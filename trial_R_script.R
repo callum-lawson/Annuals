@@ -3,3 +3,5 @@
 
 newfunction <- function() 
   print("hello world")
+
+# Some more changes that will be deleted
