@@ -2,15 +2,9 @@
 ### Sets up seedling and seed databases for later analysis and plotting ###
 ###########################################################################
 
-# maindir <- "D:/Users/calluml/Dropbox/NIOO/"
-# maindir <- "C:/Users/Callum/Dropbox/NIOO/"
-# maindir <- "D:/Dropbox/NIOO/"
-
-setwd(paste0(maindir,"Analyses/Venable"))
-source("dataprocess_functions.R") # formerly venable_functions_22Apr2015
-
 library(plyr)
 library(data.table)
+setwd("Output/")
 
 ########################
 ### LOAD CENSUS DATA ###
@@ -347,7 +341,8 @@ ncy <- ddply(nc, .(year), summarize,
 	springprcp = sum(prcp[yday<=endday], na.rm=T), 	
 	wintprcp = sum(prcp[yday>=startday], na.rm=T),
 	espringprcp = sum(prcp[yday<=earlyendday], na.rm=T),
-	ewintprcp = sum(prcp[yday>=(startday-30)], na.rm=T)	# -30 because month before first germ 			
+	ewintprcp = sum(prcp[yday>=(startday-30)], na.rm=T)	
+	  # -30 because month before first germ 			
 	) 
 	# IGNORING NAS - only 8 in whole nc dataset
 	# national climate aggregated 
