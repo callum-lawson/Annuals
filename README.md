@@ -17,5 +17,5 @@ Graphical plots of results.
 Stored runs of population simulations.
 
 ## Source
-R code 
-* Example.R: describe role here [and match to file blurb]
+R code.
+* dataprocess.R: Set up seedling and seed databases.

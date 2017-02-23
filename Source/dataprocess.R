@@ -384,23 +384,6 @@ cd$seedsint <- with(cd, as.integer(round(seeds,0)))
 
 cdpos <- subset(cd,seedsint>0)
 
-##########################
-### SUMMARISE COVERAGE ###
-##########################
-
-#with(cd,table(species,year))
-#with(csyp,table(species,year))
-#with(csy,table(species,year))
-
-#with(sb,table(species,year))
-#with(ssyp,table(species,year))
-#with(ssy,table(species,year))
-
-#with(msy,table(species,year))
-	# fica absent from both datasets in 2006, so excluded
-
-	# Could use xtabs
-
 ##################
 ### WRITE DATA ###
 ##################
