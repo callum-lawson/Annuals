@@ -1,7 +1,21 @@
 # Annuals
-Analyses of bet-hedging in desert annuals
-- I will fill this in later
+Analyses of bet-hedging in desert annuals.
 
-# Next day
-- Some further edits to the file. 
-- Also a few more later.
+## Data
+Master copies of data files used in the analysis.
+
+## Models
+Parameters stored from Stan model runs.
+
+## Output
+Data produced by R scripts (csv, rds, etc.).
+	
+## Plots
+Graphical plots of results.
+
+## Sims
+Stored runs of population simulations.
+
+## Source
+R code 
+* Example.R: describe role here [and match to file blurb]
