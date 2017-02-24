@@ -9,7 +9,30 @@ Parameters stored from Stan model runs.
 
 ## Output
 Data produced by R scripts (csv, rds, etc.).
-	
+* *aggregate_rainfall*: Daily total precipitation 1946-2014 (10ths of a mm?).
+* *cd*: Raw plant reproduction census data.
+* *cdpos*: cd for plants that produced at least one seed.
+* *census_data_date_errors*: Date errors identified by Ursula (?).
+* *csy*: cd aggregated over individuals within plots, then aggregated over plots within years.
+* *csyp*: cd aggregated over individuals within plots.
+* *csyp_seedests*: csyp with reproduction estimates added for all plots (based on reproduction model predictions).
+* *DI_survival*: Table of density-independent seed survival rates as calculated from model.
+* *gnzhh_onhh_pars_medians*: Variance components (plot,year,species) for germination and old seed counts (?), based on descriptive Stan model. 
+* *medtraits*: Species-averaged vital rates, for use in explaining population simulation results. 
+* *msy*: Combined census and seed bank aggregated data, with single count values for each species-year combination. 
+* *msy*: msy with estimated new seed densities added (based on reproduction model predictions).
+* *ncy*: Total precipitation over germination and growing season periods 1946-2014 (10ths of a mm?).
+* *observation_error_byspecies*: observation errors for germinant, old seed, and new seed densities, based on non parametric bootstrap (?). 
+* *pr_pars*: Parameters from probability of reproduction model.
+* *rs_pars*: Parameters from model of expected number of seeds, given that the plant reproduced. 
+* *sb*: Raw seed bank data.
+* *Seed_Bank_sharedspecies*: UNCERTAIN.
+* *species_list*: List of species abbreviations and full scientific names.
+* *ssy*: sb, aggregated across replicates within plots, then plots within years.
+* *ssyp*: sb, aggregated across replicates within plots.
+* *Tvalues*: Duration of each part of season, estimated from germination and death dates.
+* *venablePlots_processed*: Areas for each plant census plot (how have these been processed?).
+
 ## Plots
 Graphical plots of results.
 
