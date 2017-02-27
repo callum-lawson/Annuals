@@ -1,6 +1,15 @@
 # Annuals
 Analyses of bet-hedging in desert annuals.
 
+Workflow:
+1. speciescorrect + plot_sizes + national_climate_process + prcp_projections
+2. dataprocess
+3. reprod + GO_descriptive
+4. bootstrap + seedpredict
+5. poplevel
+6. popsims
+7. traitmeasures
+
 ## Data
 Master copies of data files used in the analysis.
 
@@ -66,5 +75,3 @@ R code.
 * *correlations*: Look at among-species correlations across years and plots.
 * *popsize_timeseries*: Plot population sizes of seedlings and seeds through time. Only two versions, debatable whether to keep / update. 
 * *queries_reproduction*: Subset and save census data to provide examples of potential problems for Venable to investigate
-
-# Organise the above by workflow, not title
