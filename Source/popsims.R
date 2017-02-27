@@ -61,6 +61,7 @@ wcv <- sd(ncy$germprcp)/wam
 
 pl <- list(
 	go = readRDS("go_pars_tdistpois_naspecies_noerr_GDD_06Apr2016.rds"),
+	  # wrong parameters - shouldn't be GDD
 	gs = readRDS("gnzhh_onhh_pars_medians_26Oct2015.rds"),
 		# gs = g site level
 		# source script: venable_Stan_GO_descriptive_gnzhh_onhh_26Oct2015

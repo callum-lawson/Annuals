@@ -52,7 +52,7 @@ R code.
 * *prediction_functions*: Functions for predicting reproduction, germination, and seed survival. 
 * *bootstrap_nonparametric*: Non-parametric bootstrap of total counts.
 * *seedpredict*: Predictions of new seed density for all plots. 
-* *popsims*: Simulations of population dynamics for finite area. 
+* *popsims*: Simulations of population dynamics for finite area ("squared"=misnomer). 
 * *poplevel_binomialG*: Germination and seed survival models in Stan, with binomial germination calculation.
 * *poplevel_lnpoisdist*: Germination and seed survival models in Stan, with poisson seed counts.
 * *traitmeasures*: Plot simulation summaries against species traits.
