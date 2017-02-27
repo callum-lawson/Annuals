@@ -23,6 +23,7 @@ msy <- read.csv("msy_15Jan2016.csv",header=T)
 library(rstan)
 library(parallel)
 library(plyr)
+library(matrixStats)
 
 ####################
 ### PREPARE DATA ###
@@ -124,7 +125,8 @@ prmod <- "
 		matrix[M_p,L] z_p;
 		cholesky_factor_corr[M_p] L_Omega_p;
 		vector<lower=0>[M_p] tau_p; 	// prior scale
-		matrix[1,M_p] beta_mu_p; 	    // combines with u (1s for each species) to create matrix of (identical) beta_mus for each group 
+		matrix[1,M_p] beta_mu_p; 	    
+      // combines with u (1s for each species) to create matrix of (identical) beta_mus for each group 
 
     real sig_y_alpha_p;
 		real<lower=0> sig_y_gam_p;
@@ -139,6 +141,7 @@ prmod <- "
 	  }
 
 	transformed parameters{
+
 		matrix[L,M_p] beta_p;
 		vector[I_p] pi;   // logit scale!
 
@@ -180,7 +183,13 @@ prmod <- "
   generated quantities {
 
 		matrix[M_p,M_p] Omega_p;
+    vector[I_p] log_lik_p;
+
 		Omega_p <- L_Omega_p * L_Omega_p';
+
+    for (i in 1:I_p){
+      log_lik_p[i] <- binomial_logit_log(nfert[i],nmeas[i],pi[i]);
+      }
 
 		}
 	"
@@ -228,16 +237,25 @@ rsmod <- "
 	transformed parameters{
 
 		matrix[L,M_r] beta_r;
+		vector[I_r] loglam_r;
 
 		// COEFFICIENTS
 		beta_r <- u * beta_mu_r + (diag_pre_multiply(tau_r,L_Omega_r) * z_r)';
 			// u*gamma = M x L matrix (or L x M) = beta_mus for each species
 
+  	// LIKELIHOOD
+		for(i in 1:I_r){
+			loglam_r[i] <- exp(
+				x_r[i] * beta_r[species_r[i]]' // [L,M] or [M,L] matrix
+					+ eps_y_r[spyear_r[i]] 
+					+ eps_s_r[spsite_r[i]]
+				);
+				// put exp here if not using neg_binomial_2_log
+		  }
+
 		}
 
 	model{
-
-		vector[I_r] loglam_r;
 
 		// PRIORS
 		tau_r ~ cauchy(0,2.5);
@@ -260,16 +278,6 @@ rsmod <- "
     //	}
 		eps_s_r ~ normal(0,sig_s_r);
 
-		// LIKELIHOOD
-		for(i in 1:I_r){
-			loglam_r[i] <- exp(
-				x_r[i] * beta_r[species_r[i]]' // [L,M] or [M,L] matrix
-					+ eps_y_r[spyear_r[i]] 
-					+ eps_s_r[spsite_r[i]]
-					);
-				// put exp here if not using neg_binomial_2_log
-		  }
-
 		for(i in 1:I_r){
 			seedsint[i] ~ neg_binomial_2(loglam_r[i],phi_r) T[1,];
 			}
@@ -282,7 +290,14 @@ rsmod <- "
   generated quantities {
 
 		matrix[M_r,M_r] Omega_r;
+    vector[I_r] log_lik_r;
+
 		Omega_r <- L_Omega_r * L_Omega_r';
+
+    for (i in 1:I_r){
+      log_lik_r[i] <- neg_binomial_2_log(seedsint[i],loglam_r[i],phi_r)
+        / ( 1 - neg_binomial_2_log(0,loglam_r[i],phi_r) );
+      }
 
 		}
 	"
@@ -291,7 +306,7 @@ rsmod <- "
 
 prfit <- stan(model_code=prmod,data=dat_list,chains=0)
 rsfit <- stan(model_code=rsmod,data=dat_list,chains=0)
-rsfit <- stan(model_code=rsmod,data=dat_list,chains=1,warmup=1,iter=2,init=inits[1])
+rsfit <- stan(model_code=rsmod,data=dat_list,chains=1,warmup=10,iter=20,init=inits[1])
 
 ### SET UP PARALLEL
 
@@ -308,7 +323,7 @@ setwd("/mnt/data/home/NIOO/calluml/Output/")
 
 fit_list <- list(prfit=prfit)
 par_list <- list("beta_mu_p")
-apptext <- c("yearhet_nositehet_squared_pc")
+apptext <- c("yearhet_nositehet_squared_loglik")
 warm_list <- 500
 iter_list <- 1500
 
@@ -323,7 +338,7 @@ mod_names <- paste(names(fit_list),apptext,sep="_")
 
 fit_list <- list(rsfit=rsfit)
 par_list <- list("beta_mu_r")
-apptext <- c("yearhet_nositehet_squared_pc_trunc_c")
+apptext <- c("yearhet_nositehet_squared_trunc_loglik")
 warm_list <- 500
 iter_list <- 1500
 
@@ -371,14 +386,14 @@ clusterExport(cl=CL, c("p_sflist","pchains"))
 p_sflist <- parLapply(CL, 1:pchains, function(i){
   require(rstan)
   if(i %in% 1:pchains){
-    read_stan_csv(paste0("prfit_yearhet_nositehet_squared_pc_chain",i,"_29Feb2016.csv"))
+    read_stan_csv(paste0("prfit_yearhet_nositehet_squared_loglik_chain",i,"_19May2016.csv"))
     }
   })
 stopCluster(CL)
 
 # RS
 
-finchains <- 1:12 # cutting off spare chains 11,12
+finchains <- 1:10 # cutting off spare chains 11,12
 maxchains <- max(finchains)   # !!! only runs loop up to here !!!
 CL = makeCluster(nchains) # load from earlier
 r_sflist <- list()
@@ -387,7 +402,7 @@ clusterExport(cl=CL, c("r_sflist","fit_ind","chain_ind","mod_names","finchains")
 r_sflist <- parLapply(CL, 1:maxchains, function(i){
   require(rstan)
   if(i %in% finchains){
-    read_stan_csv(paste0(mod_names[fit_ind[i]],"_chain",chain_ind[i],"_03Mar2016.csv"))
+    read_stan_csv(paste0(mod_names[fit_ind[i]],"_chain",chain_ind[i],"_19May2016.csv"))
     }
   })
 stopCluster(CL)
@@ -458,6 +473,18 @@ rspars <- extract(rsfit,permuted=T)
 # params with uncertainty
 # predictions and marginal predictions without uncertainty
 
+### LIKELIHOODS
+
+log_lik_p <- with(prpars,rowSums(log_lik_p))
+median(log_lik_p)
+log_lik_r <- with(rspars,rowSums(log_lik_r))
+median(log_lik_r)
+
+prsq <- prpars$beta_mu_p[,,1]
+table(prsq<0)
+
+### ALL PARAMS
+
 prparl <- rsparl <- list()
 
 ### CALCULATE LOGLAM FOR RS
@@ -494,6 +521,34 @@ eps_y_r <- with(rspars,colMedians(eps_y_r))
 eps_s_r <- with(rspars,colMedians(eps_s_r))
 Omega_r <- apply(rspars$Omega_r,c(2,3),median)
   # marginal predictions *still include year effects*
+
+liknb <- function(x,...){
+  dnbinom(x,
+    mu=rspars$loglam_r,
+    size=rep(rspars$phi_r,times=dat_list$I_r),
+    ...
+  )
+}
+
+yobsmat <- matrix(rep(dat_list$seedsint,each=10^4),nr=10^4,nc=dat_list$I_r)
+
+log_lik_r_full <- matrix(NA,nr=10^4,ncol=dat_list$I_r)
+log_lik_r_full[] <- 
+  liknb(yobsmat,log=T) - log( 1 - liknb(rep(0,dat_list$I_r*10^4),log=F) ) 
+
+log_lik_r <- with(rspars,rowSums(log_lik_r_full))
+median(log_lik_r)
+
+library(loo)
+loo1 <- loo(log_lik_r_full)
+waic1 <- waic(log_lik_r_full)
+
+cbind(
+  rspars$loglam_r[1,log_lik_r_full[1,]==-Inf],
+  yobsmat[1,log_lik_r_full[1,]==-Inf]
+  )
+
+curve(dnbinom(x,mu=rspars$loglam_r[1],size=rspars$phi_r[1]),xlim=c(0,100))
 
 ### ASSESS SPECIES HETEROGENEITY
 
