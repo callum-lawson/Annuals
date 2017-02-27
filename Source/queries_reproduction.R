@@ -3,6 +3,8 @@
 ### problems for Venable to investigate                            ###
 ######################################################################
 
+# *Old file - directories and files not updated*
+
 # CHECK DATES ON SOURCE SCRIPTS
 
 # maindir <- "D:/Users/calluml/Dropbox/NIOO/"

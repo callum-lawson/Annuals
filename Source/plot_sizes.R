@@ -3,19 +3,13 @@
 #############################################
 
 # CHECK DATES ON SOURCE SCRIPTS
-
-# maindir <- "D:/Users/calluml/Dropbox/NIOO/"
-# maindir <- "C:/Users/Callum/Documents/My Dropbox/NIOO/"
-# maindir <- "D:/Dropbox/NIOO/"
-
-setwd(paste0(maindir,"Analyses/Venable"))
 require(plyr)
 
 ########################
 ### LOAD CENSUS DATA ###
 ########################
 
-cd <- read.csv("census_data_sharedspecies_13May2015.csv",header=T) # cd = census data
+cd <- read.csv("Output/census_data_sharedspecies_13May2015.csv",header=T) # cd = census data
 
 names(cd)[names(cd)=="plot.habitat.replicate"] <- "plot"
 names(cd)[names(cd)=="Year"] <- "year"
@@ -33,9 +27,7 @@ cd$reprod <- cd$seeds!=0 	# Did plant have >0 offspring?
 ### CHECKS FOR VENABLE PLOT AREA DATA ###
 #########################################
 
-# pa <- read.csv("plotareas_bestguess.csv",header=T)
-pa <- read.csv(paste0(maindir,"Data/Venable/","venablePlots2_09May2015.csv"),header=T)
-	# Note that different working directory
+pa <- read.csv("Data/venablePlots2_09May2015.csv",header=T)
 
 excludeplots <- paste0(rep(paste0("C",c(1:3,5:6)),each=3),rep(LETTERS[1:3],times=5))
 pa <- subset(pa,PlotID %in% excludeplots==F)
@@ -146,7 +138,7 @@ names(pa)[names(pa)=="Habitat"] <- "habitat"
 names(pa)[names(pa)=="Replicate"] <- "replicate"
 names(pa)[names(pa)=="area_m2"] <- "area"
 
-write.csv(pa,file=paste0("venablePlots_processed_",format(Sys.Date(),"%d%b%Y"),".csv"),row.names=F)
+write.csv(pa,file=paste0("Output/venablePlots_processed_",format(Sys.Date(),"%d%b%Y"),".csv"),row.names=F)
 
 
 

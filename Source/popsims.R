@@ -2,10 +2,6 @@
 ### Simulations of population dynamics for finite area ###
 ##########################################################
 
-# maindir <- "D:/Users/calluml/Dropbox/NIOO/"
-# maindir <- "C:/Users/Callum/Dropbox/NIOO/"
-# maindir <- "D:/Dropbox/NIOO/"
-
 library(plyr)
 library(reshape2)
 library(parallel)
@@ -14,15 +10,12 @@ library(RColorBrewer)
 
 ### LOAD DATA 
 
-# setwd(paste0(maindir,"Analyses/Venable"))
-# setwd("/mnt/data/home/NIOO/calluml/Source/")
+source("Source/simulation_functions.R")
+source("Source/figure_functions.R")
+source("Source/prediction_functions.R")
 
-source("venable_simulation_functions_squared_noGDD_06Dec2016.R")
-source("venable_figure_functions_23Apr2016.R")
-source("venable_prediction_functions_06Dec2016.R")
-
-msy <- read.csv("msy_15Jan2016.csv",header=T)
-Tvalues <- read.csv("Tvalues_31Jul2015.csv",header=T)
+msy <- read.csv("Output/msy_15Jan2016.csv",header=T)
+Tvalues <- read.csv("Output/Tvalues_31Jul2015.csv",header=T)
 
 #####################
 ### DEFINE PARAMS ###
@@ -44,10 +37,10 @@ tau_p <- 100	# adjustment for rainfall
 
 ### CLIMATE
 
-pp <- read.csv("prcp_projection_summaries_08Apr2016.csv",header=T)
+pp <- read.csv("Output/prcp_projection_summaries_08Apr2016.csv",header=T)
 pps <- subset(pp,scenario %in% c(45,60))
 
-ncy <- read.csv("ncy_15Jan2016.csv",header=T)
+ncy <- read.csv("Output/ncy_15Jan2016.csv",header=T)
 ncy <- subset(ncy,is.na(seasprcp)==F)
 	# removes first value (missing because no previous winter)
 
@@ -60,22 +53,20 @@ wcv <- sd(ncy$germprcp)/wam
 ### MODEL PARAMS (already permuted)
 
 pl <- list(
-	go = readRDS("go_pars_tdistpois_naspecies_noerr_GDD_06Apr2016.rds"),
-	  # wrong parameters - shouldn't be GDD
-	gs = readRDS("gnzhh_onhh_pars_medians_26Oct2015.rds"),
+	go = readRDS("Models/go_pars_tdistpois_naspecies_noerr_noGDD_loglik_BH_05Dec2016.rds"),
+	  # wrong parameters - shouldn't be GDD?
+	gs = readRDS("Models/gnzhh_onhh_pars_medians_26Oct2015.rds"),
 		# gs = g site level
 		# source script: venable_Stan_GO_descriptive_gnzhh_onhh_26Oct2015
 		# uses tau_s = 100
 		# but tau actually irrelevant because all multiplicative?
-	pr = readRDS("pr_pars_yearhet_squared_pc_02Mar2016.rds"),
-	rs = readRDS("rs_pars_yearhet_squared_pc_trunc_05Mar2016.rds")
+	pr = readRDS("Models/pr_pars_yearhet_squared_pc_02Mar2016.rds"),
+	rs = readRDS("Models/rs_pars_yearhet_squared_pc_trunc_05Mar2016.rds")
 	)
 
 ############
 ### SIMS ###
 ############
-
-# setwd("/mnt/data/home/NIOO/calluml/Output/")
 
 	# 1000 per 0.1m^2
 
@@ -144,8 +135,6 @@ stopCluster(CL)
 ### READ BACK IN  ###
 #####################
 
-# setwd("/mnt/data/home/NIOO/calluml/Output/")
-
 # Read in all sims
 # CL = makeCluster(ncores)
 # clusterExport(cl=CL, c("cnames_bycore"))
@@ -155,7 +144,7 @@ stopCluster(CL)
 # stopCluster(CL)
 psl <- as.list(rep(NA,ncores))
 for(n in 1:ncores){
-  psl[[n]] <- readRDS(paste0(cnames_bycore[n],"_22Dec2016.rds"))
+  psl[[n]] <- readRDS(paste0("Output/",cnames_bycore[n],"_22Dec2016.rds"))
   }
 names(psl) <- cnames_bycore
 
@@ -338,7 +327,7 @@ relchange <- function(a,scenbase,scennew,tpos=15,keepsp){
   }
 
 pairplot <- function(plotname,a,npdim,w=8,h=8){
-  pdf(paste0(plotname,format(Sys.Date(),"%d%b%Y"),".pdf"),width=w,height=h)
+  pdf(paste0("Plots/",plotname,format(Sys.Date(),"%d%b%Y"),".pdf"),width=w,height=h)
   # npdim = new page dim = whcih dim gets new page each time?
   npdim_n <- dim(a)[npdim]
   for(i in 1:npdim_n){
@@ -385,7 +374,7 @@ rpna <- relchange(qlogis(pna),scenbase="mu1_cv0",scennew="mu1_cv1",keepsp=keepsp
 
 ### Population traits
 
-medtraits <- readRDS("medtraits_07Dec2016.rds") # check that most recent
+medtraits <- readRDS("Output/medtraits_07Dec2016.rds") # check that most recent
 
 mta <- medtraits[keepsp,]
 G_full <- q_Gf["mu1_cv1",2,tpos,] 
@@ -424,7 +413,7 @@ alpha_G <- go$alpha_G[iter_go,]
 
 ### Climate graphs
 
-pdf(paste0("zdists",format(Sys.Date(),"%d%b%Y"),".pdf"),width=4.5,height=4.5)
+pdf(paste0("Plots/zdists",format(Sys.Date(),"%d%b%Y"),".pdf"),width=4.5,height=4.5)
 plot(density(psls$mu1_cv1$z),xlim=c(-2,2),main="")
 lines(density(psls$mu08_cv1$z),col="red")
 lines(density(psls$mu1_cv12$z),col="blue")
@@ -481,7 +470,7 @@ md_nsd$G_var <- G_var[md_nsd$species]
 
 myteal <- rgb(190,235,159,maxColorValue=255)
 
-pdf(paste0("mean_variance_comparison_",
+pdf(paste0("Output/mean_variance_comparison_",
   paste(keepnames,collapse="_"),
   "_t",tpos,"_",
   format(Sys.Date(),"%d%b%Y"),".pdf"
@@ -611,7 +600,7 @@ diffplot_all <- function(...){
   diffplot(G_mod,md_nsd$dlN[md_nsd$scenario=="mu08_cv12"],"germination probability",...)
   }
 
-pdf(paste0("bet_hedging_prediction_",
+pdf(paste0("Plots/bet_hedging_prediction_",
     paste(keepnames,collapse="_"),
     "_t",tpos,"_",
     format(Sys.Date(),"%d%b%Y"),".pdf"
@@ -622,7 +611,7 @@ diffplot_all(type="n")
 diffplot_all()
 dev.off()
 
-pdf(paste0("bet_hedging_prediction_K_So",
+pdf(paste0("Plots/bet_hedging_prediction_K_So",
   "_t",tpos,"_",
   format(Sys.Date(),"%d%b%Y"),".pdf"
   ),width=9,height=4.5)
@@ -677,10 +666,8 @@ md_nsd$G_med <- G_med[md_nsd$species]
 
 myteal <- rgb(190,235,159,maxColorValue=255)
 
-setwd("/mnt/data/home/NIOO/calluml/Source/")
-
-csyp <- read.csv("csyp_15Jan2016.csv",header=T)
-cdpos <- read.csv("cdpos_15Jan2016.csv",header=T)
+csyp <- read.csv("Output/csyp_15Jan2016.csv",header=T)
+cdpos <- read.csv("Output/cdpos_15Jan2016.csv",header=T)
 prdat <- subset(csyp, ngerm>0 & is.na(nmeas)==F & is.na(germd)==F)
 rsdat <- cdpos
 
@@ -917,7 +904,7 @@ x_in <- psls$mu1_cv1$z
 y_in <- psls$mu1_cv1$r
 y_in[!is.finite(y_in)] <- NA
 
-pdf(paste0("popgrowth_rainfall_",format(Sys.Date(),"%d%b%Y"),".pdf"),
+pdf(paste0("Plots/popgrowth_rainfall_",format(Sys.Date(),"%d%b%Y"),".pdf"),
     width=plotwidth,height=plotheight)
   
   plotsetup()
@@ -948,7 +935,7 @@ dev.off()
 
 x_in <- qlogis(psls$mu1_cv1$G)
 
-pdf(paste0("popgrowth_G_",format(Sys.Date(),"%d%b%Y"),".pdf"),
+pdf(paste0("Plots/popgrowth_G_",format(Sys.Date(),"%d%b%Y"),".pdf"),
   width=plotwidth,height=plotheight)
 
 plotsetup()
@@ -982,7 +969,7 @@ x_in <- log(psls$mu1_cv1$ns)
 y_in <- psls$mu1_cv1$r
 y_in[!is.finite(y_in)] <- NA
 
-pdf(paste0("popgrowth_density_",format(Sys.Date(),"%d%b%Y"),".pdf"),
+pdf(paste0("Plots/popgrowth_density_",format(Sys.Date(),"%d%b%Y"),".pdf"),
   width=plotwidth,height=plotheight)
 
 plotsetup()
@@ -1010,7 +997,7 @@ for(j in 1:nspecies){
 dev.off()
 
 
-pdf(paste0("popgrowth_hists_",format(Sys.Date(),"%d%b%Y"),".pdf"),
+pdf(paste0("Plots/popgrowth_hists_",format(Sys.Date(),"%d%b%Y"),".pdf"),
   width=plotwidth,height=plotheight)
 
 plotsetup()
@@ -1035,7 +1022,7 @@ x_in <- psls$mu1_cv1$z
 y_in <- log(psls$mu1_cv1$nn/psls$mu1_cv1$ng)
 y_in[!is.finite(y_in)] <- NA
 
-pdf(paste0("Y_rainfall_",format(Sys.Date(),"%d%b%Y"),".pdf"),
+pdf(paste0("Plots/Y_rainfall_",format(Sys.Date(),"%d%b%Y"),".pdf"),
   width=plotwidth,height=plotheight)
 
 plotsetup()
@@ -1066,7 +1053,7 @@ dev.off()
 y_in <- log(psls$mu1_cv1$nnb/psls$mu1_cv1$ng)
 y_in[!is.finite(y_in)] <- NA
 
-pdf(paste0("Ye_rainfall_",format(Sys.Date(),"%d%b%Y"),".pdf"),
+pdf(paste0("Plots/Ye_rainfall_",format(Sys.Date(),"%d%b%Y"),".pdf"),
   width=plotwidth,height=plotheight)
 
 plotsetup()
@@ -1100,7 +1087,7 @@ x_in <-  log(psls$mu1_cv1$ng)
 y_in <- log(psls$mu1_cv1$nn/psls$mu1_cv1$ng)
 y_in[!is.finite(y_in)] <- NA
 
-pdf(paste0("Y_gd_",format(Sys.Date(),"%d%b%Y"),".pdf"),
+pdf(paste0("Plots/Y_gd_",format(Sys.Date(),"%d%b%Y"),".pdf"),
   width=plotwidth,height=plotheight)
 
 plotsetup()
@@ -1137,7 +1124,7 @@ x_in <-  log(psls$mu1_cv1$ng)
 y_in <- apply(psls$mu1_cv1$nn[,nt,],2,function(x) sum(x>0)/length(x))
 y_in[!is.finite(y_in)] <- NA
 
-pdf(paste0("Y_gd_",format(Sys.Date(),"%d%b%Y"),".pdf"),
+pdf(paste0("Plots/Y_gd_",format(Sys.Date(),"%d%b%Y"),".pdf"),
   width=plotwidth,height=plotheight)
 
 plotsetup()
@@ -1167,7 +1154,7 @@ dev.off()
 
 ### Y~G
 
-pdf(paste0("Y_vs_G_",format(Sys.Date(),"%d%b%Y"),".pdf"),
+pdf(paste0("Plots/Y_vs_G_",format(Sys.Date(),"%d%b%Y"),".pdf"),
   width=plotwidth,height=plotheight)
 
 plotsetup()

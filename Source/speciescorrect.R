@@ -1,19 +1,13 @@
 ### Correct names of species in Census and Seed data
 ### and remove low-abundance species
 
-# maindir <- "D:/Users/calluml/Dropbox/NIOO/"
-# maindir <- "C:/Users/Callum/Documents/My Dropbox/NIOO/"
-setwd(paste0(maindir,"Analyses/Venable"))
-
 ####################
 ### READ IN DATA ###
 ####################
 
 ### SPECIES LIST 
 
-sl <- read.csv(paste(maindir,
-	"Data/Venable/species_list.csv",sep=""),
-	header=T)
+sl <- read.csv("Data/species_list.csv",header=T)
 
 names(sl)[names(sl)=="Species.code"] <- "Code"
 sl <- sl[,names(sl)!="synonym"]
@@ -21,9 +15,7 @@ slsp <- levels(sl$Code)
 
 ### CENSUS DATA 
 
-cd <- read.csv(paste(maindir,
-	"Data/Venable/census_data_07May2015.csv",sep=""),
-	header=T)
+cd <- read.csv("Data/census_data_07May2015.csv",header=T)
 
 cd$species <- as.factor(tolower(as.character(cd$species))) 
 	# converts to lower case (some had species in caps)
@@ -32,9 +24,7 @@ cdsp <- levels(cd$species)
 
 ### SEED BANK DATA
 
-sb <- read.csv(paste(maindir,
-	"Data/Venable/Seed_Bank_13May2015.csv",sep=""),
-	header=T)
+sb <- read.csv("Data/Seed_Bank_13May2015.csv",header=T)
 
 sb$species <- as.factor(tolower(as.character(sb$species))) 
 	# converts to lower case (later measurements had species in caps)
@@ -135,13 +125,13 @@ allsharedbig <- intersect(allshared,bigger)
 
 ### CENSUS
 cdnew <- subset(cd,species %in% allsharedbig)
-write.csv(cdnew,file=paste0("census_data_sharedspecies_",format(Sys.Date(),"%d%b%Y"),".csv"),row.names=F)
+write.csv(cdnew,file=paste0("Output/census_data_sharedspecies_",format(Sys.Date(),"%d%b%Y"),".csv"),row.names=F)
 
 ### SEED BANK
 sbnew <- subset(sb,species %in% allsharedbig)
-write.csv(sbnew,file=paste0("Seed_Bank_sharedspecies_",format(Sys.Date(),"%d%b%Y"),".csv"),row.names=F)
+write.csv(sbnew,file=paste0("Output/Seed_Bank_sharedspecies_",format(Sys.Date(),"%d%b%Y"),".csv"),row.names=F)
 
 ### SPECIES LIST
 
 slnew <- subset(sl,Code %in% allsharedbig)
-write.csv(slnew,file=paste0("species_list_",format(Sys.Date(),"%d%b%Y"),".csv"),row.names=F)
+write.csv(slnew,file=paste0("Output/species_list_",format(Sys.Date(),"%d%b%Y"),".csv"),row.names=F)

@@ -2,16 +2,9 @@
 ### Estimating per-capita reproduction (Y) parameters ###
 #########################################################
 
-# maindir <- "D:/Users/calluml/Dropbox/NIOO/"
-# maindir <- "C:/Users/Callum/Documents/My Dropbox/NIOO/"
-# maindir <- "D:/Dropbox/NIOO/"
-
-setwd(paste0(maindir,"Analyses/Venable"))
-# setwd("/mnt/data/home/NIOO/calluml/Source/")
-
-cdpos <- read.csv("cdpos_15Jan2016.csv",header=T)
-csyp <- read.csv("csyp_15Jan2016.csv",header=T)
-msy <- read.csv("msy_15Jan2016.csv",header=T)
+cdpos <- read.csv("Output/cdpos_15Jan2016.csv",header=T)
+csyp <- read.csv("Output/csyp_15Jan2016.csv",header=T)
+msy <- read.csv("Output/msy_15Jan2016.csv",header=T)
 
 #keepsp <- c("boin","evmu","scba","pere","plpa")
 #keeppl <- sample(levels(csyp$plot),size=10)
@@ -310,9 +303,6 @@ rsfit <- stan(model_code=rsmod,data=dat_list,chains=1,warmup=10,iter=20,init=ini
 
 ### SET UP PARALLEL
 
-# setwd("D:/Users/calluml/Desktop/Stan/")
-setwd("/mnt/data/home/NIOO/calluml/Output/")
-
 # fit_list <- list(prfit=prfit,rsfit=rsfit)
 # par_list <- list("beta_mu_p","beta_mu_r")
 # apptext <- c("yearhet_nositehet_squared_pc","yearhet_sitehet_linear_pc_trunc")
@@ -368,7 +358,7 @@ system.time({
          pars=par_list[[fit_ind[i]]],
          chain_id=i,
     		 init=inits[i], # OMITTED FOR PR!
-         sample_file=paste0(mod_names[fit_ind[i]],"_chain",chain_ind[i],"_",format(Sys.Date(),"%d%b%Y"),".csv")
+         sample_file=paste0("Models/",mod_names[fit_ind[i]],"_chain",chain_ind[i],"_",format(Sys.Date(),"%d%b%Y"),".csv")
     )
   })
   stopCluster(CL)
@@ -386,7 +376,7 @@ clusterExport(cl=CL, c("p_sflist","pchains"))
 p_sflist <- parLapply(CL, 1:pchains, function(i){
   require(rstan)
   if(i %in% 1:pchains){
-    read_stan_csv(paste0("prfit_yearhet_nositehet_squared_loglik_chain",i,"_19May2016.csv"))
+    read_stan_csv(paste0("Models/prfit_yearhet_nositehet_squared_loglik_chain",i,"_19May2016.csv"))
     }
   })
 stopCluster(CL)
@@ -402,7 +392,7 @@ clusterExport(cl=CL, c("r_sflist","fit_ind","chain_ind","mod_names","finchains")
 r_sflist <- parLapply(CL, 1:maxchains, function(i){
   require(rstan)
   if(i %in% finchains){
-    read_stan_csv(paste0(mod_names[fit_ind[i]],"_chain",chain_ind[i],"_19May2016.csv"))
+    read_stan_csv(paste0("Models/",mod_names[fit_ind[i]],"_chain",chain_ind[i],"_19May2016.csv"))
     }
   })
 stopCluster(CL)
@@ -618,7 +608,7 @@ rsparl <- c(rspars[names(rspars) %in% rs_keep],
                  )
             )
 
-saveRDS(prparl,paste0("pr_pars_yearhet_squared_pc_",format(Sys.Date(),"%d%b%Y"),".rds"))
-saveRDS(rsparl,paste0("rs_pars_yearhet_squared_pc_trunc_",format(Sys.Date(),"%d%b%Y"),".rds"))
-saveRDS(inits,paste0("rs_inits_sq_b_",format(Sys.Date(),"%d%b%Y"),".rds"))
+saveRDS(prparl,paste0("Models/pr_pars_yearhet_squared_pc_",format(Sys.Date(),"%d%b%Y"),".rds"))
+saveRDS(rsparl,paste0("Models/rs_pars_yearhet_squared_pc_trunc_",format(Sys.Date(),"%d%b%Y"),".rds"))
+saveRDS(inits,paste0("Models/rs_inits_sq_b_",format(Sys.Date(),"%d%b%Y"),".rds"))
 

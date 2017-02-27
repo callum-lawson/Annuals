@@ -2,12 +2,7 @@
 ### Expolore distribution and time series of rainfall data ###
 ##############################################################
 
-# maindir <- "D:/Users/calluml/Dropbox/NIOO/"
-# maindir <- "C:/Users/Callum/Dropbox/NIOO/"
-# maindir <- "D:/Dropbox/NIOO/"
-
-setwd(paste0(maindir,"Analyses/Venable"))
-source("venable_figure_functions_25Nov2015.R")
+source("Source/figure_functions.R")
 
 library(bbmle)
 library(reshape2)
@@ -16,7 +11,7 @@ library(reshape2)
 ### CLIMATE DATA ###
 ####################
 
-ncy <- read.csv("ncy_15Jan2016.csv",header=T)
+ncy <- read.csv("Output/ncy_15Jan2016.csv",header=T)
 ncy <- subset(ncy,is.na(seasprcp)==F)
 	# removes first value (missing because no previous winter)
 
@@ -124,7 +119,7 @@ acf(fake)
 ### OUTPUT GRAPHS ###
 #####################
 
-pdf(paste0("precipitation_summaries_",format(Sys.Date(),"%d%b%Y"),".pdf"),
+pdf(paste0("Plots/precipitation_summaries_",format(Sys.Date(),"%d%b%Y"),".pdf"),
 		width=7,height=7)
 
 layout(matrix(c(rep(1,2),2,3),byrow=T,nc=2,nr=2))

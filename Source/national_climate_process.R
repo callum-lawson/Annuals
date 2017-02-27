@@ -2,13 +2,7 @@
 ### Process rainfall data from US to produce single daily rainfall time series ###
 ##################################################################################
 
-#############
-### SETUP ###
-#############
-
-# maindir <- "D:/Users/calluml/Dropbox/NIOO/"
-# maindir <- "C:/Users/Callum/Documents/My Dropbox/NIOO/"
-setwd(paste0(maindir,"Analyses/Venable"))
+require(geosphere)
 
 #################
 ### LOAD DATA ###
@@ -19,16 +13,16 @@ setwd(paste0(maindir,"Analyses/Venable"))
 require(data.table)
 
 nc1 <- fread(
-	paste(maindir, "Data/Venable/National_Climatic_Data/521606.csv",sep=""),
+	paste("Data/National_Climatic_Data/521606.csv",sep=""),
 	header=T, colClasses=rep(c("character","numeric"),c(6,4))
 	)
 	# TSUN missing
 nc2 <- fread(
-	paste(maindir, "Data/Venable/National_Climatic_Data/521610.csv",sep=""),
+	paste("Data/National_Climatic_Data/521610.csv",sep=""),
 	header=T, colClasses=rep(c("character","numeric"),c(6,5))
 	)
 nc3 <- fread(
-	paste(maindir, "Data/Venable/National_Climatic_Data/521611.csv",sep=""),
+	paste("Data/National_Climatic_Data/521611.csv",sep=""),
 	header=T, colClasses=rep(c("character","numeric"),c(6,5))
 	)
 
@@ -65,7 +59,6 @@ points(tumax,tumay,pch="+",col="red") # desert laboratory
 unipos <- which(statlevels=="TUCSON U OF A NUMBER 1 AZ US")
 points(statx[unipos],staty[unipos],pch=16,col="blue")
 
-require(geosphere)
 statdists <- distVincentySphere(cbind(statx,staty), c(tumax,tumay))/1000
 	# /1000 because dist given in metres
 dd <- data.frame(station=statlevels,statdists=statdists)
@@ -107,10 +100,9 @@ nc10ys <- subset(nc10ys,select=c("station","year","prcp"))
 nc10ys <- ddply(nc10ys ,.(station,year),summarise,prcp=mean(prcp,na.rm=T))
 nc10_ysmat <- daply(nc10ys , .(year,station), function(x) x$prcp)
 
-
 ### RAIN AND GEOGRAPHIC LOCATION FIGURE (OLD) 
 
-pdf(paste0("weather_stations_",format(Sys.Date(),"%d%b%Y"),".pdf"),
+pdf(paste0("Plots/weather_stations_",format(Sys.Date(),"%d%b%Y"),".pdf"),
 	width=13,height=7)
 
 	par(mfrow=c(1,2))
@@ -174,7 +166,7 @@ nc10d$date <- strptime(nc10d$date,format="%Y%m%d")
 #################################
 
 write.csv(nc10d,
-	paste0("aggregate_rainfall_",format(Sys.Date(),"%d%b%Y"),".csv"),
+	paste0("Output/aggregate_rainfall_",format(Sys.Date(),"%d%b%Y"),".csv"),
 	row.names=F)
 
 #################################
@@ -204,8 +196,7 @@ nc10ys <- subset(nc10ys,select=c("station","year","prcp"))
 nc10ys <- ddply(nc10ys ,.(station,year),summarise,prcp=mean(prcp,na.rm=T))
 nc10_ysmat <- daply(nc10ys , .(year,station), function(x) x$prcp)
 
-
-pdf(paste0("weather_stations_",format(Sys.Date(),"%d%b%Y"),".pdf"),
+pdf(paste0("Plots/weather_stations_",format(Sys.Date(),"%d%b%Y"),".pdf"),
 	width=13,height=7)
 
 par(mfrow=c(1,2))
@@ -226,9 +217,7 @@ dev.off()
 ### ANGERT DATA 
 	# Doesn't name the source of this data (uni or desert laboratory)
 
-ang <- read.csv(paste(maindir,
-	"Data/Venable/angert_2009_figS1_b.csv",sep=""),
-	header=T,skip=1)
+ang <- read.csv("Data/angert_2009_figS1_b.csv",header=T,skip=1)
 	# Actually Kimball et al 2010
 
 require("reshape2")

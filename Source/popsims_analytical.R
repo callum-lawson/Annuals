@@ -3,6 +3,8 @@
 ### Includes purely analytical calculations of DI long-term growth ###
 ######################################################################
 
+# *Update file directories*
+
 # maindir <- "D:/Users/calluml/Dropbox/NIOO/"
 # maindir <- "C:/Users/Callum/Dropbox/NIOO/"
 # maindir <- "D:/Dropbox/NIOO/"

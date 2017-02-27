@@ -2,26 +2,20 @@
 ### Exploring observation-level variance models ###
 ###################################################
 
-# maindir <- "D:/Users/calluml/Dropbox/NIOO/"
-# maindir <- "C:/Users/Callum/Dropbox/NIOO/"
-# maindir <- "D:/Dropbox/NIOO/"
-# setwd("/mnt/data/home/NIOO/calluml/Source/")
-
 library(plyr)
 library(reshape2)
 library(matrixStats)
 library(truncdist)
 
-# setwd(paste0(maindir,"Analyses/Venable"))
-# source("venable_figure_functions_23Apr2016.R")
+source("Source/figure_functions.R")
 
-csy <- read.csv("csy_15Jan2016.csv",header=T)
-msy <- read.csv("msy_15Jan2016.csv",header=T)
+csy <- read.csv("Output/csy_15Jan2016.csv",header=T)
+msy <- read.csv("Output/msy_15Jan2016.csv",header=T)
 
-csyp <- read.csv("csyp_15Jan2016.csv",header=T)
-ssyp <- read.csv("ssyp_15Jan2016.csv",header=T)
+csyp <- read.csv("Output/csyp_15Jan2016.csv",header=T)
+ssyp <- read.csv("Output/ssyp_15Jan2016.csv",header=T)
 
-rsdat <- read.csv("cdpos_15Jan2016.csv",header=T)
+rsdat <- read.csv("Output/cdpos_15Jan2016.csv",header=T)
 
 #####################
 ### NEW VARIABLES ###
@@ -71,8 +65,8 @@ spvals <- levels(msy$species)
 # go <- readRDS("gnzhh_onhh_pars_medians_26Oct2015.rds")
 # go2 <- readRDS("onhh_pars_medians_naspecies_28Mar2016.rds")
 #   # separate omod run, omitting na species
-pr <- readRDS("pr_pars_yearhet_squared_pc_02Mar2016.rds")
-rs <- readRDS("rs_pars_yearhet_squared_pc_trunc_05Mar2016.rds")
+pr <- readRDS("Models/pr_pars_yearhet_squared_pc_02Mar2016.rds")
+rs <- readRDS("Models/rs_pars_yearhet_squared_pc_trunc_05Mar2016.rds")
 
 beta_p <- apply(pr$beta_p,c(2,3),median)
 beta_r <- apply(rs$beta_r,c(2,3),median)
@@ -515,7 +509,7 @@ abline(0,1,col="red")
 # OBSERVED DATA
 
 write.csv(msy_new,
-	paste0("msy_seedests_",format(Sys.Date(),"%d%b%Y"),".csv"),
+	paste0("Output/msy_seedests_",format(Sys.Date(),"%d%b%Y"),".csv"),
 	row.names=F
 	)
 

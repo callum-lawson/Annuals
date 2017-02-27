@@ -4,10 +4,11 @@
 
 ### LOAD PARAMS
 
-go <- readRDS("go_pars_binomialG_tdistbpar_normndat_16Feb2017.rds")
-gs <- readRDS("gnzhh_onhh_pars_medians_26Oct2015.rds")
-pr <- readRDS("pr_pars_yearhet_squared_pc_02Mar2016.rds")
-rs <- readRDS("rs_pars_yearhet_squared_pc_trunc_05Mar2016.rds")
+go <- readRDS("Models/go_pars_tdistpois_naspecies_noerr_noGDD_loglik_BH_05Dec2016.rds")
+  # change later
+gs <- readRDS("Models/gnzhh_onhh_pars_medians_26Oct2015.rds")
+pr <- readRDS("Models/pr_pars_yearhet_squared_pc_02Mar2016.rds")
+rs <- readRDS("Models/rs_pars_yearhet_squared_pc_trunc_05Mar2016.rds")
 
 ### GO
 
@@ -129,15 +130,3 @@ r_quant <- function(pred){
   	
   }
 
-### OTHER FUNCTIONS
-
-panel.cor <- function(x, y, digits=2, prefix="", cex.cor, ...){
-  usr <- par("usr"); on.exit(par(usr))
-  par(usr = c(0, 1, 0, 1))
-  r <- cor(x,y)
-  r_abs <- abs(r)
-  txt <- format(c(r, 0.123456789), digits=digits)[1]
-  txt <- paste(prefix, txt, sep="")
-  if(missing(cex.cor)) cex.cor <- 0.8/strwidth(txt)
-  text(0.5, 0.5, txt, cex = cex.cor * r_abs)
-  }

@@ -321,7 +321,7 @@ popsim <- function(pl,ni,nt,nj=22,nk,nstart,
 		return(outlist)
 		}
 	if(is.null(savefile)==F){
-		saveRDS(outlist,paste0(savefile,"_",cur_date,".rds"))
+		saveRDS(outlist,paste0("Sims/",savefile,"_",cur_date,".rds"))
 		}
 
 	}

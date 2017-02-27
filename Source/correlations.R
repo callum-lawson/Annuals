@@ -2,22 +2,18 @@
 ### Look at among-species correlations across years and plots ###
 #################################################################
 
-# maindir <- "D:/Users/calluml/Dropbox/NIOO/"
-# maindir <- "C:/Users/Callum/Dropbox/NIOO/"
-# maindir <- "D:/Dropbox/NIOO/"
-
 library(plyr)
+library(lme4)
 
-setwd(paste0(maindir,"Analyses/Venable"))
-source("venable_figure_functions_31Jul2015.R")
+source("Source/figure_functions.R")
 
-csy <- read.csv("csy_26Aug2015.csv",header=T)
-msy <- read.csv("msy_26Aug2015.csv",header=T)
+csy <- read.csv("Output/csy_15Jan2016.csv",header=T)
+msy <- read.csv("Output/msy_15Jan2016.csv",header=T)
 
-csyp <- read.csv("csyp_20Jun2015.csv",header=T)
-ssyp <- read.csv("ssyp_26Aug2015.csv",header=T)
+csyp <- read.csv("Output/csyp_15Jan2016.csv",header=T)
+ssyp <- read.csv("Output/ssyp_15Jan2016.csv",header=T)
 
-sb <- read.csv("sb_26Aug2015.csv",header=T)
+sb <- read.csv("Output/sb_15Jan2016.csv",header=T)
 
 # csyp <- read.csv("csyp_20Jun2015.csv",header=T)
 # ssyp <- read.csv("ssyp_20Jun2015.csv",header=T)
@@ -26,7 +22,6 @@ sb <- read.csv("sb_26Aug2015.csv",header=T)
 ### VARIANCE PARTITIONING ###
 #############################
 
-library(lme4)
 sb$obslevel <- 1:nrow(sb)
 ssyp$obslevel <- 1:nrow(ssyp)
 sb$area <- rep(pi*(0.054/2)^2,nrow(sb))	# diameter is 5.4cm
@@ -46,22 +41,6 @@ summary(model)
 summary(model2)
 overdisp_fun(model)
 overdisp_fun(model2)
-
-overdisp_fun <- function(model) {
-  ## number of variance parameters in 
-  ##   an n-by-n variance-covariance matrix
-  vpars <- function(m) {
-    nrow(m)*(nrow(m)+1)/2
-  }
-  model.df <- sum(sapply(VarCorr(model),vpars))+length(fixef(model))
-  rdf <- nrow(model.frame(model))-model.df
-  rp <- residuals(model,type="pearson")
-  Pearson.chisq <- sum(rp^2)
-  prat <- Pearson.chisq/rdf
-  pval <- pchisq(Pearson.chisq, df=rdf, lower.tail=FALSE)
-  c(chisq=Pearson.chisq,ratio=prat,rdf=rdf,p=pval)
-}
-	# but overdisp_fun apparently doens't work in Poisson not >5
 
 ### each year then calculate means
 
@@ -555,7 +534,7 @@ cor_ogrow_plot_mat <- outer(1:nspecies,1:nspecies,paircor,veclist=ogrow_plot_lis
 ### PLOT ###
 ############
 
-pdf(paste0("correlations_year_plot_",format(Sys.Date(),"%d%b%Y"),".pdf"),
+pdf(paste0("Plots/correlations_year_plot_",format(Sys.Date(),"%d%b%Y"),".pdf"),
 	width=12,height=5)
 
 par(mfrow=c(2,5),mar=c(2,2,2,2),oma=c(6,6,2,2),las=1,bty="l")

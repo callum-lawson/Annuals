@@ -6,19 +6,13 @@ library(plyr)
 library(matrixStats)
 library(reshape2)
 
-# maindir <- "D:/Users/calluml/Dropbox/NIOO/"
-# maindir <- "C:/Users/Callum/Dropbox/NIOO/"
-# maindir <- "D:/Dropbox/NIOO/"
-# maindir <- "C:/Users/cl17quxu/Dropbox/NIOO/"
+source("Source/figure_functions.R")
+source("Source/prediction_functions.R")
 
-setwd(paste0(maindir,"Analyses/Venable"))
-source("venable_figure_functions_10Mar2016.R")
-source("venable_prediction_functions_17Feb2017.R")
-
-msy <- read.csv("msy_seedests_28Mar2016.csv",header=T)
+msy <- read.csv("Output/msy_seedests_28Mar2016.csv",header=T)
 # no sds attached yet
-Tvalues <- read.csv("Tvalues_20Jun2015.csv",header=T)
-obserr <- read.csv("observation_error_byspecies_28Mar2016.csv",header=T)
+Tvalues <- read.csv("Output/Tvalues_31Jul2015.csv",header=T)
+obserr <- read.csv("Output/observation_error_byspecies_28Mar2016.csv",header=T)
 
 nspecies <- nlevels(msy$species)
 spvals <- levels(msy$species)
@@ -131,7 +125,7 @@ msy90$Shat1 <- with(msy90,ifelse(Shat>1,1,Shat))
 ### PLOT RAW DATA ###
 #####################
 
-pdf(paste0("germhat_olsdhat_equalscale_",format(Sys.Date(),"%d%b%Y"),".pdf"),width=7,height=7)
+pdf(paste0("Plots/germhat_olsdhat_equalscale_",format(Sys.Date(),"%d%b%Y"),".pdf"),width=7,height=7)
 with(msy90,plot(log(germdhat+1)~log(olsdhat+1),
   xlim=c(-2,10),ylim=c(-2,10))
   )
@@ -140,7 +134,7 @@ abline(h=0,col="blue",lty=3)
 abline(v=0,col="blue",lty=3)
 dev.off()
 
-pdf(paste0("whist_ngerm0_",format(Sys.Date(),"%d%b%Y"),".pdf"),width=5,height=5)
+pdf(paste0("Plots/whist_ngerm0_",format(Sys.Date(),"%d%b%Y"),".pdf"),width=5,height=5)
 par(mfrow=c(1,1),bty="l")
 mybreaks <- with(msy90,hist(log(gprcp),breaks=50,main=""))
 with(subset(msy90,germdhat==0),

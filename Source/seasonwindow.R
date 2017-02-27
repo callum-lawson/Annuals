@@ -2,14 +2,9 @@
 ### Finding best times for open and close of growing season ###
 ###############################################################
 
-# maindir <- "D:/Users/calluml/Dropbox/NIOO/"
-# maindir <- "C:/Users/Callum/Dropbox/NIOO/"
-# maindir <- "D:/Dropbox/NIOO/"
+source("Source/figure_functions.R")
 
-setwd(paste0(maindir,"Analyses/Venable"))
-source("venable_figure_functions_31Jul2015.R")
-
-cd <- read.csv("cd_20Jun2015.csv",header=T)
+cd <- read.csv("Output/cd_15Jan2016.csv",header=T)
 
 ####################
 ### CLIMATE DATA ###
@@ -18,7 +13,7 @@ cd <- read.csv("cd_20Jun2015.csv",header=T)
 # Need to construct joint model that finds right period given likelihood of
 # two above models multiplied together
 
-nc <- read.csv("aggregate_rainfall_03May2015.csv",header=T)
+nc <- read.csv("Output/aggregate_rainfall_03May2015.csv",header=T)
 	# nc = national climate
 
 nc$date <- strptime(nc$date,format="%Y-%m-%d")
@@ -88,7 +83,7 @@ T3 <- 1-(T1+T2)
 
 Tvalues <- data.frame(period=c("T1","T2","T3"),duration=c(T1,T2,T3))
 
-write.csv(Tvalues,file=paste0("Tvalues_",format(Sys.Date(),"%d%b%Y"),".csv"),row.names=F)
+write.csv(Tvalues,file=paste0("Output/Tvalues_",format(Sys.Date(),"%d%b%Y"),".csv"),row.names=F)
 
 # quantile(cd$gseasday,probs=c(0.1,0.9),na.rm=T)
 	# germination dates mostly lay between -59 and 32
@@ -104,7 +99,7 @@ cdm <- melt(cdm, id.var=c("year","plot"))
 
 ### PLOT FIGURE
 
-pdf("germ_death_seasdates.pdf",width=8,height=4)
+pdf("Plots/germ_death_seasdates.pdf",width=8,height=4)
 
 layout(rbind(rep(1:2,c(1,4))))
 par(bty="l")

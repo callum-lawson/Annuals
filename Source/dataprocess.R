@@ -4,13 +4,12 @@
 
 library(plyr)
 library(data.table)
-setwd("Output/")
 
 ########################
 ### LOAD CENSUS DATA ###
 ########################
 
-cd <- read.csv("census_data_sharedspecies_13May2015.csv",header=T) # cd = census data
+cd <- read.csv("Output/census_data_sharedspecies_13May2015.csv",header=T) # cd = census data
 
 names(cd)[names(cd)=="plot.habitat.replicate"] <- "plot"
 names(cd)[names(cd)=="Year"] <- "year"
@@ -32,7 +31,7 @@ cd$species <- as.factor(as.character(cd$species))
 ### LOAD SEED BANK DATA ###
 ###########################
 
-sb <- read.csv("Seed_Bank_sharedspecies_13May2015.csv",header=T)
+sb <- read.csv("Output/Seed_Bank_sharedspecies_13May2015.csv",header=T)
 
 names(sb)[names(sb)=="viable.seeds"] <- "nlive"
 names(sb)[names(sb)=="non.viable.seeds"] <- "ndead"
@@ -127,7 +126,7 @@ csyp <- ddply(cd, .(species,year,plot), summarize,
 
 ### ADD NGERM=0 
 
-pa <- read.csv("venablePlots_processed_13May2015.csv",header=T)
+pa <- read.csv("Output/venablePlots_processed_13May2015.csv",header=T)
 
 pa_dt <- as.data.table(subset(pa,select=c("year","plot","area")))
 	# add open/shrub, aspect if needed
@@ -320,7 +319,7 @@ cd <- merge(cd,msy_app,by=c("species","year"))
 ### ADD CLIMATE  ###
 ####################
 
-nc <- read.csv("aggregate_rainfall_03May2015.csv",header=T)
+nc <- read.csv("Output/aggregate_rainfall_03May2015.csv",header=T)
 	# nc = national climate
 
 nc$date <- strptime(nc$date,format="%Y-%m-%d")
@@ -383,6 +382,8 @@ cdpos <- subset(cd,seedsint>0)
 ### WRITE DATA ###
 ##################
 
+rootdir <- getwd()
+setwd(paste0(rootdir,"/Output"))
 write.csv(cd,file=paste0("cd_",format(Sys.Date(),"%d%b%Y"),".csv"),row.names=F)
 write.csv(cdpos,file=paste0("cdpos_",format(Sys.Date(),"%d%b%Y"),".csv"),row.names=F)
 write.csv(csy,file=paste0("csy_",format(Sys.Date(),"%d%b%Y"),".csv"),row.names=F)
@@ -392,6 +393,7 @@ write.csv(sb,file=paste0("sb_",format(Sys.Date(),"%d%b%Y"),".csv"),row.names=F)
 write.csv(ssy,file=paste0("ssy_",format(Sys.Date(),"%d%b%Y"),".csv"),row.names=F)
 write.csv(ssyp,file=paste0("ssyp_",format(Sys.Date(),"%d%b%Y"),".csv"),row.names=F)
 write.csv(ncy,file=paste0("ncy_",format(Sys.Date(),"%d%b%Y"),".csv"),row.names=F)
+setwd(rootdir)
 
 #######################
 ### CLEAN WORKSPACE ###

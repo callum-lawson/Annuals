@@ -3,26 +3,20 @@
 ### go, reproduction, and population growth  ###
 ################################################
 
-# maindir <- "D:/Users/calluml/Dropbox/NIOO/"
-# maindir <- "C:/Users/Callum/Dropbox/NIOO/"
-# maindir <- "D:/Dropbox/NIOO/"
-# setwd("/mnt/data/home/NIOO/calluml/Source/")
-
 library(plyr)
 library(reshape2)
 library(truncdist)
 
 ### LOAD DATA 
 
-# setwd(paste0(maindir,"Analyses/Venable"))
-source("venable_figure_functions_23Apr2016.R")
-source("venable_prediction_functions_01Jan2017.R")
+source("Source/figure_functions.R")
+source("Source/prediction_functions.R")
 
-msy <- read.csv("msy_15Jan2016.csv",header=T)
-csyp <- read.csv("csyp_15Jan2016.csv",header=T)
-cd <- read.csv("cd_15Jan2016.csv",header=T)
-cdpos <- read.csv("cdpos_15Jan2016.csv",header=T)
-Tvalues <- read.csv("Tvalues_31Jul2015.csv",header=T)
+msy <- read.csv("Output/msy_15Jan2016.csv",header=T)
+csyp <- read.csv("Output/csyp_15Jan2016.csv",header=T)
+cd <- read.csv("Output/cd_15Jan2016.csv",header=T)
+cdpos <- read.csv("Output/cdpos_15Jan2016.csv",header=T)
+Tvalues <- read.csv("Output/Tvalues_31Jul2015.csv",header=T)
 
 #####################
 ### DEFINE PARAMS ###
@@ -116,8 +110,6 @@ pcr_dens_quant <- exp(r_quant(pcr_dens_lp))
 ### CALIBRATION FIGURES ###
 ###########################
 
-setwd(paste0(maindir,"Analyses/Venable"))
-
 prdat$prpred <- plogis(pr$pi)
 rsdat$seedspred <- rs$mu_r
 
@@ -126,7 +118,7 @@ rsdat$seedspred <- rs$mu_r
 
 prdat$prpos <- 1:nrow(prdat)
 rsdat$rspos <- 1:nrow(rsdat)
-prrsdat <- merge(prdat,rsdat,by=c("plot","year","plot"))
+prrsdat <- merge(prdat,rsdat,by=c("species","year","plot"))
   # multiple other columns with same names but different entries
 
 prrsdat$pcrpred <- with(prrsdat,prpred*seedspred)
@@ -144,7 +136,7 @@ prrsdat0 <- ddply(prrsdat,.(species),summarise,
 
 # Aggregate, then plot...?
 
-pdf(paste0("Pr_Rs_calibration_nozeroes_",format(Sys.Date(),"%d%b%Y"),".pdf"),
+pdf(paste0("Plots/Pr_Rs_calibration_nozeroes_",format(Sys.Date(),"%d%b%Y"),".pdf"),
 		width=9,height=3)
 par(mfrow=c(1,3),mar=c(5,5,2,2),las=1,bty="l")
 
@@ -240,8 +232,6 @@ dev.off()
 ############################
 ### RELATIONSHIP FIGURES ###
 ############################
-
-setwd(paste0(maindir,"Analyses/Venable"))
 
 ### PREDICTIONS AND DATA
 

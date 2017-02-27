@@ -3,20 +3,14 @@
 ### comparing negative binomial and lognormal-Poisson models                 ###
 ################################################################################
 
-# maindir <- "D:/Users/calluml/Dropbox/NIOO/"
-# maindir <- "C:/Users/Callum/Dropbox/NIOO/"
-# maindir <- "D:/Dropbox/NIOO/"
+source("Source/figure_functions.R")
 
-setwd(paste0(maindir,"Analyses/Venable"))
-# setwd("/mnt/data/home/NIOO/calluml/Source/")
-source("venable_figure_functions_10Mar2016.R")
-
-csyp <- read.csv("csyp_15Jan2016.csv",header=T)
-ssyp <- read.csv("ssyp_15Jan2016.csv",header=T)
-msy <- read.csv("msy_15Jan2016.csv",header=T)
+csyp <- read.csv("Output/csyp_15Jan2016.csv",header=T)
+ssyp <- read.csv("Output/ssyp_15Jan2016.csv",header=T)
+msy <- read.csv("Output/msy_15Jan2016.csv",header=T)
 
 library(rstan)
-# library(lme4)
+library(lme4)
 library(parallel)
 library(reshape2)
 library(plyr)
@@ -258,10 +252,6 @@ omod_nhh <- "
 
 ### INITIATE MODEL
 
-# setwd("D:/Users/calluml/Desktop/Stan/")
-# setwd("C:/Users/Callum/Desktop/Stan/")
-setwd("/mnt/data/home/NIOO/calluml/Output/")
-
 gfit_nzhh <- stan(model_code=gmod_nzhh,data=dat_list,chains=0)
 ofit_nhh <- stan(model_code=omod_nhh,data=dat_list,chains=0,warmup=10,iter=20)
 
@@ -289,7 +279,7 @@ g_o_list <- parLapply(CL, 1:nchains, fun=function(i) {  # number of chains
 		iter=1500,
 		pars=c("alpha_mu"), # arbitrary
 		chain_id=i,
-		sample_file=paste0(mod_names[fit_ind[i]],"_chain",chain_ind[i],"_",format(Sys.Date(),"%d%b%Y"),".csv")
+		sample_file=paste0("Output/",mod_names[fit_ind[i]],"_chain",chain_ind[i],"_",format(Sys.Date(),"%d%b%Y"),".csv")
 		)
 	})
 stopCluster(CL)
@@ -303,7 +293,7 @@ clusterExport(cl=CL, c("go_sflist","fit_ind","chain_ind","mod_names"))
 
 go_sflist <- parLapply(CL, 1:nchains, function(i){
   require(rstan)
-  read_stan_csv(paste0(mod_names[fit_ind[i]],"_chain",chain_ind[i],"_28Mar2016.csv"))
+  read_stan_csv(paste0("Output/",mod_names[fit_ind[i]],"_chain",chain_ind[i],"_28Mar2016.csv"))
   })
 
 gfit_nzhh <- sflist2stanfit(go_sflist[1:10])
@@ -398,7 +388,7 @@ goparl <- c(
       )
     )
 
-saveRDS(goparl,paste0("onhh_pars_medians_naspecies_",format(Sys.Date(),"%d%b%Y"),".rds"))
+saveRDS(goparl,paste0("Models/onhh_pars_medians_naspecies_",format(Sys.Date(),"%d%b%Y"),".rds"))
 
 #saveRDS(goparl,paste0("gnzhh_onhh_pars_medians_",format(Sys.Date(),"%d%b%Y"),".rds"))
 

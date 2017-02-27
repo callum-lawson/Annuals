@@ -1,23 +1,18 @@
 # Setup -------------------------------------------------------------------
 
-# maindir <- "D:/Users/calluml/Dropbox/NIOO/"
-# maindir <- "C:/Users/Callum/Dropbox/NIOO/"
-# maindir <- "D:/Dropbox/NIOO/"
-
 library(plyr)
 library(reshape2)
 
 ### Load data
 
-setwd(paste0(maindir,"Analyses/Venable"))
-source("venable_figure_functions_23Apr2016.R")
-source("venable_prediction_functions_06Dec2016.R")
+source("Source/figure_functions.R")
+source("Source/prediction_functions.R")
 
-msy <- read.csv("msy_15Jan2016.csv",header=T)
-csyp <- read.csv("csyp_15Jan2016.csv",header=T)
-cd <- read.csv("cd_15Jan2016.csv",header=T)
-cdpos <- read.csv("cdpos_15Jan2016.csv",header=T)
-Tvalues <- read.csv("Tvalues_31Jul2015.csv",header=T)
+msy <- read.csv("Output/msy_15Jan2016.csv",header=T)
+csyp <- read.csv("Output/csyp_15Jan2016.csv",header=T)
+cd <- read.csv("Output/cd_15Jan2016.csv",header=T)
+cdpos <- read.csv("Output/cdpos_15Jan2016.csv",header=T)
+Tvalues <- read.csv("Output/Tvalues_31Jul2015.csv",header=T)
 
 # Define params -----------------------------------------------------------
 
@@ -266,5 +261,5 @@ medtraits <- data.frame(
 # relative growth rates
 
 saveRDS(medtraits,
-  paste0("medtraits_",format(Sys.Date(),"%d%b%Y"),".rds")
+  paste0("Output/medtraits_",format(Sys.Date(),"%d%b%Y"),".rds")
   )

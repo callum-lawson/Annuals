@@ -43,7 +43,7 @@ preddatplot <- function(plotname,xdat,ydat,sind,xpred,ypred,xptype="vector",pcol
 	# sind = species index
 	# pcol = point colour
 
-	pdf(paste0(plotname,format(Sys.Date(),"%d%b%Y"),".pdf"),
+	pdf(paste0("Plots/",plotname,format(Sys.Date(),"%d%b%Y"),".pdf"),
 		width=plotwidth,height=plotheight)
 	
 	plotsetup()
@@ -99,7 +99,7 @@ calplot <- function(plotname,ym,pcol,xname,yname,...){
 	# pcol = point colour
 	# require(Hmisc)
 
-	pdf(paste0(plotname,format(Sys.Date(),"%d%b%Y"),".pdf"),
+	pdf("Plots/",paste0(plotname,format(Sys.Date(),"%d%b%Y"),".pdf"),
 		width=plotwidth,height=plotheight)
 	
 	plotsetup()
@@ -132,7 +132,7 @@ calplot <- function(plotname,ym,pcol,xname,yname,...){
 ### DATA HISTOGRAM
 
 comphist <- function(plotname,x,y1,y2,xname,...){
-	pdf(paste0(plotname,format(Sys.Date(),"%d%b%Y"),".pdf"),
+	pdf(paste0("Plots/",plotname,format(Sys.Date(),"%d%b%Y"),".pdf"),
 		width=plotwidth,height=plotheight)
 
 	plotsetup()
@@ -184,7 +184,7 @@ lettlab2 <- function(i,myline=-0.5,...){
 
 seriesplot <- function(simname,a,yname,cols,ltys,colledgetext,detledgetext){
 
-	pdf(paste0("timeseries_",simname,"_",format(Sys.Date(),"%d%b%Y"),".pdf"),
+	pdf(paste0("Plots/timeseries_",simname,"_",format(Sys.Date(),"%d%b%Y"),".pdf"),
 			width=plotwidth,height=plotheight)
 	
 		plotsetup()
@@ -214,5 +214,33 @@ seriesplot <- function(simname,a,yname,cols,ltys,colledgetext,detledgetext){
 	
 	}
 
+### BEN BOLKER OVERDISPERSION
 
+overdisp_fun <- function(model) {
+  ## number of variance parameters in 
+  ##   an n-by-n variance-covariance matrix
+  vpars <- function(m) {
+    nrow(m)*(nrow(m)+1)/2
+  }
+  model.df <- sum(sapply(VarCorr(model),vpars))+length(fixef(model))
+  rdf <- nrow(model.frame(model))-model.df
+  rp <- residuals(model,type="pearson")
+  Pearson.chisq <- sum(rp^2)
+  prat <- Pearson.chisq/rdf
+  pval <- pchisq(Pearson.chisq, df=rdf, lower.tail=FALSE)
+  c(chisq=Pearson.chisq,ratio=prat,rdf=rdf,p=pval)
+}
+# but overdisp_fun apparently doens't work in Poisson not >5
 
+### PANEL PLOTS
+
+panel.cor <- function(x, y, digits=2, prefix="", cex.cor, ...){
+  usr <- par("usr"); on.exit(par(usr))
+  par(usr = c(0, 1, 0, 1))
+  r <- cor(x,y)
+  r_abs <- abs(r)
+  txt <- format(c(r, 0.123456789), digits=digits)[1]
+  txt <- paste(prefix, txt, sep="")
+  if(missing(cex.cor)) cex.cor <- 0.8/strwidth(txt)
+  text(0.5, 0.5, txt, cex = cex.cor * r_abs)
+}

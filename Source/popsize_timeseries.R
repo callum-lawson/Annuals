@@ -2,14 +2,9 @@
 ### Plotting population sizes of seedlings and seeds through time  ###
 ######################################################################
 
-# maindir <- "D:/Users/calluml/Dropbox/NIOO/"
-# maindir <- "C:/Users/Callum/Dropbox/NIOO/"
-# maindir <- "D:/Dropbox/NIOO/"
-
 ### LOAD DATA 
 
-setwd(paste0(maindir,"Analyses/Venable"))
-msy <- read.csv("msy_26Aug2015.csv",header=T)
+msy <- read.csv("Output/msy_15Jan2016.csv",header=T)
 
 #####################
 ### DEFINE PARAMS ###
@@ -24,7 +19,7 @@ nyear <- length(unique(msy$year))
 ### PLOT GRAPHS ###
 ###################
 
-pdf(paste0("pop_timeseries_",format(Sys.Date(),"%d%b%Y"),".pdf"),
+pdf(paste0("Plots/pop_timeseries_",format(Sys.Date(),"%d%b%Y"),".pdf"),
 	width=20,height=16)
 	
 par(mfrow=c(6,4),mar=c(2.5,2.5,4,2.5),oma=c(4,4,1,1),las=1,bty="l")

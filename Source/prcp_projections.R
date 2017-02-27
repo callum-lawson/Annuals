@@ -2,10 +2,6 @@
 ### Running mean of prcp values ###
 ###################################
 
-# maindir <- "D:/Users/calluml/Dropbox/NIOO/"
-# maindir <- "C:/Users/Callum/Dropbox/NIOO/"
-# maindir <- "D:/Dropbox/NIOO/"
-
 library(reshape2)
 library(tidyr)
 library(plyr)
@@ -13,7 +9,8 @@ library(zoo)
 
 # Load Data ---------------------------------------------------------------
 
-# setwd(paste0(maindir,"Data/Venable/Tucson_prcp_monthly/bcsd5"))
+rootdir <- getwd()
+setwd(paste0(rootdir,"/Data/Tucson_prcp_monthly/bcsd5"))
 
 allfiles <- list.files()
 pfiles <- allfiles[grep(".csv",allfiles)]
@@ -121,15 +118,13 @@ myhist(ppm$mgam[ppm$yearcat=="100"])
 myhist(ppm$mgcv[ppm$yearcat=="50"])
 myhist(ppm$mgcv[ppm$yearcat=="100"])
 
-# setwd(paste0(maindir,"Analyses/Venable"))
-write.csv(ppma,file=paste0("prcp_projection_summaries_",format(Sys.Date(),"%d%b%Y"),".csv"),
+setwd(rootdir)
+write.csv(ppma,file=paste0("Output/prcp_projection_summaries_",format(Sys.Date(),"%d%b%Y"),".csv"),
   row.names=F)
 
 # Observed climate --------------------------------------------------------
 
-# setwd(paste0(maindir,"Analyses/Venable"))
-
-ncy <- read.csv("ncy_15Jan2016.csv",header=T)
+ncy <- read.csv("Output/ncy_15Jan2016.csv",header=T)
 ncy <- subset(ncy,is.na(seasprcp)==F)
 	# removes first value (missing because no previous winter)
   # prcp values given in total mm (NOT 10ths of a mm) over whole period
