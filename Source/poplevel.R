@@ -2,10 +2,6 @@
 ### Population-level models for Pr, Rs, G, and O ###
 ####################################################
 
-# maindir <- "D:/Users/calluml/Dropbox/NIOO/"
-# maindir <- "C:/Users/Callum/Dropbox/NIOO/"
-# maindir <- "D:/Dropbox/NIOO/"
-
 library(plyr)
 library(reshape2)
 library(lme4)
@@ -13,14 +9,16 @@ library(rstan)
 library(parallel)
 library(matrixStats)
 
-setwd(paste0(maindir,"Analyses/Venable"))
-# setwd("/mnt/data/home/NIOO/calluml/Source/")
-source("venable_figure_functions_10Mar2016.R")
+source("Source/figure_functions.R")
 
-msy <- read.csv("msy_seedests_28Mar2016.csv",header=T)
-# no sds attached yet
-Tvalues <- read.csv("Tvalues_20Jun2015.csv",header=T)
-obserr <- read.csv("observation_error_byspecies_28Mar2016.csv",header=T)
+msy <- read.csv("Output/msy_seedests_18Jan2017.csv",header=T)
+
+Tvalues <- read.csv("Output/Tvalues_31Jul2015.csv",header=T)
+obserr <- read.csv("Output/observation_error_byspecies_23Jan2017.csv",header=T)
+
+#obserrold <- read.csv("Output/observation_error_byspecies_28Mar2016.csv",header=T)
+#plot(log(obserr$sig_n),log(obserrold$ssd))
+  # errors related but not identical
 
 nspecies <- nlevels(msy$species)
 spvals <- levels(msy$species)
@@ -70,9 +68,9 @@ dl$larea_g <- log(msy90$area_g * tau_s)
 dl$larea_o <- log(msy90$area_o * tau_s)
 dl$larea_n <- log(msy90pos$area_n * tau_s)
 
-dl$sdll_g <- msy90$gsd
-dl$sdll_o <- msy90$osd
-dl$sdll_n <- msy90pos$ssd 
+# dl$sdll_g <- msy90$gsd
+# dl$sdll_o <- msy90$osd
+dl$sdll_n <- msy90pos$sig_n
 	# could also be vectors with one for each
 
 dl$T1 <- with(Tvalues,duration[period=="T1"])
@@ -309,16 +307,14 @@ go_mod <- "
     }
 	"
 
-# setwd("/mnt/data/home/NIOO/calluml/Output/")
-
-rstan_options(auto_write = TRUE)
-options(mc.cores = parallel::detectCores())
+# rstan_options(auto_write = TRUE)
+# options(mc.cores = parallel::detectCores())
 go_fit <- stan(model_code=go_mod,data=dl,chains=0)
 
 # WINDOWS
 nchains <- 10
 
-CL = makeCluster(nchains, outfile=paste0("gofit_poplevel_lnpoistdist_BH_naspecies_diffnu_noerr_noGDD_loglik_",format(Sys.Date(),"%d%b%Y"),".log"))
+CL = makeCluster(nchains, outfile=paste0("Models/gofit_poplevel_lnpoistdist_BH_naspecies_diffnu_noerr_noGDD_loglik_",format(Sys.Date(),"%d%b%Y"),".log"))
 clusterExport(cl=CL, c("dl","go_fit")) 
 go_sflist <- parLapply(CL, 1:nchains, fun = function(cid) {  # number of chains
   require(rstan)
@@ -328,15 +324,13 @@ go_sflist <- parLapply(CL, 1:nchains, fun = function(cid) {  # number of chains
        warmup=2000,
        iter=3000,
        pars=c("alpha_G_mu","beta_Gz_mu"),
-       sample_file=paste0("go_fits_chain",cid,"_poplevel_lnpoistdist_BH_naspecies_diffnu_noerr_noGDD_loglik_",format(Sys.Date(),"%d%b%Y"),".csv"),
+       sample_file=paste0("Models/go_fits_chain",cid,"_poplevel_lnpoistdist_BH_naspecies_diffnu_noerr_noGDD_loglik_",format(Sys.Date(),"%d%b%Y"),".csv"),
        chain_id=cid
   )
 })
 stopCluster(CL)
 
 ### READ IN
-
-# setwd("/mnt/data/home/NIOO/calluml/Output/")
 
 finchains <- 1:nchains
 
@@ -347,13 +341,13 @@ clusterExport(cl=CL, c("go_sflist","finchains"))
 
 go_sflist <- parLapply(CL, 1:nchains, function(i){
   require(rstan)
-  read_stan_csv(paste0("go_fits_chain",finchains[i],"_poplevel_lnpoistdist_BH_naspecies_diffnu_noerr_noGDD_loglik_05Dec2016.csv"))
+  read_stan_csv(paste0("Models/go_fits_chain",finchains[i],"_poplevel_lnpoistdist_BH_naspecies_diffnu_noerr_noGDD_loglik_05Dec2016.csv"))
   })
 
 go_fit <- sflist2stanfit(go_sflist) 
 
 traceplot(go_fit,pars=c("alpha_G_mu","beta_Gz_mu","alpha_m_mu","beta_m_mu"),nr=2,nc=3)
-print(go_fit,pars=c("alpha_G_mu","beta_Gz_mu",,"alpha_m_mu","beta_m_mu","nu_g","nu_o"))
+print(go_fit,pars=c("alpha_G_mu","beta_Gz_mu","alpha_m_mu","beta_m_mu","nu_g","nu_o"))
 print(go_fit,pars=c("beta_Gd"))
 print(go_fit,pars=c("lp__"))
 
@@ -422,7 +416,7 @@ curve(dnorm(x,0,sig_m_eps),col="red",add=T)
 tgreen <- rgb(red=0,green=1,blue=0,alpha=0.3,maxColorValue=1)
 tblue <- rgb(red=0,green=0,blue=1,alpha=0.3,maxColorValue=1)
 
-pdf(paste0("obserror_hists_",format(Sys.Date(),"%d%b%Y"),".pdf"),
+pdf(paste0("Plots/obserror_hists_",format(Sys.Date(),"%d%b%Y"),".pdf"),
   width=plotwidth,height=plotheight)
 par(mfrow=c(6,4))
 for(i in 1:nspecies){
@@ -499,7 +493,7 @@ osimmat[] <- rpois(ntot,
 
 # make distribution of residuals too
 
-pdf(paste0("hists_lnpois_BH_naspecies_diffnu_noerr_GDD_loglik_",format(Sys.Date(),"%d%b%Y"),".pdf"),
+pdf(paste0("Plots/hists_lnpois_BH_naspecies_diffnu_noerr_GDD_loglik_",format(Sys.Date(),"%d%b%Y"),".pdf"),
   width=12,height=8)
 par(mfrow=c(2,3),mar=c(4.5,4.5,1.5,1.5))
 mybreaks <- hist(msy90$germdhat,breaks=50,prob=T,density=20,xlab=expression(N[g]),main="")
@@ -543,8 +537,7 @@ for(i in 1:length(gopars)){
 goparl$loglam_g_marg <- with(gopars,colMedians(loglam_g-eps_g))
 goparl$loglam_o_marg <- with(gopars,colMedians(loglam_o-eps_o))
 
-setwd("/mnt/data/home/NIOO/calluml/Source/")
 saveRDS(goparl,
-  paste0("go_pars_tdistpois_naspecies_noerr_noGDD_loglik_BH_",format(Sys.Date(),"%d%b%Y"),".rds")
+  paste0("Output/go_pars_tdistpois_naspecies_noerr_noGDD_loglik_BH_",format(Sys.Date(),"%d%b%Y"),".rds")
   )
 
