@@ -2,6 +2,10 @@
 ### Population-level models for Pr, Rs, G, and O ###
 ####################################################
 
+# TODO:
+# - Single entry of model name
+# - Stan code as separate file?
+
 library(plyr)
 library(reshape2)
 library(lme4)
@@ -314,6 +318,7 @@ go_fit <- stan(model_code=go_mod,data=dl,chains=0)
 # WINDOWS
 nchains <- 10
 
+system.time({
 CL = makeCluster(nchains, outfile=paste0("Models/gofit_poplevel_lnpoistdist_BH_naspecies_diffnu_noerr_noGDD_loglik_",format(Sys.Date(),"%d%b%Y"),".log"))
 clusterExport(cl=CL, c("dl","go_fit")) 
 go_sflist <- parLapply(CL, 1:nchains, fun = function(cid) {  # number of chains
@@ -329,6 +334,7 @@ go_sflist <- parLapply(CL, 1:nchains, fun = function(cid) {  # number of chains
   )
 })
 stopCluster(CL)
+})
 
 ### READ IN
 
@@ -341,22 +347,16 @@ clusterExport(cl=CL, c("go_sflist","finchains"))
 
 go_sflist <- parLapply(CL, 1:nchains, function(i){
   require(rstan)
-  read_stan_csv(paste0("Models/go_fits_chain",finchains[i],"_poplevel_lnpoistdist_BH_naspecies_diffnu_noerr_noGDD_loglik_05Dec2016.csv"))
+  read_stan_csv(paste0("Models/go_fits_chain",finchains[i],"_poplevel_lnpoistdist_BH_naspecies_diffnu_noerr_noGDD_loglik_28Feb2017.csv"))
   })
 
 go_fit <- sflist2stanfit(go_sflist) 
 
 traceplot(go_fit,pars=c("alpha_G_mu","beta_Gz_mu","alpha_m_mu","beta_m_mu"),nr=2,nc=3)
-print(go_fit,pars=c("alpha_G_mu","beta_Gz_mu","alpha_m_mu","beta_m_mu","nu_g","nu_o"))
-print(go_fit,pars=c("beta_Gd"))
-print(go_fit,pars=c("lp__"))
-
-gopars <- extract(go_fit)
-gonames <- names(gopars)
-goshow <- sapply(gopars,function(x) (nrow(msy90) %in% dim(x))==F)
-print(go_fit,pars=gonames[goshow])
-traceplot(go_fit,c("sig_G_alpha","sig_Gz_beta","sig_Gd_beta","sig_m_alpha","sig_m_beta","sig_g_sig","sig_o_sig"))
-  # sig_Gd_beta quite autocorrelated
+traceplot(go_fit,pars=c("alpha_G"))
+traceplot(go_fit,pars=c("beta_Gz"))
+traceplot(go_fit,pars=c("alpha_m"))
+traceplot(go_fit,pars=c("beta_m"))
 
 # Likelihood
 
@@ -518,9 +518,6 @@ curve(dgamma(x,shape=2,rate=0.1),xlim=c(0,20))
 ### SAVE PARS ###
 #################
 
-# lapply(gopars,dim)
-# lapply(goparl,dim)
-
 gopars <- extract(go_fit)
 
 goparl <- as.list(rep(NA,length(gopars)))
@@ -538,6 +535,6 @@ goparl$loglam_g_marg <- with(gopars,colMedians(loglam_g-eps_g))
 goparl$loglam_o_marg <- with(gopars,colMedians(loglam_o-eps_o))
 
 saveRDS(goparl,
-  paste0("Output/go_pars_tdistpois_naspecies_noerr_noGDD_loglik_BH_",format(Sys.Date(),"%d%b%Y"),".rds")
+  paste0("Models/go_pars_tdistpois_naspecies_noerr_noGDD_loglik_BH_",format(Sys.Date(),"%d%b%Y"),".rds")
   )
 

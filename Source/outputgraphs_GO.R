@@ -9,10 +9,10 @@ library(reshape2)
 source("Source/figure_functions.R")
 source("Source/prediction_functions.R")
 
-msy <- read.csv("Output/msy_seedests_28Mar2016.csv",header=T)
-# no sds attached yet
+msy <- read.csv("Output/msy_seedests_18Jan2017.csv",header=T)
+
 Tvalues <- read.csv("Output/Tvalues_31Jul2015.csv",header=T)
-obserr <- read.csv("Output/observation_error_byspecies_28Mar2016.csv",header=T)
+obserr <- read.csv("Output/observation_error_byspecies_23Jan2017.csv",header=T)
 
 nspecies <- nlevels(msy$species)
 spvals <- levels(msy$species)
@@ -21,8 +21,7 @@ spvals <- levels(msy$species)
 ### ADD DATA ###
 ################
 
-# Taken from:
-# venable_Stan_poplevel_binomialG_tdistbpar_normndat_allm1prior_16Feb2016
+# Taken from poplevel, 28 Feb 2017
 
 tau_s <- 100		# adjustment for seed density
 tau_p <- 100		# adjustment for rainfall
@@ -32,12 +31,12 @@ msy$year_num <- as.numeric(as.character(msy$year))
 msyerr <- merge(msy,obserr,by="species")
 exlsp <- with(subset(msy,year<2001),
   names(which(tapply(totlive,species,sum,na.rm=T)<5))
-  )
+)
 msy90 <- subset(msyerr,
   ((species %in% exlsp)==T & year_num>=2001)
   |
-  ((species %in% exlsp)==F & year_num>=1990)
-  )
+    ((species %in% exlsp)==F & year_num>=1990)
+)
 msy90$year <- as.factor(as.character(msy90$year))
 msy90pos <- subset(msy90,isseed_hat)
 
@@ -66,20 +65,10 @@ dl$larea_g <- log(msy90$area_g * tau_s)
 dl$larea_o <- log(msy90$area_o * tau_s)
 dl$larea_n <- log(msy90pos$area_n * tau_s)
 
-dl$larea_go <- with(dl, larea_g - larea_o)
-
-dl$totlivemult <- with(dl, round(totlive*exp(larea_go),0))
-dl$totboth <- with(dl,totgerm+totlivemult)
-# area for both = area_g
-
-dl$totboth_p <- with(dl,totboth[totboth>0])
-dl$totgerm_p <- with(dl,totgerm[totboth>0])
-dl$M <- length(dl$totboth_p)
-dl$mpos <- which(dl$totboth>0)
-
-dl$sig_b <- msy90$sig_b 
-dl$nu_b <- msy90$nu_b 
-dl$sig_n <- msy90pos$sig_n 
+# dl$sdll_g <- msy90$gsd
+# dl$sdll_o <- msy90$osd
+dl$sdll_n <- msy90pos$sig_n
+# could also be vectors with one for each
 
 dl$T1 <- with(Tvalues,duration[period=="T1"])
 dl$T2 <- with(Tvalues,duration[period=="T2"])
