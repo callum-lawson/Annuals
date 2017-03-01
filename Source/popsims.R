@@ -37,8 +37,14 @@ tau_p <- 100	# adjustment for rainfall
 
 ### CLIMATE
 
+# DATA
 pp <- read.csv("Output/prcp_projection_summaries_08Apr2016.csv",header=T)
-pps <- subset(pp,scenario %in% c(45,60))
+mpam <- with(pp, median[measure=="mpam" & scenario==60 & yearcat==100])
+mpcv <- with(pp, median[measure=="mpcv" & scenario==60 & yearcat==100])
+  # using projected season precipitation for germination season precipitation change
+  # (both very similar)
+  # year = 2100
+  # Representative Concentration Pathway 6.0
 
 ncy <- read.csv("Output/ncy_15Jan2016.csv",header=T)
 ncy <- subset(ncy,is.na(seasprcp)==F)
@@ -53,8 +59,7 @@ wcv <- sd(ncy$germprcp)/wam
 ### MODEL PARAMS (already permuted)
 
 pl <- list(
-	go = readRDS("Models/go_pars_tdistpois_naspecies_noerr_noGDD_loglik_BH_05Dec2016.rds"),
-	  # wrong parameters - shouldn't be GDD?
+	go = readRDS("Models/go_pars_tdistpois_naspecies_noerr_noGDD_loglik_BH_01Mar2017.rds"),
 	gs = readRDS("Models/gnzhh_onhh_pars_medians_26Oct2015.rds"),
 		# gs = g site level
 		# source script: venable_Stan_GO_descriptive_gnzhh_onhh_26Oct2015
@@ -68,30 +73,21 @@ pl <- list(
 ### SIMS ###
 ############
 
-	# 1000 per 0.1m^2
+# 1000 per 0.1m^2
 
-# maml <- as.list(c(1,0.9,1,0.9))
-# mcvl <- as.list(c(1,1,1.5,1.5))
-
-# maml <- as.list(rep(seq(1,0.8,length.out=3),times=3))
-# mcvl <- as.list(rep(seq(1,1.2,length.out=3),each=3))
-
-# with(pps,range(median[measure=="mpam"]))
-# with(pps,range(median[measure=="mpcv"]))
-
-maml <- as.list(c(1,1,0.8,1,0.8))
-mcvl <- as.list(c(0,1,1,1.2,1.2))
+maml <- as.list(c(1,1,mpam,1,mpam))
+mcvl <- as.list(c(0,1,1,mpcv,mpcv))
 
 nclim <- length(maml)
-cpc <- 5		# CORES per CLIMATE
+cpc <- 2 # CORES per CLIMATE
 ncores <- nclim*cpc
 mpos <- rep(1:nclim,each=cpc)
 
 nstart <- rep(10000,nspecies)
-ni <- 500 # 50 # iterations PER CORE
-nt <- 50 # 20 
+ni <- 5 # 500 - will need 2500 # iterations PER CORE
+nt <- 50
 nj <- 22
-nk <- 10000 # 2500 # 500 # 250
+nk <- 10000
 
 # ni and nk must be >1
 

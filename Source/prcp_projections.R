@@ -91,6 +91,7 @@ pps <- ddply(ppy, .(yearcat,model,scenario), summarise,
   gam = mean(germprcp) ,
   gcv = sd(germprcp)/gam
   )
+  # p -> seasprcp, g -> germprcp
 
 ppm = ddply(pps, .(model,scenario), summarise,
   yearcat=yearcat,
