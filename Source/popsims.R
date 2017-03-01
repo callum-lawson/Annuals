@@ -84,7 +84,8 @@ ncores <- nclim*cpc
 mpos <- rep(1:nclim,each=cpc)
 
 nstart <- rep(10000,nspecies)
-ni <- 5 # 500 - will need 2500 # iterations PER CORE
+ni <- 500 # iterations PER CORE
+  # total = 1000 per climate
 nt <- 50
 nj <- 22
 nk <- 10000
@@ -98,7 +99,13 @@ for(i in 1:ncores){
   itersetl[[i]] <- sample(1:maxiter,ni,replace=F)
   }
 
-cnames_unique <- gsub("\\.","",paste0("mu",maml,"_cv",mcvl))
+simp <- function(l){
+  lapply(l,function(x){
+    signif(x,2)
+  })
+}
+  
+cnames_unique <- gsub("\\.","",paste0("mu",simp(maml),"_cv",simp(mcvl)))
 cnames_bycore <- paste0(rep(cnames_unique,each=cpc),"_s",rep(1:cpc,times=nclim))
 cnames_merged <- paste(cnames_unique,collapse="_")
 
@@ -140,7 +147,7 @@ stopCluster(CL)
 # stopCluster(CL)
 psl <- as.list(rep(NA,ncores))
 for(n in 1:ncores){
-  psl[[n]] <- readRDS(paste0("Output/",cnames_bycore[n],"_22Dec2016.rds"))
+  psl[[n]] <- readRDS(paste0("Sims/",cnames_bycore[n],"_01Mar2017.rds"))
   }
 names(psl) <- cnames_bycore
 
