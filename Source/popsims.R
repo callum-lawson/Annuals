@@ -97,7 +97,8 @@ maxiter <- 10000 # max number of itertions in PARAMETERISATION
 itersetl <- as.list(rep(NA,ncores))
 for(i in 1:ncores){
   itersetl[[i]] <- sample(1:maxiter,ni,replace=F)
-  }
+}
+# edit this to pair params between different clim scenarios?
 
 simp <- function(l){
   lapply(l,function(x){
@@ -127,7 +128,7 @@ parLapply(CL, 1:ncores, function(n){
 		nstart=nstart,zam=zam*mam,zcv=zcv*mcv,
 		wam=wam*mam,wcv=wcv*mcv,rho=0.82,
 		Tvalues=Tvalues,tau_p=10^2,tau_d=10^2,tau_s=10^2,
-		iterset=itersetl[[mpos[n]]],
+		iterset=itersetl[[mpos[n]]], # should be just "n"?
 		savefile=paste0(cnames_bycore[n])
 		)
 	})
@@ -398,6 +399,46 @@ lines(density(tau_p*exp(psls$mu1_cv12$z)),col="blue")
 lines(density(tau_p*exp(psls$mu08_cv12$z)),col="purple")
 abline(v=tau_p*exp(psls$mu1_cv0$z[1]),col="green",lty=2)
 dev.off()
+
+#########################################
+### OPTIMAL PARAMETERS WITHIN SPECIES ###
+#########################################
+
+alpha_G <- beta_Gz <- list()
+alpha_pr <- beta_m <- list()
+for(i in 1:nclim){
+  iters <- rep(itersetl[[i]],2) # unlist(itersetl[mpos==i])
+  alpha_G[[i]] <- pl$go$alpha_G[iters,]
+  beta_Gz[[i]] <- pl$go$beta_Gz[iters,]
+  beta_m[[i]] <- pl$go$beta_m[iters,]
+  alpha_pr[[i]] <- pl$pr$beta_p[iters,,1]
+}
+
+climno <- which(cnames_unique=="mu1_cv1")
+# mymedian <- apply(log(psls[[climno]]$ns),c(1,3),median)
+mymedian <- log(psls[[climno]]$ns[,tpos,])
+# mymedian <- apply(log(psls[[climno]]$G),c(1,3),median)
+  # checks match - higher G results from higher alpha_G
+myal <- alpha_G[[climno]]
+mybet <- beta_Gz[[climno]]
+mypr <- alpha_pr[[climno]]
+mybetm <- beta_m[[climno]]
+
+
+my_iota_mu <- -myal/mybet
+my_iota_sig <- pi^2/(3*mybet^2)
+# from Godfray & Rees 2002
+
+cs <- 15 # 19
+plot(mymedian[,cs]~myal[,cs])
+plot(mymedian[,cs]~mybet[,cs])
+plot(mymedian[,cs]~mybetm[,cs])
+plot(mymedian[,cs]~mypr[,cs])
+
+plot(mymedian[,cs]~my_iota_mu[,cs],xlim=c(-0.5,1))
+lines(supsmu(my_iota_mu[,cs],mymedian[,cs]),col="red")
+plot(mymedian[,cs]~log(my_iota_sig[,cs]))
+lines(supsmu(log(my_iota_sig[,cs]),mymedian[,cs]),col="red")
 
 #######################
 ### OSLO TALK PLOTS ###
