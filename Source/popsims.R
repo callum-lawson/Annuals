@@ -313,37 +313,6 @@ scennew <- c("mu08_cv1","mu1_cv12","mu08_cv12")
 tpos <- 15 # averaging over range of z due to different iterations
 keepsp <- (spvals %in% c("plpa","vuoc"))==F
 
-relchange <- function(a,scenbase,scennew,tpos=15,keepsp){
-  sposbase <- match(scenbase,cnames_unique)
-  sposnew <- match(scennew,cnames_unique)
-  nnew <- length(scennew)
-  nkspecies <- sum(keepsp)
-  anew <- matrix(nr=nnew,nc=nkspecies,
-    dimnames=list(cnames_unique[sposnew],1:nkspecies)
-    )
-  for (i in 1:nnew){
-    anew[i,] <- a[sposnew[i],2,tpos,keepsp] - a[sposbase,2,tpos,keepsp]
-    }
-  return(t(anew))
-    # 2 because median (ignoring other quantiles)
-  # gives matrix; could add functions to convert to dataframe
-  }
-
-pairplot <- function(plotname,a,npdim,w=8,h=8){
-  pdf(paste0("Plots/",plotname,format(Sys.Date(),"%d%b%Y"),".pdf"),width=w,height=h)
-  # npdim = new page dim = whcih dim gets new page each time?
-  npdim_n <- dim(a)[npdim]
-  for(i in 1:npdim_n){
-    if(npdim==2){
-      pairs(a[,i,],lower.panel=panel.cor,pch="+",main=dimnames(a)[[npdim]][i])
-    }
-    if(npdim==3){
-      pairs(a[,,i],lower.panel=panel.cor,pch="+",main=dimnames(a)[[npdim]][i])
-    }
-  }
-  dev.off()
-  }
-
 qal <- list(ns=q_nsf,G=q_Gf,ng=q_ngf,Y=q_Yf,Ye=q_Yef,nn=q_nnf,Sn=q_Snf)
 
 rcl <- lapply(qal,relchange,scenbase=scenbase,scennew=scennew,keepsp=keepsp)
