@@ -309,7 +309,7 @@ with(psls$mu1_cv1,matplot(t(ns[egi,,17]),type="l"))
 #########################################
 
 scenbase <- "mu1_cv1"
-scennew <- c("mu08_cv1","mu1_cv12","mu08_cv12")
+scennew <- c("mu081_cv1", "mu1_cv12", "mu081_cv12")
 tpos <- 15 # averaging over range of z due to different iterations
 keepsp <- (spvals %in% c("plpa","vuoc"))==F
 
@@ -332,7 +332,7 @@ cca[] <- unlist(ccl)
 mvint <- cca
 mvint[] <- NA
 dimnames(mvint)[[2]] <- "mvint"
-mvint[] <- rca[,"mu08_cv12",] - (rca[,"mu08_cv1",] + rca[,"mu1_cv12",])
+mvint[] <- rca[,"mu081_cv12",] - (rca[,"mu081_cv1",] + rca[,"mu1_cv12",])
   # filling-in only works because mvint has 1 column
 rcaa <- abind(rca,cca,mvint,along=2)
 
@@ -346,7 +346,7 @@ rpna <- relchange(qlogis(pna),scenbase="mu1_cv0",scennew="mu1_cv1",keepsp=keepsp
 
 ### Population traits
 
-medtraits <- readRDS("Output/medtraits_07Dec2016.rds") # check that most recent
+medtraits <- readRDS("Output/medtraits_07Dec2016.rds") # *check that most recent*
 
 mta <- medtraits[keepsp,]
 G_full <- q_Gf["mu1_cv1",2,tpos,] 
