@@ -84,7 +84,7 @@ ncores <- nclim*cpc
 mpos <- rep(1:nclim,each=cpc)
 
 nstart <- rep(10000,nspecies)
-ni <- 500 # iterations PER CORE
+ni <- 5 # TRIAL # 500 # iterations PER CORE
   # total = 1000 per climate
 nt <- 50
 nj <- 22
@@ -94,11 +94,10 @@ nk <- 10000
 
 set.seed(1)
 maxiter <- 10000 # max number of itertions in PARAMETERISATION
-itersetl <- as.list(rep(NA,ncores))
-for(i in 1:ncores){
-  itersetl[[i]] <- sample(1:maxiter,ni,replace=F)
-}
-# edit this to pair params between different clim scenarios?
+cpos <- rep(1:cpc,times=nclim)
+cipos <- rep(1:cpc,each=ni)
+itersetl <- split(1:(ni*cpc),cipos)
+  # requires that ni < maxiter
 
 simp <- function(l){
   lapply(l,function(x){
@@ -117,7 +116,7 @@ system.time({
 CL = makeCluster(ncores)
 clusterExport(cl=CL, c("popsim","pl",
   "zam","zcv","wam","wcv",
-  "mpos","maml","mcvl",
+  "mpos","maml","mcvl","cpos",
   "nstart","ni","nt","nj","nk",
   "Tvalues","itersetl","cnames_bycore"
   )) 
@@ -128,7 +127,7 @@ parLapply(CL, 1:ncores, function(n){
 		nstart=nstart,zam=zam*mam,zcv=zcv*mcv,
 		wam=wam*mam,wcv=wcv*mcv,rho=0.82,
 		Tvalues=Tvalues,tau_p=10^2,tau_d=10^2,tau_s=10^2,
-		iterset=itersetl[[mpos[n]]], # should be just "n"?
+		iterset=itersetl[[cpos[n]]],
 		savefile=paste0(cnames_bycore[n])
 		)
 	})
