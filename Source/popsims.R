@@ -408,16 +408,21 @@ withinplot(pl$go,psls,"alpha_G","ns",simtrans_fun=log)
 withinplot(pl$go,psls,"beta_Gz","ns",simtrans_fun=log)
 withinplot(pl$go,psls,"alpha_m","ns",simtrans_fun=log)
 withinplot(pl$go,psls,"beta_m","ns",simtrans_fun=log)
+
 pl$pr$alpha_p <- pl$pr$beta_p[,,1]
+pl$pr$beta_d_p <- pl$pr$beta_p[,,4]
 withinplot(pl$pr,psls,"alpha_p","ns",simtrans_fun=log)
+withinplot(pl$pr,psls,"beta_d_p","ns",simtrans_fun=log)
 
 pl$go$iota_mu <- with(pl$go, -alpha_G/beta_Gz )
 pl$go$iota_sig <- with(pl$go, pi^2/(3*beta_Gz^2) )
 # from Godfray & Rees 2002
 
+pl$go$rho <- with(pl$go, alpha_G + beta_Gz*log(zam/tau_p))
+
 withinplot(pl$go,psls,"iota_mu","ns",simtrans_fun=log)
 withinplot(pl$go,psls,"iota_sig","ns",partrans_fun=log,simtrans_fun=log)
-
+withinplot(pl$go,psls,"rho","ns",simtrans_fun=log)
 
 #######################
 ### OSLO TALK PLOTS ###
