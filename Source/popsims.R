@@ -404,62 +404,6 @@ dev.off()
 ### OPTIMAL PARAMETERS WITHIN SPECIES ###
 #########################################
 
-ccur <- which(cnames_unique=="mu1_cv1")
-
-iters <- rep(itersetl[[ccur]],2) # unlist(itersetl[mpos==i])
-alpha_G <- pl$go$alpha_G[iters,]
-beta_Gz <- pl$go$beta_Gz[iters,]
-alpha_m <- pl$go$beta_m[iters,]
-beta_m <- pl$go$alpha_m[iters,]
-alpha_p <- pl$pr$beta_p[iters,,1]
-  # may need to change iters extracted when change sim code
-
-ns_t <- log(psls[[ccur]]$ns[,tpos,])
-G_med <- apply(log(psls[[ccur]]$G),c(1,3),median)
-  # checks match; higher G results from higher alpha_G
-
-iota_mu <- -alpha_G/beta_Gz
-iota_sig <- pi^2/(3*beta_Gz^2)
-# from Godfray & Rees 2002
-
-withinplot <- function(parlist,simlist,parname,simname,
-  simtrans_fun=NULL,agg_fun=NULL,smooth=T,...){
-  
-  pdf(paste0("Plots/",parname,"_",simname,"_",format(Sys.Date(),"%d%b%Y"),".pdf"),
-    width=plotwidth,height=plotheight)
-  
-  for(i in 1:nclim){
-  
-    iters <- rep(itersetl[[i]],2)
-    xmat <- parlist[[parname]][iters,]
-    if(is.null(simtrans_fun)) yarr <- simlist[[i]][[simname]]
-    else yarr <- simtrans_fun(simlist[[i]][[simname]])
-    
-    if(is.null(agg_fun)) ymat <- yarr[,tpos,]
-    else ymat <- apply(yarr,c(1,3),agg_fun)
-      
-    plotsetup()
-    
-    for(j in 1:nspecies){
-      
-      plot(ymat[,j]~xmat[,j],...)
-      if(smooth==T) lines(mysupsmu(xmat[,j],ymat[,j]),col="red")
-      
-      lettlab(j)
-      
-      if(j %in% 19:23) addxlab(parname) 
-      if(j %in% seq(1,23,4)) addylab(simname) 
-      
-    }
-    
-    addledge(ltext=cnames_unique[i])
-    
-  }
-  
-  dev.off()
-  
-}
-
 withinplot(pl$go,psls,"alpha_G","ns",simtrans_fun=log)
 withinplot(pl$go,psls,"beta_Gz","ns",simtrans_fun=log)
 withinplot(pl$go,psls,"alpha_m","ns",simtrans_fun=log)
@@ -467,12 +411,13 @@ withinplot(pl$go,psls,"beta_m","ns",simtrans_fun=log)
 pl$pr$alpha_p <- pl$pr$beta_p[,,1]
 withinplot(pl$pr,psls,"alpha_p","ns",simtrans_fun=log)
 
-withinplot(pl$go,psls,"alpha_G","G",simtrans_fun=qlogis,agg_fun=median)
+pl$go$iota_mu <- with(pl$go, -alpha_G/beta_Gz )
+pl$go$iota_sig <- with(pl$go, pi^2/(3*beta_Gz^2) )
+# from Godfray & Rees 2002
 
-plot(mymedian[,cs]~my_iota_mu[,cs],xlim=c(-0.5,1))
-lines(supsmu(my_iota_mu[,cs],mymedian[,cs]),col="red")
-plot(mymedian[,cs]~log(my_iota_sig[,cs]))
-lines(supsmu(log(my_iota_sig[,cs]),mymedian[,cs]),col="red")
+withinplot(pl$go,psls,"iota_mu","ns",simtrans_fun=log)
+withinplot(pl$go,psls,"iota_sig","ns",partrans_fun=log,simtrans_fun=log)
+
 
 #######################
 ### OSLO TALK PLOTS ###

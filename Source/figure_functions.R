@@ -246,6 +246,48 @@ pairplot <- function(plotname,a,npdim,w=8,h=8){
   dev.off()
 }
 
+withinplot <- function(parlist,simlist,parname,simname,
+  partrans_fun=NULL,simtrans_fun=NULL,
+  agg_fun=NULL,smooth=T,...){
+  
+  pdf(paste0("Plots/",parname,"_",simname,"_",format(Sys.Date(),"%d%b%Y"),".pdf"),
+    width=plotwidth,height=plotheight)
+  
+  for(i in 1:nclim){
+    
+    iters <- rep(itersetl[[i]],2)   
+    # may need to change iters extracted when change sim code
+    if(is.null(partrans_fun)) xmat <- parlist[[parname]][iters,]
+    else xmat <- partrans_fun( parlist[[parname]][iters,] )
+    
+    if(is.null(simtrans_fun)) yarr <- simlist[[i]][[simname]]
+    else yarr <- simtrans_fun(simlist[[i]][[simname]])
+    
+    if(is.null(agg_fun)) ymat <- yarr[,tpos,]
+    else ymat <- apply(yarr,c(1,3),agg_fun)
+    
+    plotsetup()
+    
+    for(j in 1:nspecies){
+      
+      plot(ymat[,j]~xmat[,j],...)
+      if(smooth==T) lines(mysupsmu(xmat[,j],ymat[,j]),col="red")
+      
+      lettlab(j)
+      
+      if(j %in% 19:23) addxlab(parname) 
+      if(j %in% seq(1,23,4)) addylab(simname) 
+      
+    }
+    
+    addledge(ltext=cnames_unique[i])
+    
+  }
+  
+  dev.off()
+  
+}
+
 ### BEN BOLKER OVERDISPERSION
 
 overdisp_fun <- function(model) {
