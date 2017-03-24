@@ -423,6 +423,23 @@ withinplot(pl$go,psls,"iota_mu","ns",simtrans_fun=log)
 withinplot(pl$go,psls,"iota_sig","ns",partrans_fun=log,simtrans_fun=log)
 withinplot(pl$go,psls,"rho","ns",simtrans_fun=log)
 
+pl$go$m0 <- exp(pl$go$alpha_m)
+pl$go$m1 <- exp(pl$go$beta_m)
+pl$go$Kn <- with(pl$go, Kncalc(m0,m1,T3))
+
+Knarr <- array(dim=c(ni*cpc,nj,nt)) # flip nj and nt later
+Knarr[] <- pl$go$Kn[as.vector(unlist(itersetl)),]*(nk/10*tau_s) 
+  # total K, adjusting for number of sites (nk)
+  # fill in same for all nt
+Knarr <- aperm(Knarr, c(1,3,2)) # flip nj and nt
+for(i in 1:nclim){
+  psls[[i]]$nsK <- psls[[i]]$ns/Knarr
+  }
+  # bit awkward, improve later?
+
+withinplot(pl$go,psls,"alpha_G","nsK",simtrans_fun=log)
+withinplot(pl$go,psls,"beta_Gz","nsK",simtrans_fun=log)
+
 #######################
 ### OSLO TALK PLOTS ###
 #######################
