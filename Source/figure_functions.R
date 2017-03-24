@@ -253,9 +253,11 @@ withinplot <- function(parlist,simlist,parname,simname,
   pdf(paste0("Plots/",parname,"_",simname,"_",format(Sys.Date(),"%d%b%Y"),".pdf"),
     width=plotwidth,height=plotheight)
   
+  iters <- as.vector(unlist(itersetl))
+    # same parameter sets for all clims
+  
   for(i in 1:nclim){
     
-    iters <- rep(itersetl[[i]],2)   
     # may need to change iters extracted when change sim code
     if(is.null(partrans_fun)) xmat <- parlist[[parname]][iters,]
     else xmat <- partrans_fun( parlist[[parname]][iters,] )

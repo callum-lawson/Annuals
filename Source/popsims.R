@@ -84,7 +84,7 @@ ncores <- nclim*cpc
 mpos <- rep(1:nclim,each=cpc)
 
 nstart <- rep(10000,nspecies)
-ni <- 5 # TRIAL # 500 # iterations PER CORE
+ni <- 500 # iterations PER CORE
   # total = 1000 per climate
 nt <- 50
 nj <- 22
@@ -147,7 +147,7 @@ stopCluster(CL)
 # stopCluster(CL)
 psl <- as.list(rep(NA,ncores))
 for(n in 1:ncores){
-  psl[[n]] <- readRDS(paste0("Sims/",cnames_bycore[n],"_01Mar2017.rds"))
+  psl[[n]] <- readRDS(paste0("Sims/",cnames_bycore[n],"_17Mar2017.rds"))
   }
 names(psl) <- cnames_bycore
 
