@@ -13,6 +13,7 @@ library(RColorBrewer)
 source("Source/simulation_functions.R")
 source("Source/figure_functions.R")
 source("Source/prediction_functions.R")
+source("Source/trait_functions.R")
 
 msy <- read.csv("Output/msy_15Jan2016.csv",header=T)
 Tvalues <- read.csv("Output/Tvalues_31Jul2015.csv",header=T)
@@ -413,9 +414,8 @@ pl$pr$beta_d_p <- pl$pr$beta_p[,,4]
 withinplot(pl$pr,psls,"alpha_p","ns",simtrans_fun=log)
 withinplot(pl$pr,psls,"beta_d_p","ns",simtrans_fun=log)
 
-pl$go$iota_mu <- with(pl$go, -alpha_G/beta_Gz )
-pl$go$iota_sig <- with(pl$go, pi^2/(3*beta_Gz^2) )
-# from Godfray & Rees 2002
+pl$go$iota_mu <- with(pl$go, godmean_f(alpha_G,beta_Gz) )
+pl$go$iota_sig <- with(pl$go, godvar_f(beta_Gz) )
 
 pl$go$rho <- with(pl$go, alpha_G + beta_Gz*log(zam/tau_p))
 

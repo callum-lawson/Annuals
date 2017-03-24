@@ -7,6 +7,7 @@ library(reshape2)
 
 source("Source/figure_functions.R")
 source("Source/prediction_functions.R")
+source("Source/trait_functions.R")
 
 msy <- read.csv("Output/msy_15Jan2016.csv",header=T)
 csyp <- read.csv("Output/csyp_15Jan2016.csv",header=T)
@@ -96,22 +97,6 @@ pcr_dens_lp <- list(
 zseq <- makeseq(log(seq(minprcp,maxprcp,length.out=2)/tau_p)) 
   # was used in calculations but had not yet been saved as an object
 
-zopt_f <- function(y,z){
-  z[which(y==max(y))[1]]
-  }
-
-minabs_f <- function(u,v){
-  which(abs(u-v)==min(abs(u-v)))[1]
-  }
-
-zwid_f <- function(y,z,qvals=c(0.25,0.75)){
-  sumy <- cumsum(exp(y))
-  qy <- sumy/max(sumy)
-  qpos <- sapply(qvals,minabs_f,v=qy)
-  zvals <- z[qpos]
-  zwid <- diff(zvals)
-  }
-
 rz <- pcr_prcp_lp$pred_lp
 lz <- exp(rz)
 
@@ -158,27 +143,6 @@ matplot(zseq,exp(rrelmed),type="l",xlim=c(-1,2),lty=1)
 # divide by K to re-scale curves?
 # distinction between per-capita reproduction and total density
 # DD in germination forces us to use simulation-derived traits? 
-
-Kncalc <- function(m0,m1,T3){
-  exp(-m0*T3) / ( (m1/m0)*(1-exp(-m0*T3))/tau_s )
-  }
-  # Yodzis, fig on p53
-  # density effectively in units of 0.01m^2 (10cm x 10cm) 
-
-hncalc <- function(m0,m1,T3){
-  1 / ( (m1/m0)*(1-exp(-m0*T3))/tau_s )
-  }
-  # half-saturation density
-  # calculated from c1/(1+c2N) = (1/2)(c1/c2)
-  # based on Yodzis, p53
-
-godmean_f <- function(alpha,beta){
-  -alpha/beta
-  }
-
-godvar_f <- function(beta){
-  pi^2/(3*beta^2)
-  }
 
 m0 <- exp(go$alpha_m[1:niter,])
 m1 <- exp(go$beta_m[1:niter,])
