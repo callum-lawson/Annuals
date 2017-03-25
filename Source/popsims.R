@@ -264,7 +264,7 @@ seriesplot(q_Y,"Y",yname="ln Y")
 seriesplot(q_Ye,"Ye",yname="ln Yeff")
 seriesplot(q_nnb,"nnb",yname=expression(ln~N[nb]))
 seriesplot(q_no,"no",yname=expression(ln~N[o]))
-seriesplot(apYf,"pY",yname="Pr(Y>0)")
+seriesplot(psla$pY,"pY",yname="Pr(Y>0)",quantiles=F)
 
 # Relative change between scenarios ---------------------------------------
 
@@ -273,7 +273,7 @@ scennew <- c("mu081_cv1", "mu1_cv12", "mu081_cv12")
 tpos <- 15 # averaging over range of z due to different iterations
 keepsp <- (spvals %in% c("plpa","vuoc"))==F
 
-qal <- list(ns=q_nsf,G=q_Gf,ng=q_ngf,Y=q_Yf,Ye=q_Yef,nn=q_nnf,Sn=q_Snf)
+qal <- list(ns=q_ns,G=q_G,ng=q_ng,Y=q_Y,Ye=q_Ye,nn=q_nn,Sn=q_Sn)
 
 rcl <- lapply(qal,relchange,scenbase=scenbase,scennew=scennew,keepsp=keepsp)
 rca <- array(dim=c(dim(rcl[[1]]),length(qal)),
@@ -298,10 +298,9 @@ rcaa <- abind(rca,cca,mvint,along=2)
 
 ### P(nd>1)
 
-pna <- abind(pYf,pYf,along=4)
-pna <- aperm(pna,c(1,4,2,3))
+pna <- with(psla,abind(pY,pY,along=4))
+pna <- aperm(pna,c(4,1,2,3))
   # hack to stack two copies of pYf along 2nd dimension so that relchange works
-
 rpna <- relchange(qlogis(pna),scenbase="mu1_cv0",scennew="mu1_cv1",keepsp=keepsp)
 
 ### Pairs plots
@@ -311,7 +310,7 @@ pairplot("popchange_pairs_vitalratechange_consenv",cca,2)
 pairplot("popchange_pairs_allclimscenarios_",rcaa,3)
 pairplot("popchange_pairs_allclimscenarios_alltraits",rcata,3,w=21,h=21)
 
-hist(mvint[,"ns"],breaks=30)
+hist(mvint[,,"ns"],breaks=30) # had to put in extra comma here - dims changed?
 abline(v=0,col="red")
 
 plot(cca[,1,"Sn"] ~ mta$lKnmed)
