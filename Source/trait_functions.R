@@ -20,27 +20,27 @@ zwid_f <- function(y,z,qvals=c(0.25,0.75)){
   zwid <- diff(zvals)
 }
 
-zseq <- makeseq(log(seq(minprcp,maxprcp,length.out=2)/tau_p)) 
-# was used in calculations but had not yet been saved as an object
-
-rz <- pcr_prcp_lp$pred_lp
-lz <- exp(rz)
-
-zopt <- apply(rz,c(1,3),zopt_f,z=zseq)
-zwid <- apply(rz,c(1,3),zwid_f,z=zseq)
-rmax <- apply(rz,c(1,3),max,na.rm=T)
-lsum <- apply(lz,c(1,3),sum)
-
-rzrel <- aaply(exp(rz),c(1,3),function(x) x/sum(x))
-rzrel <- log(aperm(rzrel,c(1,3,2)))
-
-zopt_med <- apply(zopt,2,median,na.rm=T) # but check why getting NAs
-zwid_med <- apply(zwid,2,median,na.rm=T)
-rmax_med <- apply(rmax,2,median,na.rm=T)
-lsum_med <- apply(lsum,2,median,na.rm=T)
-
-rmed <- apply(rz,c(2,3),median)
-rrelmed <- apply(rzrel,c(2,3),median)
+# zseq <- makeseq(log(seq(minprcp,maxprcp,length.out=2)/tau_p))
+# # was used in calculations but had not yet been saved as an object
+# 
+# rz <- pcr_prcp_lp$pred_lp
+# lz <- exp(rz)
+# 
+# zopt <- apply(rz,c(1,3),zopt_f,z=zseq)
+# zwid <- apply(rz,c(1,3),zwid_f,z=zseq)
+# rmax <- apply(rz,c(1,3),max,na.rm=T)
+# lsum <- apply(lz,c(1,3),sum)
+# 
+# rzrel <- aaply(exp(rz),c(1,3),function(x) x/sum(x))
+# rzrel <- log(aperm(rzrel,c(1,3,2)))
+# 
+# zopt_med <- apply(zopt,2,median,na.rm=T) # but check why getting NAs
+# zwid_med <- apply(zwid,2,median,na.rm=T)
+# rmax_med <- apply(rmax,2,median,na.rm=T)
+# lsum_med <- apply(lsum,2,median,na.rm=T)
+# 
+# rmed <- apply(rz,c(2,3),median)
+# rrelmed <- apply(rzrel,c(2,3),median)
 
 # Mortality ---------------------------------------------------------------
 

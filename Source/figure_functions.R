@@ -182,9 +182,32 @@ lettlab2 <- function(i,myline=-0.5,...){
 
 ### SIMULATION OUTPUT FIGURES
 
-seriesplot <- function(simname,a,yname,cols,ltys,colledgetext,detledgetext){
+colledgetext <- cnames_unique
+detledgetext <- c(
+  paste0("nstart=",nstart[1]),
+  paste0("ni=",ni),
+  paste0("nt=",nt),
+  paste0("nj=",nj),
+  paste0("nk=",nk)
+)
 
-	pdf(paste0("Plots/timeseries_",simname,"_",format(Sys.Date(),"%d%b%Y"),".pdf"),
+purples <- brewer.pal(9,"Purples")[5] 
+blues <- brewer.pal(9,"Blues")[5] # [c(5,8)]
+greens <- brewer.pal(9,"Greens")[5] # [c(5,8)]
+oranges <- brewer.pal(9,"Oranges")[5]
+reds <- brewer.pal(9,"Reds")[5] # [c(5,8)]
+
+cols <- c(purples,blues,greens,oranges,reds)
+ncols <- length(cols)
+ltys <- c(3,1,3)
+nltys <- length(ltys)
+# blue = wet, red = dry; weak = no var, strong = var
+
+seriesplot <- function(qa,varname,yname){
+
+  ca <- acast(melt(qa),Var2 ~ Var4 + Var1 ~ Var3)
+  
+	pdf(paste0("Plots/timeseries_",cnames_merged,"_",varname,"_",format(Sys.Date(),"%d%b%Y"),".pdf"),
 			width=plotwidth,height=plotheight)
 	
 		plotsetup()
@@ -194,7 +217,7 @@ seriesplot <- function(simname,a,yname,cols,ltys,colledgetext,detledgetext){
 
 		for(j in 1:nspecies){
 		
-			matplot(t(a[,,j]),type="l",
+			matplot(ca[,,j],type="l",
 				col=colvec,
 				lty=ltyvec,
 				xlab="",ylab=""

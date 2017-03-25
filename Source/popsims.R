@@ -82,12 +82,12 @@ mpos <- rep(1:nclim,each=cpc)
 
 nstart <- rep(10000,nspecies)
 ni <- 500 # iterations PER CORE
-  # total = 1000 per climate
 nt <- 50
 nj <- 22
 nk <- 10000
 
 # ni and nk must be >1
+nit <- ni*cpc
 
 set.seed(1)
 maxiter <- 10000 # max number of itertions in PARAMETERISATION
@@ -106,7 +106,7 @@ cnames_unique <- gsub("\\.","",paste0("mu",simp(maml),"_cv",simp(mcvl)))
 cnames_bycore <- paste0(rep(cnames_unique,each=cpc),"_s",rep(1:cpc,times=nclim))
 cnames_merged <- paste(cnames_unique,collapse="_")
 
-# *change to PAIR climate replicates*
+# !!! Change to PAIR climate replicates !!!
 
 # Each core focuses on one climate
 # Iterations for one climate can be split up over multiple cores
@@ -135,11 +135,27 @@ stopCluster(CL)
 
 # Read back in ------------------------------------------------------------
 
+### Small RAM read-in
+
+# cnames_bycore_small <- cnames_bycore[grep("mu1_cv1",cnames_bycore)]
+# ncores_small <- length(cnames_bycore_small)
+# psl <- as.list(rep(NA,ncores_small))
+# for(n in 1:ncores_small){
+#   psl[[n]] <- readRDS(paste0(cnames_bycore_small[n],"_28Apr2016.rds"))
+#   }
+# names(psl) <- cnames_bycore_small
+
 psl <- as.list(rep(NA,ncores))
 for(n in 1:ncores){
   psl[[n]] <- readRDS(paste0("Sims/",cnames_bycore[n],"_17Mar2017.rds"))
   }
 names(psl) <- cnames_bycore
+
+varl <- psl[[1]]
+nvar <- length(varl)
+dimvar <- sapply(varl,dim)
+ndimvar <- sapply(dimvar,length)
+firstmpos <- match(1:nclim,mpos)
 
 # Combine sim matrices by sim type
 psla <- vector("list", nvar)
@@ -163,71 +179,14 @@ for(i in 1:nvar){
 }
 psla <- psla[ndimvar>0]
 
-### Small RAM read-in
-
-# cnames_bycore_small <- cnames_bycore[grep("mu1_cv1",cnames_bycore)]
-# ncores_small <- length(cnames_bycore_small)
-# psl <- as.list(rep(NA,ncores_small))
-# for(n in 1:ncores_small){
-#   psl[[n]] <- readRDS(paste0(cnames_bycore_small[n],"_28Apr2016.rds"))
-#   }
-# names(psl) <- cnames_bycore_small
-
-# Aggregate data ----------------------------------------------------------
-
-seriesquant <- function(a,probs=c(0.05,0.50,0.95)){
-	qarr <- apply(a,c(2,3),quantile,prob=probs,na.rm=T)
-	return(qarr)
-	}
-
-q_nsf <- laply(psls, function(x) seriesquant(a=log(x$ns)))
-q_nnf <- laply(psls, function(x) seriesquant(a=log(x$nn)))
-q_Gf <- laply(psls, function(x) seriesquant(a=qlogis(x$G)))
-q_Snf <- laply(psls, function(x) seriesquant(a=qlogis(x$Sn)))
-  # Includes cases where no seeds were produced (DI survival)
-q_Yf <- laply(psls, function(x) seriesquant(a=log(x$nn/x$ng)))
-  # Ignoring cases where Ng=0  
-q_Yef <- laply(psls, function(x) seriesquant(a=log(x$nnb/x$ng)))
-  # Ignoring cases where Ng=0  
-q_nnbf <- laply(psls, function(x) seriesquant(a=log(x$nnb)))
-q_nof <- laply(psls, function(x) seriesquant(a=log(x$no)))
-q_ngf <- laply(psls, function(x) seriesquant(a=log(x$ng)))
-q_Sof <- laply(psls, function(x) seriesquant(a=qlogis(x$So)))
-
-	# applies quantile function to list of densities for each climate scenario
-	# dims: (clim,quantile,time,species)
-
-dimnames(q_nsf)[[1]] <- cnames_unique
-dimnames(q_nnf)[[1]] <- cnames_unique
-dimnames(q_Gf)[[1]] <- cnames_unique
-dimnames(q_Snf)[[1]] <- cnames_unique
-dimnames(q_Yf)[[1]] <- cnames_unique
-dimnames(q_Yef)[[1]] <- cnames_unique
-dimnames(q_nnbf)[[1]] <- cnames_unique
-dimnames(q_nof)[[1]] <- cnames_unique
-dimnames(q_ngf)[[1]] <- cnames_unique
-dimnames(q_Sof)[[1]] <- cnames_unique
-
-library(abind)
-q_ns <- acast(melt(q_nsf),Var1 + Var2 ~ Var3 ~ Var4)
-q_nn <- acast(melt(q_nnf),Var1 + Var2 ~ Var3 ~ Var4)
-q_G <- acast(melt(q_Gf),Var1 + Var2 ~ Var3 ~ Var4)
-q_Sn <- acast(melt(q_Snf),Var1 + Var2 ~ Var3 ~ Var4)
-q_Y <- acast(melt(q_Yf),Var1 + Var2 ~ Var3 ~ Var4)
-q_Ye <- acast(melt(q_Yef),Var1 + Var2 ~ Var3 ~ Var4)
-q_nnb <- acast(melt(q_nnbf),Var1 + Var2 ~ Var3 ~ Var4)
-q_no <- acast(melt(q_nof),Var1 + Var2 ~ Var3 ~ Var4)
-q_ng <- acast(melt(q_ngf),Var1 + Var2 ~ Var3 ~ Var4)
-q_So <- acast(melt(q_Sof),Var1 + Var2 ~ Var3 ~ Var4)
-  # want to plot all clims at same time in matplot
-	# (i.e. as joint matrix, not separate arrays)
-
 # Derived parameters ------------------------------------------------------
 
 ### From input parameters
 
 pl$pr$alpha_p <- pl$pr$beta_p[,,1]
 pl$pr$beta_d_p <- pl$pr$beta_p[,,4]
+
+pl$rs$beta_d_r <- pl$rs$beta_r[,,4]
 
 pl$go$iota_mu <- with(pl$go, godmean_f(alpha_G,beta_Gz) )
 pl$go$iota_sig <- with(pl$go, godvar_f(beta_Gz) )
@@ -239,28 +198,30 @@ pl$go$m1 <- exp(pl$go$beta_m)
 pl$go$Kn <- with(pl$go, Kncalc(m0,m1,T3))
 pl$go$hn <- with(pl$go, hncalc(m0,m1,T3))
 
-Knarr <- array(dim=c(ni*cpc,nj,nt)) # flip nj and nt later
+### From simulations
+
+psla$Y <- with(psla,nn/ng)
+psla$Ye <- with(psla,nnb/ng)
+aNA <- array(dim=c(nit,1,nj,nclim))
+psla$r <- log(psla$ns) - log(abind(aNA,psla$ns[,-nt,,],along=2))
+# popualtion growth rates
+psla$pY <- apply(psla$nn,2:4,function(x) sum(x>0)/length(x))
+# probability of at least one new seed
+# (could also use to calculate extinction risk)
+
+# not surprising that differ in seed numbers (e.g. if make smaller seeds)
+# calculate relative reproduction instead?
+
+### From combination of input parameters and simulations
+
+Knarr <- array(dim=c(nit,nj,nt)) # flip nj and nt later
 Knarr[] <- pl$go$Kn[as.vector(unlist(itersetl)),]*(nk/10*tau_s) 
-# total K, adjusting for number of sites (nk)
-# fill in same for all nt
+  # total K, adjusting for number of sites (nk)
+  # fill in same for all nt
 Knarr <- aperm(Knarr, c(1,3,2)) # flip nj and nt
-for(i in 1:nclim){
-  psls[[i]]$nsK <- psls[[i]]$ns/Knarr
-}
-  # bit awkward, improve later?
+psla$nsK <- psla$ns/rep(Knarr,nclim)
 
-### Population traits
-
-medtraits <- readRDS("Output/medtraits_07Dec2016.rds") # *check that most recent*
-
-mta <- medtraits[keepsp,]
-G_full <- q_Gf["mu1_cv1",2,tpos,] 
-mta$G <- G_full[keepsp] # median for current clim
-So_full <- q_Sof["mu1_cv1",2,tpos,]
-mta$So <- So_full[keepsp] # median for current clim
-mta$lKndiff <- with(mta, lKnmed-rmax)
-mta$beta_p <- apply(pl$pr$beta_p[,,4],2,median)[keepsp]
-mta$beta_r <- apply(pl$rs$beta_r[,,4],2,median)[keepsp]
+# to calculate: median G and So for timestep 0
 
 rcatm <- cbind(rcaa[,,"ns"],mta)
 rcata <- array(dim=c(dim(rcatm),1),
@@ -270,77 +231,40 @@ rcata <- array(dim=c(dim(rcatm),1),
 rcata[,,1] <- unlist(rcatm)
 # filling-in only works because rcatm has dim3 of 1
 
-### From simulations
+# Aggregate data ----------------------------------------------------------
 
-# Population growth rates
-
-rcalc_f <- function(alist){
-  aNA <- array(dim=c(ni*cpc,1,nj))
-  alist$r <- log(alist$ns) - log(abind(aNA,alist$ns[,-nt,],along=2))
-  return(alist)
+seriesquant <- function(a,probs=c(0.05,0.50,0.95),keepdims=2:4){
+	qarr <- apply(a,keepdims,quantile,prob=probs,na.rm=T)
+	return(qarr)
 }
 
-psls <- lapply(psls,rcalc_f)
-# psls <- lapply(psls,function(x){
-#   x$Y <- x$nn/x$ng
-#   x$Ye <- x$nnb/x$ng
-#   return(x)
-#   })
-
-# could also calculate Yeff: log(nn[ipos,tpos,j]/ng[ipos,tpos,j]
-
-pYf <- laply(psls, function(a){
-  apply(a$nn,c(2,3),function(x) sum(x>0)/length(x))
-  })
-  # probability of at least one new seed
-  # (could also use to calculate extinction risk)
-
-apYf <- abind(
-  pYf[1,,],pYf[1,,],pYf[1,,],
-  pYf[2,,],pYf[2,,],pYf[2,,],
-  pYf[3,,],pYf[3,,],pYf[3,,],
-  pYf[4,,],pYf[4,,],pYf[4,,],
-  pYf[5,,],pYf[5,,],pYf[5,,],
-  along=3
-) # being lazy, not general
-apYf <- aperm(apYf,c(3,1,2))
-
-# not surprising that differ in seed numbers (e.g. if make smaller seeds)
-# calculate relative reproduction instead?
+q_ns <- seriesquant(log(psla$ns))
+q_nn <- seriesquant(log(psla$nn))
+q_G <- seriesquant(qlogis(psla$G))
+q_Sn <- seriesquant(qlogis(psla$Sn))
+  # Includes cases where no seeds were produced (DI survival)
+q_Y <- seriesquant(log(psla$nn/psla$ng))
+  # Ignoring cases where Ng=0  
+q_Ye <- seriesquant(log(psla$Ye))
+  # Ignoring cases where Ng=0  
+q_nnb <- seriesquant(log(psla$nnb))
+q_no <- seriesquant(log(psla$no))
+q_ng <- seriesquant(log(psla$ng))
+q_So <- seriesquant(qlogis(psla$So))
+	# applies quantile function to list of densities for each climate scenario
+	# dims: (quantile,time,species,clim)
 
 # Plot results ------------------------------------------------------------
 
-colledgetext <- cnames_unique
-detledgetext <- c(
-	paste0("nstart=",nstart[1]),
-	paste0("ni=",ni),
-	paste0("nt=",nt),
-	paste0("nj=",nj),
-	paste0("nk=",nk)
-	)
-
-purples <- brewer.pal(9,"Purples")[5] 
-blues <- brewer.pal(9,"Blues")[5] # [c(5,8)]
-greens <- brewer.pal(9,"Greens")[5] # [c(5,8)]
-oranges <- brewer.pal(9,"Oranges")[5]
-reds <- brewer.pal(9,"Reds")[5] # [c(5,8)]
-
-cols <- c(purples,blues,greens,oranges,reds)
-ncols <- length(cols)
-ltys <- c(3,1,3)
-nltys <- length(ltys)
-# blue = wet, red = dry; weak = no var, strong = var
-
-seriesplot(paste0(cnames_merged ,"_ns"),a=q_ns,yname=expression(ln(N[s])),cols,ltys,colledgetext,detledgetext)
-seriesplot(paste0(cnames_merged ,"_nn"),a=q_nn,yname=expression(ln(N[n])),cols,ltys,colledgetext,detledgetext)
-seriesplot(paste0(cnames_merged ,"_G"),a=q_G,yname="logit(G)",cols,ltys,colledgetext,detledgetext)
-seriesplot(paste0(cnames_merged ,"_Sn"),a=q_Sn,yname="logit(Sn)",cols,ltys,colledgetext,detledgetext)
-seriesplot(paste0(cnames_merged ,"_Y"),a=q_Y,yname="ln Y",cols,ltys,colledgetext,detledgetext)
-seriesplot(paste0(cnames_merged ,"_Ye"),a=q_Ye,yname="ln Yeff",cols,ltys,colledgetext,detledgetext)
-seriesplot(paste0(cnames_merged ,"_nnb"),a=q_nnb,yname=expression(ln~N[nb]),cols,ltys,colledgetext,detledgetext)
-seriesplot(paste0(cnames_merged ,"_no"),a=q_no,yname=expression(ln~N[o]),cols,ltys,colledgetext,detledgetext)
-
-seriesplot(paste0(cnames_merged ,"_pY"),a=apYf, yname="Pr(Y>0)",cols,ltys,colledgetext,detledgetext)
+seriesplot(q_ns,"ns",yname=expression(ln(N[s])))
+seriesplot(q_nn,"nn",yname=expression(ln(N[n])))
+seriesplot(q_G,"G",yname="logit(G)")
+seriesplot(q_Sn,"Sn",yname="logit(Sn)")
+seriesplot(q_Y,"Y",yname="ln Y")
+seriesplot(q_Ye,"Ye",yname="ln Yeff")
+seriesplot(q_nnb,"nnb",yname=expression(ln~N[nb]))
+seriesplot(q_no,"no",yname=expression(ln~N[o]))
+seriesplot(apYf,"pY",yname="Pr(Y>0)")
 
 # Relative change between scenarios ---------------------------------------
 
