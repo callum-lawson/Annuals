@@ -18,9 +18,7 @@ source("Source/trait_functions.R")
 msy <- read.csv("Output/msy_15Jan2016.csv",header=T)
 Tvalues <- read.csv("Output/Tvalues_31Jul2015.csv",header=T)
 
-#####################
-### DEFINE PARAMS ###
-#####################
+# Define params -----------------------------------------------------------
 
 ### DATA PARAMS
 nspecies <- nlevels(msy$species) # same for all other datasets
@@ -70,9 +68,7 @@ pl <- list(
 	rs = readRDS("Models/rs_pars_yearhet_squared_pc_trunc_05Mar2016.rds")
 	)
 
-############
-### SIMS ###
-############
+# Sims --------------------------------------------------------------------
 
 # 1000 per 0.1m^2
 
@@ -135,9 +131,8 @@ parLapply(CL, 1:ncores, function(n){
 stopCluster(CL)
 })
 
-#####################
-### READ BACK IN  ###
-#####################
+
+# Read back in ------------------------------------------------------------
 
 # Read in all sims
 # CL = makeCluster(ncores)
@@ -198,9 +193,7 @@ psls <- lapply(psls,rcalc_f)
 #   }
 # names(psl) <- cnames_bycore_small
 
-######################
-### AGGREGATE DATA ###
-######################
+# Aggregate data ----------------------------------------------------------
 
 seriesquant <- function(a,probs=c(0.05,0.50,0.95)){
 	qarr <- apply(a,c(2,3),quantile,prob=probs,na.rm=T)
@@ -255,9 +248,7 @@ pYf <- laply(psls, function(a){
   # probability of at least one new seed
   # (could also use to calculate extinction risk)
 
-####################
-### PLOT RESULTS ###
-####################
+# Plot results ------------------------------------------------------------
 
 colledgetext <- cnames_unique
 detledgetext <- c(
@@ -305,9 +296,7 @@ egi <- 16:20
 with(psls$mu1_cv1,matplot(t(log(ns[egi,,17])),type="l"))
 with(psls$mu1_cv1,matplot(t(ns[egi,,17]),type="l"))
 
-#########################################
-### RELATIVE CHANGE BETWEEN SCENARIOS ###
-#########################################
+# Relative change between scenarios ---------------------------------------
 
 scenbase <- "mu1_cv1"
 scennew <- c("mu081_cv1", "mu1_cv12", "mu081_cv12")
@@ -400,9 +389,7 @@ lines(density(tau_p*exp(psls$mu08_cv12$z)),col="purple")
 abline(v=tau_p*exp(psls$mu1_cv0$z[1]),col="green",lty=2)
 dev.off()
 
-#########################################
-### OPTIMAL PARAMETERS WITHIN SPECIES ###
-#########################################
+# Optimal parameters within species ---------------------------------------
 
 withinplot(pl$go,psls,"alpha_G","ns",simtrans_fun=log)
 withinplot(pl$go,psls,"beta_Gz","ns",simtrans_fun=log)
@@ -440,9 +427,7 @@ for(i in 1:nclim){
 withinplot(pl$go,psls,"alpha_G","nsK",simtrans_fun=log)
 withinplot(pl$go,psls,"beta_Gz","nsK",simtrans_fun=log)
 
-#######################
-### OSLO TALK PLOTS ###
-#######################
+# Oslo talk plots ---------------------------------------------------------
 
 tpos <- 15
 myylim <- c(-5,0)
@@ -536,9 +521,7 @@ abline(h=0,lty=2)
 
 dev.off()
 
-#############
-### OTHER ###
-#############
+# Other -------------------------------------------------------------------
 
 cclimpos <- which(cnames_unique=="mu1_cv0")
   # changing reference climate to mu1_cv0
@@ -649,9 +632,7 @@ summary(glm(md_nsd$dlN[md_nsd$scenario=="mu08_cv12"]~G_mod))
 
 plot(md_nsd$dlN[md_nsd$scenario=="mu1_cv12"] ~ md_nsd$dlN[md_nsd$scenario=="mu08_cv1"])
 
-####################################
-### BET-HEDGING DEFINITION PLOTS ###
-####################################
+# Bet-hedging definition plots --------------------------------------------
 
 tpos <- 25
 myylim <- c(-0.8,-0.2)
@@ -903,9 +884,7 @@ lines(density(log(nnarr[,1,100])),col="red")
 plot(psls[[1]]$Sn[1:100,tpos,]~log(psls[[1]]$nn[1:100,tpos,]))
 plot(qlogis(psls[[1]]$Sn[1:100,tpos,])~log(psls[[1]]$nn[1:100,tpos,]))
 
-#########################
-### POST-HOC ANALYSES ###
-#########################
+# Post-hoc analyses -------------------------------------------------------
 
 pscur <- psls$mu1_cv1
 ipos <- 1:1000
