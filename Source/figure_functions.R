@@ -214,7 +214,6 @@ seriesplot <- function(simname,a,yname,cols,ltys,colledgetext,detledgetext){
 	
 	}
 
-
 relchange <- function(a,scenbase,scennew,tpos=15,keepsp){
   sposbase <- match(scenbase,cnames_unique)
   sposnew <- match(scennew,cnames_unique)

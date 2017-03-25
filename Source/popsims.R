@@ -70,7 +70,7 @@ pl <- list(
 
 # Sims --------------------------------------------------------------------
 
-# 1000 per 0.1m^2
+# 1000 per 0.1m^2 - *what does this mean?*
 
 maml <- as.list(c(1,1,mpam,1,mpam))
 mcvl <- as.list(c(0,1,1,mpcv,mpcv))
@@ -106,8 +106,10 @@ cnames_unique <- gsub("\\.","",paste0("mu",simp(maml),"_cv",simp(mcvl)))
 cnames_bycore <- paste0(rep(cnames_unique,each=cpc),"_s",rep(1:cpc,times=nclim))
 cnames_merged <- paste(cnames_unique,collapse="_")
 
-# Each core focuses on one climate combo
-# Iterations for one climate combo can be split up over multiple cores
+# *change to PAIR climate replicates*
+
+# Each core focuses on one climate
+# Iterations for one climate can be split up over multiple cores
 # (controlled by cpc)
 system.time({
 CL = makeCluster(ncores)
@@ -131,16 +133,8 @@ parLapply(CL, 1:ncores, function(n){
 stopCluster(CL)
 })
 
-
 # Read back in ------------------------------------------------------------
 
-# Read in all sims
-# CL = makeCluster(ncores)
-# clusterExport(cl=CL, c("cnames_bycore"))
-# psl <- parLapply(CL, 1:ncores, function(n){
-#   readRDS(paste0(cnames_bycore[n],"_","06Apr2016.rds"))
-#   })
-# stopCluster(CL)
 psl <- as.list(rep(NA,ncores))
 for(n in 1:ncores){
   psl[[n]] <- readRDS(paste0("Sims/",cnames_bycore[n],"_17Mar2017.rds"))
@@ -148,40 +142,26 @@ for(n in 1:ncores){
 names(psl) <- cnames_bycore
 
 # Combine sim matrices by sim type
-matmerge <- function(outlist){
-  matlist <- merlist <- list()
-  ncores <- length(outlist)
-  nvar <- length(outlist[[1]])
-  for(i in 1:nvar){
-    for(n in 1:ncores){
-      matlist[[n]] <- outlist[[n]][[i]]
+psla <- vector("list", nvar)
+names(psla) <- names(varl)
+for(i in 1:nvar){
+  if(ndimvar[i]>0){
+    for(j in 1:nclim){
+      for(k in 1:cpc){
+        if(k==1) ast <- psl[[firstmpos[j]]][[i]]
+        else ast <- abind(ast,psl[[j+(k-1)]][[i]],along=1)
       }
-      merlist[[i]] <- abind(matlist,along=1)
+      if(j==1){
+        psla[[i]] <- array(ast,dim=c(dim(ast),1))
+      }
+      else{
+        psla[[i]] <- abind(psla[[i]],ast,along=ndimvar[i]+1)
+      }
     }
-  names(merlist) <- names(outlist[[1]])
-  return(merlist)
+    dimnames(psla[[i]])[[ndimvar[i]+1]] <- cnames_unique
   }
-
-psls <- lapply(split(psl,mpos),matmerge)
-names(psls) <- cnames_unique
-	# merges outputs by climate scenario (indexed by mpos)
-
-### Calculate population growth rates
-
-rcalc_f <- function(alist){
-  aNA <- array(dim=c(ni*cpc,1,nj))
-  alist$r <- log(alist$ns) - log(abind(aNA,alist$ns[,-nt,],along=2))
-  return(alist)
-  }
-
-psls <- lapply(psls,rcalc_f)
-# psls <- lapply(psls,function(x){
-#   x$Y <- x$nn/x$ng
-#   x$Ye <- x$nnb/x$ng
-#   return(x)
-#   })
-
-# could also calculate Yeff: log(nn[ipos,tpos,j]/ng[ipos,tpos,j]
+}
+psla <- psla[ndimvar>0]
 
 ### Small RAM read-in
 
@@ -242,11 +222,91 @@ q_So <- acast(melt(q_Sof),Var1 + Var2 ~ Var3 ~ Var4)
   # want to plot all clims at same time in matplot
 	# (i.e. as joint matrix, not separate arrays)
 
+# Derived parameters ------------------------------------------------------
+
+### From input parameters
+
+pl$pr$alpha_p <- pl$pr$beta_p[,,1]
+pl$pr$beta_d_p <- pl$pr$beta_p[,,4]
+
+pl$go$iota_mu <- with(pl$go, godmean_f(alpha_G,beta_Gz) )
+pl$go$iota_sig <- with(pl$go, godvar_f(beta_Gz) )
+
+pl$go$rho <- with(pl$go, alpha_G + beta_Gz*log(zam/tau_p))
+
+pl$go$m0 <- exp(pl$go$alpha_m)
+pl$go$m1 <- exp(pl$go$beta_m)
+pl$go$Kn <- with(pl$go, Kncalc(m0,m1,T3))
+pl$go$hn <- with(pl$go, hncalc(m0,m1,T3))
+
+Knarr <- array(dim=c(ni*cpc,nj,nt)) # flip nj and nt later
+Knarr[] <- pl$go$Kn[as.vector(unlist(itersetl)),]*(nk/10*tau_s) 
+# total K, adjusting for number of sites (nk)
+# fill in same for all nt
+Knarr <- aperm(Knarr, c(1,3,2)) # flip nj and nt
+for(i in 1:nclim){
+  psls[[i]]$nsK <- psls[[i]]$ns/Knarr
+}
+  # bit awkward, improve later?
+
+### Population traits
+
+medtraits <- readRDS("Output/medtraits_07Dec2016.rds") # *check that most recent*
+
+mta <- medtraits[keepsp,]
+G_full <- q_Gf["mu1_cv1",2,tpos,] 
+mta$G <- G_full[keepsp] # median for current clim
+So_full <- q_Sof["mu1_cv1",2,tpos,]
+mta$So <- So_full[keepsp] # median for current clim
+mta$lKndiff <- with(mta, lKnmed-rmax)
+mta$beta_p <- apply(pl$pr$beta_p[,,4],2,median)[keepsp]
+mta$beta_r <- apply(pl$rs$beta_r[,,4],2,median)[keepsp]
+
+rcatm <- cbind(rcaa[,,"ns"],mta)
+rcata <- array(dim=c(dim(rcatm),1),
+  dimnames=c(dimnames(rcatm),list("ns"))
+)
+# putting on extra dimension so that works with pairplot
+rcata[,,1] <- unlist(rcatm)
+# filling-in only works because rcatm has dim3 of 1
+
+### From simulations
+
+# Population growth rates
+
+rcalc_f <- function(alist){
+  aNA <- array(dim=c(ni*cpc,1,nj))
+  alist$r <- log(alist$ns) - log(abind(aNA,alist$ns[,-nt,],along=2))
+  return(alist)
+}
+
+psls <- lapply(psls,rcalc_f)
+# psls <- lapply(psls,function(x){
+#   x$Y <- x$nn/x$ng
+#   x$Ye <- x$nnb/x$ng
+#   return(x)
+#   })
+
+# could also calculate Yeff: log(nn[ipos,tpos,j]/ng[ipos,tpos,j]
+
 pYf <- laply(psls, function(a){
   apply(a$nn,c(2,3),function(x) sum(x>0)/length(x))
   })
   # probability of at least one new seed
   # (could also use to calculate extinction risk)
+
+apYf <- abind(
+  pYf[1,,],pYf[1,,],pYf[1,,],
+  pYf[2,,],pYf[2,,],pYf[2,,],
+  pYf[3,,],pYf[3,,],pYf[3,,],
+  pYf[4,,],pYf[4,,],pYf[4,,],
+  pYf[5,,],pYf[5,,],pYf[5,,],
+  along=3
+) # being lazy, not general
+apYf <- aperm(apYf,c(3,1,2))
+
+# not surprising that differ in seed numbers (e.g. if make smaller seeds)
+# calculate relative reproduction instead?
 
 # Plot results ------------------------------------------------------------
 
@@ -280,21 +340,7 @@ seriesplot(paste0(cnames_merged ,"_Ye"),a=q_Ye,yname="ln Yeff",cols,ltys,colledg
 seriesplot(paste0(cnames_merged ,"_nnb"),a=q_nnb,yname=expression(ln~N[nb]),cols,ltys,colledgetext,detledgetext)
 seriesplot(paste0(cnames_merged ,"_no"),a=q_no,yname=expression(ln~N[o]),cols,ltys,colledgetext,detledgetext)
 
-apYf <- abind(
-  pYf[1,,],pYf[1,,],pYf[1,,],
-  pYf[2,,],pYf[2,,],pYf[2,,],
-  pYf[3,,],pYf[3,,],pYf[3,,],
-  pYf[4,,],pYf[4,,],pYf[4,,],
-  pYf[5,,],pYf[5,,],pYf[5,,],
-  along=3
-  ) # being lazy, not general
-apYf <- aperm(apYf,c(3,1,2))
-
 seriesplot(paste0(cnames_merged ,"_pY"),a=apYf, yname="Pr(Y>0)",cols,ltys,colledgetext,detledgetext)
-
-egi <- 16:20
-with(psls$mu1_cv1,matplot(t(log(ns[egi,,17])),type="l"))
-with(psls$mu1_cv1,matplot(t(ns[egi,,17]),type="l"))
 
 # Relative change between scenarios ---------------------------------------
 
@@ -333,27 +379,6 @@ pna <- aperm(pna,c(1,4,2,3))
   # hack to stack two copies of pYf along 2nd dimension so that relchange works
 
 rpna <- relchange(qlogis(pna),scenbase="mu1_cv0",scennew="mu1_cv1",keepsp=keepsp)
-
-### Population traits
-
-medtraits <- readRDS("Output/medtraits_07Dec2016.rds") # *check that most recent*
-
-mta <- medtraits[keepsp,]
-G_full <- q_Gf["mu1_cv1",2,tpos,] 
-mta$G <- G_full[keepsp] # median for current clim
-So_full <- q_Sof["mu1_cv1",2,tpos,]
-mta$So <- So_full[keepsp] # median for current clim
-mta$lKndiff <- with(mta, lKnmed-rmax)
-mta$beta_p <- apply(pl$pr$beta_p[,,4],2,median)[keepsp]
-mta$beta_r <- apply(pl$rs$beta_r[,,4],2,median)[keepsp]
-
-rcatm <- cbind(rcaa[,,"ns"],mta)
-rcata <- array(dim=c(dim(rcatm),1),
-  dimnames=c(dimnames(rcatm),list("ns"))
-  )
-  # putting on extra dimension so that works with pairplot
-rcata[,,1] <- unlist(rcatm)
-  # filling-in only works because rcatm has dim3 of 1
 
 ### Pairs plots
 
@@ -396,33 +421,12 @@ withinplot(pl$go,psls,"beta_Gz","ns",simtrans_fun=log)
 withinplot(pl$go,psls,"alpha_m","ns",simtrans_fun=log)
 withinplot(pl$go,psls,"beta_m","ns",simtrans_fun=log)
 
-pl$pr$alpha_p <- pl$pr$beta_p[,,1]
-pl$pr$beta_d_p <- pl$pr$beta_p[,,4]
 withinplot(pl$pr,psls,"alpha_p","ns",simtrans_fun=log)
 withinplot(pl$pr,psls,"beta_d_p","ns",simtrans_fun=log)
-
-pl$go$iota_mu <- with(pl$go, godmean_f(alpha_G,beta_Gz) )
-pl$go$iota_sig <- with(pl$go, godvar_f(beta_Gz) )
-
-pl$go$rho <- with(pl$go, alpha_G + beta_Gz*log(zam/tau_p))
 
 withinplot(pl$go,psls,"iota_mu","ns",simtrans_fun=log)
 withinplot(pl$go,psls,"iota_sig","ns",partrans_fun=log,simtrans_fun=log)
 withinplot(pl$go,psls,"rho","ns",simtrans_fun=log)
-
-pl$go$m0 <- exp(pl$go$alpha_m)
-pl$go$m1 <- exp(pl$go$beta_m)
-pl$go$Kn <- with(pl$go, Kncalc(m0,m1,T3))
-
-Knarr <- array(dim=c(ni*cpc,nj,nt)) # flip nj and nt later
-Knarr[] <- pl$go$Kn[as.vector(unlist(itersetl)),]*(nk/10*tau_s) 
-  # total K, adjusting for number of sites (nk)
-  # fill in same for all nt
-Knarr <- aperm(Knarr, c(1,3,2)) # flip nj and nt
-for(i in 1:nclim){
-  psls[[i]]$nsK <- psls[[i]]$ns/Knarr
-  }
-  # bit awkward, improve later?
 
 withinplot(pl$go,psls,"alpha_G","nsK",simtrans_fun=log)
 withinplot(pl$go,psls,"beta_Gz","nsK",simtrans_fun=log)

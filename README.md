@@ -64,7 +64,7 @@ R code.
 * *popsims*: Simulations of population dynamics for finite area ("squared"=misnomer). 
 * *poplevel_binomialG*: Germination and seed survival models in Stan, with binomial germination calculation.
 * *poplevel_lnpoisdist*: Germination and seed survival models in Stan, with poisson seed counts.
-* *traitmeasures*: Plot simulation summaries against species traits.
+* *traitmeasures*: Calculate species-level predictive traits (partially obsolete).
 * *trait_functions*: Functions for calculating derived trait values from popualtion parameters.
 * *simulation_functions*: Functions for simulations of population dynamics for finite area.
 * *figure_functions*: Functions to plot figures from Stan model output.
