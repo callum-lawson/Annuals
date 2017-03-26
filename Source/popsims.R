@@ -345,11 +345,55 @@ withinplot(pl$go,psls,"rho","ns",simtrans_fun=log)
 withinplot(pl$go,psls,"alpha_G","nsK",simtrans_fun=log)
 withinplot(pl$go,psls,"beta_Gz","nsK",simtrans_fun=log)
 
-# Post-hoc analyses -------------------------------------------------------
+# Predictions of yearly dynamics ------------------------------------------
 
-pscur <- psls$mu1_cv1
-ipos <- 1:1000
-tpos <- 15
+### FINISH ANNOTATIONS!
+
+### Y every year, X every year and every species
+# y[i,t,j,m] ~ x[i,t,j,m]
+
+# r ~ z
+# r ~ G
+# r ~ ns
+# Y ~ gdens
+# Pr(Y>0) ~ gdens
+
+### Y every year, X every year, same for all species
+# y[i,t,j,m] ~ x[i,t,m]
+
+# Y ~ z
+# Ye ~ z
+
+### Y one year, X one value from sims
+# y[i,j,m] ~ x[i,j,m]
+
+# ns_median ~ G_median
+
+### Y one value, X one param
+# y[i,j,m] ~ x[i,j]
+
+# ns_median ~ alpha_G
+
+# species index gets ignored
+
+### y:
+# - [1000, 50, 22, 5]
+# - [1000, 22, 5]
+
+### x : 
+# - [1000, 50, 22, 5]
+# - [1000, 50, 5]
+# - [1000, 22]
+# - [1000, 5]
+
+pslm <- pli <- list() # rename?
+pslm$ns <- apply(psla$ns,c(1,3,4),median)
+pli$alpha_G <- pl$go$alpha_G[unlist(itersetl),]
+
+parplot(pli$alpha_G,log(pslm$ns),t=NULL,xname=expression(alpha[G]),yname=expression(ln(ns[t=15])))
+
+x <- pli$alpha_G
+y <- log(pslm$ns)
 
 ### r ~ z
 

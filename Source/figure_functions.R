@@ -217,13 +217,11 @@ seriesplot <- function(qa,varname,yname,quantiles=T){
     ltyvec <- rep(1,times=ncols)
   }
     
-	pdf(paste0("Plots/timeseries_",cnames_merged,"_",varname,"_",format(Sys.Date(),"%d%b%Y"),".pdf"),
-			width=plotwidth,height=plotheight)
+	pdf(paste0("Plots/timeseries_",cnames_merged,"_",varname,"_",
+	  format(Sys.Date(),"%d%b%Y"),".pdf"), width=plotwidth,height=plotheight)
 	
 		plotsetup()
 		
-	
-
 		for(j in 1:nspecies){
 		
 			matplot(ca[,,j],type="l",
@@ -316,6 +314,88 @@ withinplot <- function(parlist,simlist,parname,simname,
     addledge(ltext=cnames_unique[i])
     
   }
+  
+  dev.off()
+  
+}
+
+parplot <- function(x,y,t=NULL,xname,yname,tran=25){
+  
+  cols_rgb <- col2rgb(cols)
+  trancols <- rgb(
+    red=cols_rgb[1,],
+    green=cols_rgb[2,],
+    blue=cols_rgb[3,],
+    alpha=tran,
+    maxColorValue = 255
+  )
+  
+  xdim <- dim(x)
+  ydim <- dim(y)
+  nxdim <- length(dim(x))
+  nydim <- length(dim(y))
+  
+  if(!is.null(t)){
+    pdf(paste0("Plots/parplot_",xname,"_",yname,"_t",t,"_",format(Sys.Date(),"%d%b%Y"),".pdf"), width=plotwidth,height=plotheight)
+  }
+  
+  if(is.null(t)){
+    pdf(paste0("Plots/parplot_",xname,"_",yname,"_",format(Sys.Date(),"%d%b%Y"),".pdf"), width=plotwidth,height=plotheight)
+  }
+  
+  plotsetup()
+  
+  for(j in 1:nspecies){
+    
+    if(!is.null(t)){
+      ys <- y[,tpos,j,]
+      if(nxdim==4){
+        xs <- x[,tpos,j,]
+      }
+      if(nxdim==3){
+        xs <- x[,tpos,]
+      }
+      if(nxdim==2){
+        xs <- array(dim=dim(ys))
+        xs[] <- rep(x[,j],nclim) # not necessary - matplot
+      }
+    }
+    if(is.null(t)){
+      if(nydim==4){
+        ys <- acast(melt(y[,,j,]), Var1 + Var2 ~ Var3)
+        if(nxdim==4){
+          xs <- acast(melt(x[,,j,]), Var1 + Var2 ~ Var3)
+        }
+        if(nxdim==3){
+          xs <- acast(melt(x), Var1 + Var2 ~ Var3)
+        }
+      }
+      if(nydim==3){
+        ys <- y[,j,]
+        if(nxdim==3){
+          xs <- x[,j,]
+        }
+        if(nxdim==2){
+        xs <- array(dim=dim(ys))
+        xs[] <- rep(x[,j],nclim) # not necessary - matplot
+        }
+      }
+    }
+    
+    matplot(xs,ys,col=trancols,pch=16)
+    for (k in 1:nclim) {
+      lines(mysupsmu(xs[,k],ys[,k]),col=cols[k])
+    }  
+    
+    lettlab(j)
+    
+    if(j %in% 19:22) addxlab(xname) 
+    if(j %in% seq(1,23,4)) addylab(yname) 
+    
+  }
+  
+  addledge(ltext=colledgetext,col=cols,lty=1)
+  addledge(ltext=detledgetext)
   
   dev.off()
   
