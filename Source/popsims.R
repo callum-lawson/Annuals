@@ -330,6 +330,24 @@ dev.off()
 
 # Optimal parameters within species ---------------------------------------
 
+iterextract <- function(p){
+  pdim <- dim(p)
+  if(maxiter %in% pdim){
+    if(length(pdim)==1) return(p[unlist(itersetl)])
+    if(length(pdim)==2) return(p[unlist(itersetl),])
+    if(length(pdim)==3) return(p[unlist(itersetl),,])
+  }
+}
+    
+goi <- lapply(pl$go,iterextract)
+pri <- lapply(pl$pr,iterextract)
+rsi <- lapply(pl$rs,iterextract)
+
+parplot(goi$alpha_G,log(psla$ns),expression(alpha[G]),expression(ln(n[s,15])),t=15)
+parplot(goi$beta_Gz,log(psla$ns),expression(beta[G]),expression(ln(n[s,15])),t=15)
+parplot(goi$alpha_m,log(psla$ns),expression(alpha[m]),expression(ln(n[s,15])),t=15)
+parplot(goi$beta_m,log(psla$ns),expression(beta[m]),expression(ln(n[s,15])),t=15)
+
 withinplot(pl$go,psls,"alpha_G","ns",simtrans_fun=log)
 withinplot(pl$go,psls,"beta_Gz","ns",simtrans_fun=log)
 withinplot(pl$go,psls,"alpha_m","ns",simtrans_fun=log)
@@ -385,15 +403,6 @@ withinplot(pl$go,psls,"beta_Gz","nsK",simtrans_fun=log)
 # - [1000, 50, 5]
 # - [1000, 22]
 # - [1000, 5]
-
-pslm <- pli <- list() # rename?
-pslm$ns <- apply(psla$ns,c(1,3,4),median)
-pli$alpha_G <- pl$go$alpha_G[unlist(itersetl),]
-
-parplot(pli$alpha_G,log(pslm$ns),t=NULL,xname=expression(alpha[G]),yname=expression(ln(ns[t=15])))
-
-x <- pli$alpha_G
-y <- log(pslm$ns)
 
 ### r ~ z
 

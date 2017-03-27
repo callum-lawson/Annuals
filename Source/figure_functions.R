@@ -190,17 +190,17 @@ reds <- brewer.pal(9,"Reds")[5]
 
 cols <- c(purples,blues,greens,oranges,reds)
 
+colledgetext <- cnames_unique
+detledgetext <- c(
+  paste0("nstart=",nstart[1]),
+  paste0("ni=",ni),
+  paste0("nt=",nt),
+  paste0("nj=",nj),
+  paste0("nk=",nk)
+)
+
 seriesplot <- function(qa,varname,yname,quantiles=T){
 
-  colledgetext <- cnames_unique
-  detledgetext <- c(
-    paste0("nstart=",nstart[1]),
-    paste0("ni=",ni),
-    paste0("nt=",nt),
-    paste0("nj=",nj),
-    paste0("nk=",nk)
-  )
-  
   ncols <- length(cols)
   ltys <- c(3,1,3)
   nltys <- length(ltys)
@@ -275,51 +275,51 @@ pairplot <- function(plotname,a,npdim,w=8,h=8){
   dev.off()
 }
 
-withinplot <- function(parlist,simlist,parname,simname,
-  partrans_fun=NULL,simtrans_fun=NULL,
-  agg_fun=NULL,smooth=T,...){
-  
-  pdf(paste0("Plots/",parname,"_",simname,"_",format(Sys.Date(),"%d%b%Y"),".pdf"),
-    width=plotwidth,height=plotheight)
-  
-  iters <- as.vector(unlist(itersetl))
-    # same parameter sets for all clims
-  
-  for(i in 1:nclim){
-    
-    # may need to change iters extracted when change sim code
-    if(is.null(partrans_fun)) xmat <- parlist[[parname]][iters,]
-    else xmat <- partrans_fun( parlist[[parname]][iters,] )
-    
-    if(is.null(simtrans_fun)) yarr <- simlist[[i]][[simname]]
-    else yarr <- simtrans_fun(simlist[[i]][[simname]])
-    
-    if(is.null(agg_fun)) ymat <- yarr[,tpos,]
-    else ymat <- apply(yarr,c(1,3),agg_fun)
-    
-    plotsetup()
-    
-    for(j in 1:nspecies){
-      
-      plot(ymat[,j]~xmat[,j],...)
-      if(smooth==T) lines(mysupsmu(xmat[,j],ymat[,j]),col="red")
-      
-      lettlab(j)
-      
-      if(j %in% 19:23) addxlab(parname) 
-      if(j %in% seq(1,23,4)) addylab(simname) 
-      
-    }
-    
-    addledge(ltext=cnames_unique[i])
-    
-  }
-  
-  dev.off()
-  
-}
+# withinplot <- function(parlist,simlist,parname,simname,
+#   partrans_fun=NULL,simtrans_fun=NULL,
+#   agg_fun=NULL,smooth=T,...){
+#   
+#   pdf(paste0("Plots/",parname,"_",simname,"_",format(Sys.Date(),"%d%b%Y"),".pdf"),
+#     width=plotwidth,height=plotheight)
+#   
+#   iters <- as.vector(unlist(itersetl))
+#     # same parameter sets for all clims
+#   
+#   for(i in 1:nclim){
+#     
+#     # may need to change iters extracted when change sim code
+#     if(is.null(partrans_fun)) xmat <- parlist[[parname]][iters,]
+#     else xmat <- partrans_fun( parlist[[parname]][iters,] )
+#     
+#     if(is.null(simtrans_fun)) yarr <- simlist[[i]][[simname]]
+#     else yarr <- simtrans_fun(simlist[[i]][[simname]])
+#     
+#     if(is.null(agg_fun)) ymat <- yarr[,tpos,]
+#     else ymat <- apply(yarr,c(1,3),agg_fun)
+#     
+#     plotsetup()
+#     
+#     for(j in 1:nspecies){
+#       
+#       plot(ymat[,j]~xmat[,j],...)
+#       if(smooth==T) lines(mysupsmu(xmat[,j],ymat[,j]),col="red")
+#       
+#       lettlab(j)
+#       
+#       if(j %in% 19:23) addxlab(parname) 
+#       if(j %in% seq(1,23,4)) addylab(simname) 
+#       
+#     }
+#     
+#     addledge(ltext=cnames_unique[i])
+#     
+#   }
+#   
+#   dev.off()
+#   
+# }
 
-parplot <- function(x,y,t=NULL,xname,yname,tran=25){
+parplot <- function(x,y,xname,yname,t=NULL,tran=25){
   
   cols_rgb <- col2rgb(cols)
   trancols <- rgb(
@@ -348,12 +348,12 @@ parplot <- function(x,y,t=NULL,xname,yname,tran=25){
   for(j in 1:nspecies){
     
     if(!is.null(t)){
-      ys <- y[,tpos,j,]
+      ys <- y[,t,j,]
       if(nxdim==4){
-        xs <- x[,tpos,j,]
+        xs <- x[,t,j,]
       }
       if(nxdim==3){
-        xs <- x[,tpos,]
+        xs <- x[,t,]
       }
       if(nxdim==2){
         xs <- array(dim=dim(ys))
