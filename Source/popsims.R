@@ -179,35 +179,45 @@ for(i in 1:nvar){
 }
 psla <- psla[ndimvar>0]
 
+# Extract parameters used in simulations ----------------------------------
+
+iterextract <- function(p){
+  pdim <- dim(p)
+  if(maxiter %in% pdim){
+    if(length(pdim)==1) return(p[unlist(itersetl)])
+    if(length(pdim)==2) return(p[unlist(itersetl),])
+    if(length(pdim)==3) return(p[unlist(itersetl),,])
+  }
+}
+
+goi <- lapply(pl$go,iterextract)
+pri <- lapply(pl$pr,iterextract)
+rsi <- lapply(pl$rs,iterextract)
+
 # Derived parameters ------------------------------------------------------
 
 ### From input parameters
 
-pl$pr$alpha_p <- pl$pr$beta_p[,,1]
-pl$pr$beta_d_p <- pl$pr$beta_p[,,4]
+goi$tau_mu <- with(goi, godmean_f(alpha_G,beta_Gz) )
+goi$tau_sig <- with(goi, godvar_f(beta_Gz) )
 
-pl$rs$beta_d_r <- pl$rs$beta_r[,,4]
+goi$rho <- with(goi, alpha_G + beta_Gz*log(zam/tau_p))
 
-pl$go$iota_mu <- with(pl$go, godmean_f(alpha_G,beta_Gz) )
-pl$go$iota_sig <- with(pl$go, godvar_f(beta_Gz) )
-
-pl$go$rho <- with(pl$go, alpha_G + beta_Gz*log(zam/tau_p))
-
-pl$go$m0 <- exp(pl$go$alpha_m)
-pl$go$m1 <- exp(pl$go$beta_m)
-pl$go$Kn <- with(pl$go, Kncalc(m0,m1,T3))
-pl$go$hn <- with(pl$go, hncalc(m0,m1,T3))
+goi$m0 <- exp(goi$alpha_m)
+goi$m1 <- exp(goi$beta_m)
+goi$Kn <- with(goi, Kncalc(m0,m1,T3))
+goi$hn <- with(goi, hncalc(m0,m1,T3))
 
 ### From simulations
 
 psla$Y <- with(psla,nn/ng)
 psla$Ye <- with(psla,nnb/ng)
 aNA <- array(dim=c(nit,1,nj,nclim))
-psla$r <- log(psla$ns) - log(abind(aNA,psla$ns[,-nt,,],along=2))
-# popualtion growth rates
+psla$r <- log(abind(psla$ns[,-1,,],aNA,along=2)) - log(psla$ns)
+  # popualtion growth rates (year t = growth to next year
 psla$pY <- apply(psla$nn,2:4,function(x) sum(x>0)/length(x))
-# probability of at least one new seed
-# (could also use to calculate extinction risk)
+  # probability of at least one new seed
+  # (could also use to calculate extinction risk)
 
 # not surprising that differ in seed numbers (e.g. if make smaller seeds)
 # calculate relative reproduction instead?
@@ -303,21 +313,62 @@ pna <- aperm(pna,c(4,1,2,3))
   # hack to stack two copies of pYf along 2nd dimension so that relchange works
 rpna <- relchange(qlogis(pna),scenbase="mu1_cv0",scennew="mu1_cv1",keepsp=keepsp)
 
-### Pairs plots
+# Pairs correlations ------------------------------------------------------
 
 pairplot("popchange_pairs_vitalratechange_newenv",rca,2)
 pairplot("popchange_pairs_vitalratechange_consenv",cca,2)
 pairplot("popchange_pairs_allclimscenarios_",rcaa,3)
 pairplot("popchange_pairs_allclimscenarios_alltraits",rcata,3,w=21,h=21)
 
-### Climate graphs
+# Optimal parameters within species ---------------------------------------
+
+parplot(goi$alpha_G,log(psla$ns),expression(alpha[G]),expression(ln(N[s15])),t=15)
+parplot(goi$beta_Gz,log(psla$ns),expression(beta[G]),expression(ln(N[s15])),t=15)
+parplot(goi$alpha_m,log(psla$ns),expression(alpha[m]),expression(ln(N[s15])),t=15)
+parplot(goi$beta_m,log(psla$ns),expression(beta[m]),expression(ln(N[s15])),t=15)
+
+parplot(pri$beta_p[,,1],log(psla$ns),expression(beta[p1]),expression(ln(N[s15])),t=15)
+parplot(pri$beta_p[,,4],log(psla$ns),expression(beta[p4]),expression(ln(N[s15])),t=15)
+
+parplot(goi$tau_mu,log(psla$ns),expression(tau[mu]),expression(ln(N[s15])),t=15)
+parplot(log(goi$tau_sig),log(psla$ns),expression(ln(tau[sigma])),expression(ln(N[s15])),t=15)
+parplot(goi$rho,log(psla$ns),expression(rho),expression(ln(n[s15])),t=15)
+
+parplot(goi$alpha_G,log(psla$nsK),expression(alpha[G]),expression(ln(N[sK15])),t=15)
+parplot(goi$beta_Gz,log(psla$nsK),expression(beta[G]),expression(ln(N[sK15])),t=15)
+
+# Yearly dynamics ---------------------------------------------------------
+
+parplot(psla$z,log(psla$r),expression(z),expression(r),t=15,xlim=c(-0.5,1.5))
+parplot(psla$z,log(psla$r),expression(z),expression(r),
+  type="n",xlim=c(-0.5,1.5),ylim=c(-2.5,0.5))
+  # doesn't account for zero-reproduction years
+
+# r ~ ns
+# Y ~ gdens
+# Pr(Y>0) ~ gdens
+
+parplot(psla$G,log(psla$r),expression(G),expression(r),type="n",ylim=c(-2.5,0.5))
+
+parplot(log(psla$ns),log(psla$r),expression(ln(N[s])),expression(r),type="n",ylim=c(-2.5,0.5))
+
+parplot(psla$z,log(psla$Y),expression(z),expression(ln(Y)),t=15,xlim=c(-0.5,1.5))
+parplot(psla$z,log(psla$Ye),expression(z),expression(ln(Ye)),t=15,xlim=c(-0.5,1.5))
+
+parplot(log(psla$ng),log(psla$Ye),expression(ln(N[g])),expression(ln(Ye)),t=15)
+parplot(qlogis(psla$G),log(psla$Ye),expression(logit(G)),expression(ln(Ye)),t=15,xlim=c(-5,5))
+
+# ns_median ~ G_median
+# ns_median ~ alpha_G
+
+# Climate distributions ---------------------------------------------------
 
 pdf(paste0("Plots/zdists",format(Sys.Date(),"%d%b%Y"),".pdf"),width=4.5,height=4.5)
 
 plot(density(psla$z[,,2]),xlim=c(-2,2),main="",col=cols[2])
 for(i in 3:nclim){
   lines(density(psla$z[,,i]),col=cols[i])
-  }
+}
 abline(v=psla$z[,,1],col="black",lty=3)
 
 plot(density(tau_p*exp(psla$z[,,2])),xlim=c(0,250),ylim=c(0,0.011),main="",col=cols[1])
@@ -328,419 +379,3 @@ abline(v=tau_p*exp(psla$z[,,1]),col="black",lty=3)
 
 dev.off()
 
-# Optimal parameters within species ---------------------------------------
-
-iterextract <- function(p){
-  pdim <- dim(p)
-  if(maxiter %in% pdim){
-    if(length(pdim)==1) return(p[unlist(itersetl)])
-    if(length(pdim)==2) return(p[unlist(itersetl),])
-    if(length(pdim)==3) return(p[unlist(itersetl),,])
-  }
-}
-    
-goi <- lapply(pl$go,iterextract)
-pri <- lapply(pl$pr,iterextract)
-rsi <- lapply(pl$rs,iterextract)
-
-parplot(goi$alpha_G,log(psla$ns),expression(alpha[G]),expression(ln(n[s,15])),t=15)
-parplot(goi$beta_Gz,log(psla$ns),expression(beta[G]),expression(ln(n[s,15])),t=15)
-parplot(goi$alpha_m,log(psla$ns),expression(alpha[m]),expression(ln(n[s,15])),t=15)
-parplot(goi$beta_m,log(psla$ns),expression(beta[m]),expression(ln(n[s,15])),t=15)
-
-withinplot(pl$go,psls,"alpha_G","ns",simtrans_fun=log)
-withinplot(pl$go,psls,"beta_Gz","ns",simtrans_fun=log)
-withinplot(pl$go,psls,"alpha_m","ns",simtrans_fun=log)
-withinplot(pl$go,psls,"beta_m","ns",simtrans_fun=log)
-
-withinplot(pl$pr,psls,"alpha_p","ns",simtrans_fun=log)
-withinplot(pl$pr,psls,"beta_d_p","ns",simtrans_fun=log)
-
-withinplot(pl$go,psls,"iota_mu","ns",simtrans_fun=log)
-withinplot(pl$go,psls,"iota_sig","ns",partrans_fun=log,simtrans_fun=log)
-withinplot(pl$go,psls,"rho","ns",simtrans_fun=log)
-
-withinplot(pl$go,psls,"alpha_G","nsK",simtrans_fun=log)
-withinplot(pl$go,psls,"beta_Gz","nsK",simtrans_fun=log)
-
-# Predictions of yearly dynamics ------------------------------------------
-
-### FINISH ANNOTATIONS!
-
-### Y every year, X every year and every species
-# y[i,t,j,m] ~ x[i,t,j,m]
-
-# r ~ z
-# r ~ G
-# r ~ ns
-# Y ~ gdens
-# Pr(Y>0) ~ gdens
-
-### Y every year, X every year, same for all species
-# y[i,t,j,m] ~ x[i,t,m]
-
-# Y ~ z
-# Ye ~ z
-
-### Y one year, X one value from sims
-# y[i,j,m] ~ x[i,j,m]
-
-# ns_median ~ G_median
-
-### Y one value, X one param
-# y[i,j,m] ~ x[i,j]
-
-# ns_median ~ alpha_G
-
-# species index gets ignored
-
-### y:
-# - [1000, 50, 22, 5]
-# - [1000, 22, 5]
-
-### x : 
-# - [1000, 50, 22, 5]
-# - [1000, 50, 5]
-# - [1000, 22]
-# - [1000, 5]
-
-### r ~ z
-
-x_in <- psls$mu1_cv1$z
-y_in <- psls$mu1_cv1$r
-y_in[!is.finite(y_in)] <- NA
-
-pdf(paste0("Plots/popgrowth_rainfall_",format(Sys.Date(),"%d%b%Y"),".pdf"),
-    width=plotwidth,height=plotheight)
-  
-  plotsetup()
-  
-  for(j in 1:nspecies){
-
-    y <- y_in[ipos,tpos,j]
-    x <- x_in[ipos,tpos-1] # clim from previous "year"
-    
-    plot(y~x,pch=16,col=myblack)
-    abline(h=0,col="red",lty=2)
-    lines(supsmu(x[is.na(y)==F],y[is.na(y)==F]),col="blue")
-    myrho <- round(cor.test(x,y)$estimate,2)
-    legend("bottomright",bty="n",
-      legend=substitute(paste(rho," = ",myrho,sep=""),list(myrho=myrho))
-      )
-    
-    lettlab(j)
-    
-    if(j %in% 19:22) addxlab("z") 
-    if(j %in% seq(1,23,4)) addylab("r") 
-    
-    }
-  
-dev.off()
-  
-### r ~ G
-
-x_in <- qlogis(psls$mu1_cv1$G)
-
-pdf(paste0("Plots/popgrowth_G_",format(Sys.Date(),"%d%b%Y"),".pdf"),
-  width=plotwidth,height=plotheight)
-
-plotsetup()
-
-for(j in 1:nspecies){
-  
-  y <- y_in[ipos,tpos,j]
-  x <- x_in[ipos,tpos-1,j] # clim from previous "year"
-  
-  plot(y~x,pch=16,col=myblack)
-  abline(h=0,col="red",lty=2)
-  lines(supsmu(x[is.na(y)==F],y[is.na(y)==F]),col="blue")
-  myrho <- round(cor.test(x,y)$estimate,2)
-  legend("bottomright",bty="n",
-    legend=substitute(paste(rho," = ",myrho,sep=""),list(myrho=myrho))
-  )
-  
-  lettlab(j)
-  
-  if(j %in% 19:22) addxlab("logit(G)") 
-  if(j %in% seq(1,23,4)) addylab("r") 
-  
-}
-
-dev.off()
-
-
-### r ~ ns
-
-x_in <- log(psls$mu1_cv1$ns)
-y_in <- psls$mu1_cv1$r
-y_in[!is.finite(y_in)] <- NA
-
-pdf(paste0("Plots/popgrowth_density_",format(Sys.Date(),"%d%b%Y"),".pdf"),
-  width=plotwidth,height=plotheight)
-
-plotsetup()
-
-for(j in 1:nspecies){
-  
-  y <- y_in[ipos,tpos,j]
-  x <- x_in[ipos,tpos-1,j] # clim from previous "year"
-  
-  plot(y~x,pch=16,col=myblack)
-  abline(h=0,col="red",lty=2)
-  lines(supsmu(x[is.na(y)==F],y[is.na(y)==F]),col="blue")
-  myrho <- round(cor.test(x,y)$estimate,2)
-  legend("bottomright",bty="n",
-    legend=substitute(paste(rho," = ",myrho,sep=""),list(myrho=myrho))
-  )
-  
-  lettlab(j)
-  
-  if(j %in% 19:22) addxlab(expression(ln(N[s])))
-  if(j %in% seq(1,23,4)) addylab("r") 
-  
-}
-
-dev.off()
-
-
-pdf(paste0("Plots/popgrowth_hists_",format(Sys.Date(),"%d%b%Y"),".pdf"),
-  width=plotwidth,height=plotheight)
-
-plotsetup()
-
-for(j in 1:nspecies){
-  
-  y <- y_in[ipos,tpos,j]
-  hist(y,breaks=1000,main="")
-  abline(v=log(plogis(So_full[j])),col="red",lty=3)
-  lettlab(j)
-
-  if(j %in% 19:22) addxlab(expression(ln(N[s])))
-  if(j %in% seq(1,23,4)) addylab("r") 
-  
-  }
-
-dev.off()
-
-### Y ~ z
-
-x_in <- psls$mu1_cv1$z
-y_in <- log(psls$mu1_cv1$nn/psls$mu1_cv1$ng)
-y_in[!is.finite(y_in)] <- NA
-
-pdf(paste0("Plots/Y_rainfall_",format(Sys.Date(),"%d%b%Y"),".pdf"),
-  width=plotwidth,height=plotheight)
-
-plotsetup()
-
-for(j in 1:nspecies){
-  
-  y <- y_in[ipos,tpos,j]
-  x <- x_in[ipos,tpos] # clim from previous "year"
-  
-  plot(y~x,pch=16,col=myblack)
-  abline(h=0,col="red",lty=2)
-  abline(v=0,col="red",lty=2)
-  lines(supsmu(x[is.na(y)==F],y[is.na(y)==F]),col="blue")
-  myrho <- round(cor.test(x,y)$estimate,2)
-  legend("bottomright",bty="n",
-    legend=substitute(paste(rho," = ",myrho,sep=""),list(myrho=myrho))
-  )
-  
-  lettlab(j)
-  
-  if(j %in% 19:22) addxlab("z") 
-  if(j %in% seq(1,23,4)) addylab("ln(Y)") 
-  
-}
-
-dev.off()
-
-y_in <- log(psls$mu1_cv1$nnb/psls$mu1_cv1$ng)
-y_in[!is.finite(y_in)] <- NA
-
-pdf(paste0("Plots/Ye_rainfall_",format(Sys.Date(),"%d%b%Y"),".pdf"),
-  width=plotwidth,height=plotheight)
-
-plotsetup()
-
-for(j in 1:nspecies){
-  
-  y <- y_in[ipos,tpos,j]
-  x <- x_in[ipos,tpos] # clim from previous "year"
-  
-  plot(y~x,pch=16,col=myblack)
-  abline(h=0,col="red",lty=2)
-  abline(v=0,col="red",lty=2)
-  lines(supsmu(x[is.na(y)==F],y[is.na(y)==F]),col="blue")
-  myrho <- round(cor.test(x,y)$estimate,2)
-  legend("bottomright",bty="n",
-    legend=substitute(paste(rho," = ",myrho,sep=""),list(myrho=myrho))
-  )
-  
-  lettlab(j)
-  
-  if(j %in% 19:22) addxlab("z") 
-  if(j %in% seq(1,23,4)) addylab(expression(ln(Y[e]))) 
-  
-}
-
-dev.off()
-
-### Y ~ gdens
-
-x_in <-  log(psls$mu1_cv1$ng)
-y_in <- log(psls$mu1_cv1$nn/psls$mu1_cv1$ng)
-y_in[!is.finite(y_in)] <- NA
-
-pdf(paste0("Plots/Y_gd_",format(Sys.Date(),"%d%b%Y"),".pdf"),
-  width=plotwidth,height=plotheight)
-
-plotsetup()
-
-for(j in 1:nspecies){
-  
-  y <- y_in[ipos,tpos,j]
-  x <- x_in[ipos,tpos,j] # clim from previous "year"
-  
-  plot(y~x,pch=16,col=myblack)
-  abline(h=0,col="red",lty=2)
-  abline(v=0,col="red",lty=2)
-  lines(supsmu(x[is.na(y)==F],y[is.na(y)==F]),col="blue")
-  myrho <- round(cor.test(x,y)$estimate,2)
-  legend("bottomright",bty="n",
-    legend=substitute(paste(rho," = ",myrho,sep=""),list(myrho=myrho))
-  )
-  
-  lettlab(j)
-  
-  if(j %in% 19:22) addxlab(expression(ln(N[g])))
-  if(j %in% seq(1,23,4)) addylab("ln(Y)") 
-  
-  }
-
-dev.off()
-
-
-### Pr(Y>0) ~ gdens
-
-### UNFINISHED!
-
-x_in <-  log(psls$mu1_cv1$ng)
-y_in <- apply(psls$mu1_cv1$nn[,nt,],2,function(x) sum(x>0)/length(x))
-y_in[!is.finite(y_in)] <- NA
-
-pdf(paste0("Plots/Y_gd_",format(Sys.Date(),"%d%b%Y"),".pdf"),
-  width=plotwidth,height=plotheight)
-
-plotsetup()
-
-for(j in 1:nspecies){
-  
-  y <- y_in[ipos,tpos,j]
-  x <- x_in[ipos,tpos,j] # clim from previous "year"
-  
-  plot(y~x,pch=16,col=myblack)
-  abline(h=0,col="red",lty=2)
-  abline(v=0,col="red",lty=2)
-  lines(supsmu(x[is.na(y)==F],y[is.na(y)==F]),col="blue")
-  myrho <- round(cor.test(x,y)$estimate,2)
-  legend("bottomright",bty="n",
-    legend=substitute(paste(rho," = ",myrho,sep=""),list(myrho=myrho))
-  )
-  
-  lettlab(j)
-  
-  if(j %in% 19:22) addxlab(expression(ln(N[g])))
-  if(j %in% seq(1,23,4)) addylab("ln(Y)") 
-  
-  }
-
-dev.off()
-
-### Y~G
-
-pdf(paste0("Plots/Y_vs_G_",format(Sys.Date(),"%d%b%Y"),".pdf"),
-  width=plotwidth,height=plotheight)
-
-plotsetup()
-
-for(j in 1:nspecies){
-  x <- with(pscur, qlogis(G[ipos,tpos,j]))
-  y <- with(pscur, log(Y[ipos,tpos,j]))
-  x <- x[y>-Inf]
-  y <- y[y>-Inf]
-  
-  plot(y~x,pch=16,col=myblack)
-  abline(lm(y~x),col="red",lty=2)
-  lines(supsmu(x,y),col="blue")
-  myrho <- round(cor.test(x,y)$estimate,2)
-  legend("bottomright",bty="n",
-    legend=substitute(paste(rho," = ",myrho,sep=""),list(myrho=myrho))
-    )
-  
-  lettlab(j)
-
-  if(j %in% 19:22) addxlab("logit(G)") 
-  if(j %in% seq(1,23,4)) addylab("ln Y") 
-  
-  }
-
-plotsetup()
-
-for(j in 1:nspecies){
-  x <- with(pscur, qlogis(G[ipos,tpos,j]))
-  y <- with(pscur, log(Y[ipos,tpos,j]))
-  yb <- y > -Inf # y binary
-  
-  boxplot(x~yb,pch=16,col=myblack,horizontal=T,range=0,lty=1,boxwex=0.5)
-  #m <- glm(yb~x,family="binomial")
-
-  lettlab(j)
-  
-  if(j %in% 19:22) addxlab("logit(G)") 
-  if(j %in% seq(1,23,4)) addylab("Y>0") 
-  
-  }
-
-plotsetup()
-
-for(j in 1:nspecies){
-  x <- with(pscur, qlogis(G[ipos,tpos,j]))
-  y <- with(pscur, log(Ye[ipos,tpos,j]))
-  x <- x[y>-Inf]
-  y <- y[y>-Inf]
-  
-  plot(y~x,pch=16,col=myblack)
-  abline(lm(y~x),col="red",lty=2)
-  lines(supsmu(x,y),col="blue")
-  myrho <- round(cor.test(x,y)$estimate,2)
-  legend("bottomright",bty="n",
-    legend=substitute(paste(rho," = ",myrho,sep=""),list(myrho=myrho))
-  )
-  
-  lettlab(j)
-  
-  if(j %in% 19:22) addxlab("logit(G)") 
-  if(j %in% seq(1,23,4)) addylab(expression(ln~Y[eff])) 
-  
-  }
-
-plotsetup()
-
-for(j in 1:nspecies){
-  x <- with(pscur, qlogis(G[ipos,tpos,j]))
-  y <- with(pscur, log(Ye[ipos,tpos,j]))
-  yb <- y > -Inf # y binary
-  
-  boxplot(x~yb,pch=16,col=myblack,horizontal=T,range=0,lty=1,boxwex=0.5)
-  #m <- glm(yb~x,family="binomial")
-  
-  lettlab(j)
-  
-  if(j %in% 19:22) addxlab("logit(G)") 
-  if(j %in% seq(1,23,4)) addylab(expression(Y[eff]>0)) 
-  
-  }
-
-dev.off()

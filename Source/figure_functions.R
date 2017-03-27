@@ -319,7 +319,7 @@ pairplot <- function(plotname,a,npdim,w=8,h=8){
 #   
 # }
 
-parplot <- function(x,y,xname,yname,t=NULL,tran=25){
+parplot <- function(x,y,xname,yname,t=NULL,tran=25,...){
   
   cols_rgb <- col2rgb(cols)
   trancols <- rgb(
@@ -382,7 +382,7 @@ parplot <- function(x,y,xname,yname,t=NULL,tran=25){
       }
     }
     
-    matplot(xs,ys,col=trancols,pch=16)
+    matplot(xs,ys,col=trancols,pch=16,...)
     for (k in 1:nclim) {
       lines(mysupsmu(xs[,k],ys[,k]),col=cols[k])
     }  
