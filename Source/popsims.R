@@ -200,7 +200,6 @@ rsi <- lapply(pl$rs,iterextract)
 
 goi$tau_mu <- with(goi, godmean_f(alpha_G,beta_Gz) )
 goi$tau_sig <- with(goi, godvar_f(beta_Gz) )
-
 goi$rho <- with(goi, alpha_G + beta_Gz*log(zam/tau_p))
 
 goi$m0 <- exp(goi$alpha_m)
@@ -326,9 +325,13 @@ parplot(goi$alpha_G,log(psla$ns),expression(alpha[G]),expression(ln(N[s15])),t=1
 parplot(goi$beta_Gz,log(psla$ns),expression(beta[G]),expression(ln(N[s15])),t=15)
 parplot(goi$alpha_m,log(psla$ns),expression(alpha[m]),expression(ln(N[s15])),t=15)
 parplot(goi$beta_m,log(psla$ns),expression(beta[m]),expression(ln(N[s15])),t=15)
+parplot(log(goi$Kn),log(psla$ns),expression(log(K[N])),expression(ln(N[s15])),t=15)
+parplot(log(goi$hn),log(psla$ns),expression(log(h[N])),expression(ln(N[s15])),t=15)
 
 parplot(pri$beta_p[,,1],log(psla$ns),expression(beta[p1]),expression(ln(N[s15])),t=15)
 parplot(pri$beta_p[,,4],log(psla$ns),expression(beta[p4]),expression(ln(N[s15])),t=15)
+parplot(pri$sig_y_p,log(psla$ns),expression(sigma[py]),expression(ln(N[s15])),t=15)
+parplot(rsi$beta_r[,,1],log(psla$ns),expression(beta[r1]),expression(ln(N[s15])),t=15)
 
 parplot(goi$tau_mu,log(psla$ns),expression(tau[mu]),expression(ln(N[s15])),t=15)
 parplot(log(goi$tau_sig),log(psla$ns),expression(ln(tau[sigma])),expression(ln(N[s15])),t=15)
@@ -343,23 +346,21 @@ parplot(psla$z,log(psla$r),expression(z),expression(r),t=15,xlim=c(-0.5,1.5))
 parplot(psla$z,log(psla$r),expression(z),expression(r),
   type="n",xlim=c(-0.5,1.5),ylim=c(-2.5,0.5))
   # doesn't account for zero-reproduction years
-
-# r ~ ns
-# Y ~ gdens
-# Pr(Y>0) ~ gdens
-
-parplot(psla$G,log(psla$r),expression(G),expression(r),type="n",ylim=c(-2.5,0.5))
-
 parplot(log(psla$ns),log(psla$r),expression(ln(N[s])),expression(r),type="n",ylim=c(-2.5,0.5))
+parplot(psla$G,log(psla$r),expression(G),expression(r),type="n",ylim=c(-2.5,0.5))
 
 parplot(psla$z,log(psla$Y),expression(z),expression(ln(Y)),t=15,xlim=c(-0.5,1.5))
 parplot(psla$z,log(psla$Ye),expression(z),expression(ln(Ye)),t=15,xlim=c(-0.5,1.5))
-
+parplot(psla$z,log(psla$Y),expression(z),expression(ln(Y)),xlim=c(-0.5,1.5),type="n",
+  ylim=c(-2.5,5))
+parplot(psla$z,log(psla$Ye),expression(z),expression(ln(Ye)),xlim=c(-0.5,1.5),type="n",
+  ylim=c(-2.5,5))
 parplot(log(psla$ng),log(psla$Ye),expression(ln(N[g])),expression(ln(Ye)),t=15)
 parplot(qlogis(psla$G),log(psla$Ye),expression(logit(G)),expression(ln(Ye)),t=15,xlim=c(-5,5))
 
-# ns_median ~ G_median
-# ns_median ~ alpha_G
+parplot(log(psla$nn),log(psla$Sn),expression(ln(N[n])),expression(S[n]),type="n")
+
+# Pr(Y>0) ~ gdens
 
 # Climate distributions ---------------------------------------------------
 
