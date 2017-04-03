@@ -217,6 +217,7 @@ psla$r <- log(abind(psla$ns[,-1,,],aNA,along=2)) - log(psla$ns)
 psla$pY <- apply(psla$nn,2:4,function(x) sum(x>0)/length(x))
   # probability of at least one new seed
   # (could also use to calculate extinction risk)
+psla$lYvS <- with(psla,log(Ye)-log(So))
 
 # not surprising that differ in seed numbers (e.g. if make smaller seeds)
 # calculate relative reproduction instead?
@@ -262,6 +263,7 @@ q_ng <- seriesquant(log(psla$ng))
 q_So <- seriesquant(qlogis(psla$So))
 	# applies quantile function to list of densities for each climate scenario
 	# dims: (quantile,time,species,clim)
+q_lYvS <- seriesquant(psla$lYvS)
 
 # Plot results ------------------------------------------------------------
 
@@ -274,6 +276,7 @@ seriesplot(q_Ye,"Ye",yname="ln Yeff")
 seriesplot(q_nnb,"nnb",yname=expression(ln~N[nb]))
 seriesplot(q_no,"no",yname=expression(ln~N[o]))
 seriesplot(psla$pY,"pY",yname="Pr(Y>0)",quantiles=F)
+seriesplot(q_lYvS,"lYvS",yname=expression(ln(Y[e]/S[o])))
 
 # Relative change between scenarios ---------------------------------------
 
@@ -342,12 +345,18 @@ parplot(goi$beta_Gz,log(psla$nsK),expression(beta[G]),expression(ln(N[sK15])),t=
 
 # Yearly dynamics ---------------------------------------------------------
 
+cbind(apply(psla$z,3,mean),apply(psla$z,3,sd))
+
 parplot(psla$z,log(psla$r),expression(z),expression(r),t=15,xlim=c(-0.5,1.5))
 parplot(psla$z,log(psla$r),expression(z),expression(r),
   type="n",xlim=c(-0.5,1.5),ylim=c(-2.5,0.5))
   # doesn't account for zero-reproduction years
+with(psla, parplot(z,lYvS,expression(z),expression(ln(Y[e])-ln(S[o])),t=15,xlim=c(-1,1),ylim=c(-5,5)))
+with(psla, parplot(z,lYvS,expression(z),expression(ln(Y[e])-ln(S[o])),type="n",xlim=c(-1,1),ylim=c(-5,5)))
+
 parplot(log(psla$ns),log(psla$r),expression(ln(N[s])),expression(r),type="n",ylim=c(-2.5,0.5))
 parplot(psla$G,log(psla$r),expression(G),expression(r),type="n",ylim=c(-2.5,0.5))
+parplot(qlogis(psla$G),log(psla$r),expression(logit(G)),expression(r),t=15,xlim=c(-5,5),ylim=c(-2.5,0.5))
 
 parplot(psla$z,log(psla$Y),expression(z),expression(ln(Y)),t=15,xlim=c(-0.5,1.5))
 parplot(psla$z,log(psla$Ye),expression(z),expression(ln(Ye)),t=15,xlim=c(-0.5,1.5))
@@ -370,13 +379,13 @@ plot(density(psla$z[,,2]),xlim=c(-2,2),main="",col=cols[2])
 for(i in 3:nclim){
   lines(density(psla$z[,,i]),col=cols[i])
 }
-abline(v=psla$z[,,1],col="black",lty=3)
+abline(v=psla$z[,,1],col=cols[1],lty=3)
 
 plot(density(tau_p*exp(psla$z[,,2])),xlim=c(0,250),ylim=c(0,0.011),main="",col=cols[1])
 for(i in 3:nclim){
   lines(density(tau_p*exp(psla$z[,,i])),col=cols[i])
 }
-abline(v=tau_p*exp(psla$z[,,1]),col="black",lty=3)
+abline(v=tau_p*exp(psla$z[,,1]),col=cols[1],lty=3)
 
 dev.off()
 
