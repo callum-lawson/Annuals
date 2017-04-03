@@ -371,6 +371,13 @@ parplot(log(psla$nn),log(psla$Sn),expression(ln(N[n])),expression(S[n]),type="n"
 
 # Pr(Y>0) ~ gdens
 
+
+# Parameters correlations within species ----------------------------------
+
+j <- 17
+with(goi,plot(log(Kn[,j])~log(hn[,j])))
+with(goi,plot(log(alpha_m[,j])~log(beta_m[,j])))
+
 # Climate distributions ---------------------------------------------------
 
 pdf(paste0("Plots/zdists",format(Sys.Date(),"%d%b%Y"),".pdf"),width=4.5,height=4.5)

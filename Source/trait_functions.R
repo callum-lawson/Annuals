@@ -45,17 +45,24 @@ zwid_f <- function(y,z,qvals=c(0.25,0.75)){
 # Mortality ---------------------------------------------------------------
 
 Kncalc <- function(m0,m1,T3){
-  exp(-m0*T3) / ( (m1/m0)*(1-exp(-m0*T3))/tau_s )
+  c1 <- exp(-m0*T3)
+  c2 <- (m1/m0)*(1-exp(-m0*T3))/tau_s
+  K <- c1/c2
+  return(K)
 }
-# Yodzis, fig on p53
 # density effectively in units of 0.01m^2 (10cm x 10cm) 
+# based on Yodzis, fig on p53
 
 hncalc <- function(m0,m1,T3){
-  1 / ( (m1/m0)*(1-exp(-m0*T3))/tau_s )
-}
+  c2 <- (m1/m0)*(1-exp(-m0*T3))/tau_s
+  h <- 1/c2
+  return(h)
+  }
 # half-saturation density
-# calculated from c1/(1+c2N) = (1/2)(c1/c2)
+# calculated myself from c1N/(1+c2N) = (1/2)(c1/c2)
 # based on Yodzis, p53
+
+# m1 is a slope with density, so affected by tau_s, so c2 needs to be adjusted for tau_s
 
 godmean_f <- function(alpha,beta){
   -alpha/beta
