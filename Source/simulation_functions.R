@@ -55,12 +55,14 @@ popsim <- function(pl,ni,nt,nj=22,nk,nstart,
 
 	BHS <- function(n,m0,m1){
 		exp(-m0*T3) / ( 1 + (m1/m0)*(1-exp(-m0*T3))*n )	
-		}
+	}
+	  # adjustment for area made when entering n (below)
+	  # (could have instead been made in BHS function)
 	if(progress==T) pb <- txtProgressBar(min=0,max=ni,style=3)
 	kseq <- 1:nk
 	tottarea <- nk/10*tau_s
   	# nk/10: number of 0.1m^2 plots -> number of 1 m^2 plots 
-  	# tau_s: density in 0.0001 m^2 = 1 x 1 cm plots
+  	# tau_s: density in 0.01 m^2 = 10 x 10 cm plots
 
 	### SAMPLE ITERATIONS ###
 
@@ -232,7 +234,7 @@ popsim <- function(pl,ni,nt,nj=22,nk,nstart,
 
 			x_t[,2] <- rep(z[i,t],nk)
 			x_t[,3] <- rep(z[i,t]^2,nk)
-			  # climate data into model matrix1111
+			  # climate data into model matrix
 			
 			eps_o_p_t[] <- rnorm(nk*nj,0,sig_o_p[i])
 			

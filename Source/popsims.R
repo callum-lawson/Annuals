@@ -217,7 +217,11 @@ psla$r <- log(abind(psla$ns[,-1,,],aNA,along=2)) - log(psla$ns)
 psla$pY <- apply(psla$nn,2:4,function(x) sum(x>0)/length(x))
   # probability of at least one new seed
   # (could also use to calculate extinction risk)
-psla$lYvS <- with(psla,log(Ye)-log(So))
+psla$YS <- with(psla,log(Ye)-log(So))
+psla$mnmo <- with(psla,log(Sn) - log(So)*T3) 
+  # log(S) = -m*T
+  # ln(Sn/So) = ln(Sn) - ln(So) = -mn + mo
+  # Convert to T3: ln(Sn) - ln(So)*T3
 
 # not surprising that differ in seed numbers (e.g. if make smaller seeds)
 # calculate relative reproduction instead?
@@ -225,11 +229,12 @@ psla$lYvS <- with(psla,log(Ye)-log(So))
 ### From combination of input parameters and simulations
 
 Knarr <- array(dim=c(nit,nj,nt)) # flip nj and nt later
-Knarr[] <- pl$go$Kn[as.vector(unlist(itersetl)),]*(nk/10*tau_s) 
-  # total K, adjusting for number of sites (nk)
+Knarr[] <- goi$Kn*nk/10*tau_s
+  # total K: (K per 0.01m^2) * 10 * (number of 0.1m^2 plots)
   # fill in same for all nt
 Knarr <- aperm(Knarr, c(1,3,2)) # flip nj and nt
 psla$nsK <- psla$ns/rep(Knarr,nclim)
+psla$nnK <- psla$nn/rep(Knarr,nclim)
 
 # to calculate: median G and So for timestep 0
 
@@ -263,7 +268,9 @@ q_ng <- seriesquant(log(psla$ng))
 q_So <- seriesquant(qlogis(psla$So))
 	# applies quantile function to list of densities for each climate scenario
 	# dims: (quantile,time,species,clim)
-q_lYvS <- seriesquant(psla$lYvS)
+q_YS <- seriesquant(psla$YS)
+q_nnK <- seriesquant(log(psla$nnK))
+q_mnmo <- seriesquant(psla$mnmo)
 
 # Plot results ------------------------------------------------------------
 
@@ -271,12 +278,15 @@ seriesplot(q_ns,"ns",yname=expression(ln(N[s])))
 seriesplot(q_nn,"nn",yname=expression(ln(N[n])))
 seriesplot(q_G,"G",yname="logit(G)")
 seriesplot(q_Sn,"Sn",yname="logit(Sn)")
+seriesplot(q_So,"So",yname="logit(So)")
 seriesplot(q_Y,"Y",yname="ln Y")
 seriesplot(q_Ye,"Ye",yname="ln Yeff")
 seriesplot(q_nnb,"nnb",yname=expression(ln~N[nb]))
 seriesplot(q_no,"no",yname=expression(ln~N[o]))
 seriesplot(psla$pY,"pY",yname="Pr(Y>0)",quantiles=F)
-seriesplot(q_lYvS,"lYvS",yname=expression(ln(Y[e]/S[o])))
+seriesplot(q_YS,"YS",yname=expression(ln(Y[e]/S[o])))
+seriesplot(q_nnK,"nnK",yname=expression(ln(N[n]/K[n])))
+seriesplot(q_mnmo,"mnmo",yname=expression(ln(S[n3]/S[o3])))
 
 # Relative change between scenarios ---------------------------------------
 
@@ -345,14 +355,14 @@ parplot(goi$beta_Gz,log(psla$nsK),expression(beta[G]),expression(ln(N[sK15])),t=
 
 # Yearly dynamics ---------------------------------------------------------
 
-cbind(apply(psla$z,3,mean),apply(psla$z,3,sd))
+cbind(mean=apply(psla$z,3,mean),sd=apply(psla$z,3,sd))
 
 parplot(psla$z,log(psla$r),expression(z),expression(r),t=15,xlim=c(-0.5,1.5))
 parplot(psla$z,log(psla$r),expression(z),expression(r),
   type="n",xlim=c(-0.5,1.5),ylim=c(-2.5,0.5))
   # doesn't account for zero-reproduction years
-with(psla, parplot(z,lYvS,expression(z),expression(ln(Y[e])-ln(S[o])),t=15,xlim=c(-1,1),ylim=c(-5,5)))
-with(psla, parplot(z,lYvS,expression(z),expression(ln(Y[e])-ln(S[o])),type="n",xlim=c(-1,1),ylim=c(-5,5)))
+with(psla, parplot(z,YS,expression(z),expression(ln(Y[e])-ln(S[o])),t=15,xlim=c(-1,1),ylim=c(-5,5)))
+with(psla, parplot(z,YS,expression(z),expression(ln(Y[e])-ln(S[o])),type="n",xlim=c(-1,1),ylim=c(-5,5)))
 
 parplot(log(psla$ns),log(psla$r),expression(ln(N[s])),expression(r),type="n",ylim=c(-2.5,0.5))
 parplot(psla$G,log(psla$r),expression(G),expression(r),type="n",ylim=c(-2.5,0.5))
