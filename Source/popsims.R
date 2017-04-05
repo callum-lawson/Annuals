@@ -211,22 +211,22 @@ beta_b <- pri$beta_p + rsi$beta_r
   # = log(pr/(1-p))
 
 nseq <- 1000
-lNgseq <- seq(-100,100,length.out=nseq)
+lNgseq <- seq(-100,100,length.out=nseq) # true values: +log(tau_s)
 modmat <- matrix(c(rep(1,(nseq*3)),lNgseq),nr=nseq,nc=4)
 
-i <- 1
-j <- 17
-
-ally <- array(dim=c(nit,nj,nseq))
+ylNg <- array(dim=c(nit,nj,nseq))
 for(i in 1:nit){
   for(j in 1:nj){
-    ally[i,j,] <- log(
-      plogis(pri$beta_p[i,j,] %*% t(modmat)) * exp(rsi$beta_r[i,j,] %*% t(modmat))
+    ylNg[i,j,] <- log(
+      plogis(
+        pri$beta_p[i,j,] %*% t(modmat)) 
+        * nbtmean(exp(rsi$beta_r[i,j,] %*% t(modmat)),rsi$phi_r[i])
+        # need to adjust for truncation
       )
   }
 }
 
-Ky <- apply(ally,c(1,2),function(x){
+lKy <- apply(ylNg,c(1,2),function(x){
   xabs <- abs(x-0)
   lNgseq[which(xabs==min(xabs))] 
   }
@@ -375,7 +375,8 @@ parplot(pri$beta_p[,,4],log(psla$ns),expression(beta[p4]),expression(ln(N[s15]))
 parplot(rsi$beta_r[,,4],log(psla$ns),expression(beta[r4]),expression(ln(N[s15])),t=15)
 
 parplot(beta_b[,,4],log(psla$ns),expression(beta[b4]),expression(ln(N[s15])),t=15)
-parplot(Ky,log(psla$ns),expression(Ky),expression(ln(N[s15])),t=15)
+parplot(lKy,log(psla$ns),expression(lKy),expression(ln(N[s15])),t=15)
+  # Very high K values, not likely to be limiting?
 
 parplot(pri$sig_y_p,log(psla$ns),expression(sigma[py]),expression(ln(N[s15])),t=15)
 
@@ -421,6 +422,10 @@ parplot(log(psla$nn),log(psla$Sn),expression(ln(N[n])),expression(S[n]),type="n"
 with(psla,matplot(t(ns[1:5,,17,1]),type="l",lty=1))
   # not overcompensating DD because doesn't switch direction every year
 
+# Population density distributions at given time --------------------------
+
+densplot(log(psla$ns),"ln(N[s])")
+
 # Parameters correlations within species ----------------------------------
 
 j <- 17
@@ -437,7 +442,7 @@ for(i in 3:nclim){
 }
 abline(v=psla$z[,,1],col=cols[1],lty=3)
 
-plot(density(tau_p*exp(psla$z[,,2])),xlim=c(0,250),ylim=c(0,0.011),main="",col=cols[1])
+plot(density(tau_p*exp(psla$z[,,2])),xlim=c(0,250),ylim=c(0,0.011),main="",col=cols[2])
 for(i in 3:nclim){
   lines(density(tau_p*exp(psla$z[,,i])),col=cols[i])
 }

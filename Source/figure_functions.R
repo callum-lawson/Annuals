@@ -204,8 +204,7 @@ seriesplot <- function(qa,varname,yname,quantiles=T){
   ncols <- length(cols)
   ltys <- c(3,1,3)
   nltys <- length(ltys)
-  # blue = wet, red = dry; weak = no var, strong = var
-  
+
   if(quantiles==T){
     ca <- acast(melt(qa),Var2 ~ Var4 + Var1 ~ Var3)
     colvec <- rep(cols,each=nltys)
@@ -318,6 +317,37 @@ pairplot <- function(plotname,a,npdim,w=8,h=8){
 #   dev.off()
 #   
 # }
+
+densplot <- function(na,yname,t=tpos){
+    
+    pdf(paste0("Plots/density_",yname,"_",
+      format(Sys.Date(),"%d%b%Y"),".pdf"), width=plotwidth,height=plotheight)
+    
+    plotsetup()
+    
+    for(j in 1:nspecies){
+      
+      plot(density(na[,t,j,1]),col=cols[1],main="",
+        xlim=round(range(na[,t,j,][is.finite(na[,t,j,])]),0)
+        )
+      for(i in 2:nclim){
+        lines(density(na[,t,j,i]),col=cols[i])
+        }
+      
+      lettlab(j)
+      
+      if(j %in% 19:23) addxlab(yname) 
+      if(j %in% seq(1,23,4)) addylab("density") 
+      
+    }
+    
+    addledge(ltext=colledgetext,col=cols,lty=1)
+    addledge(ltext=detledgetext)
+    
+    dev.off()
+    
+  }
+
 
 parplot <- function(x,y,xname,yname,t=NULL,tran=25,...){
   
