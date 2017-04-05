@@ -207,6 +207,31 @@ goi$m1 <- exp(goi$beta_m)
 goi$Kn <- with(goi, Kncalc(m0,m1,T3))
 goi$hn <- with(goi, hncalc(m0,m1,T3))
 
+beta_b <- pri$beta_p + rsi$beta_r
+  # = log(pr/(1-p))
+
+nseq <- 1000
+lNgseq <- seq(-100,100,length.out=nseq)
+modmat <- matrix(c(rep(1,(nseq*3)),lNgseq),nr=nseq,nc=4)
+
+i <- 1
+j <- 17
+
+ally <- array(dim=c(nit,nj,nseq))
+for(i in 1:nit){
+  for(j in 1:nj){
+    ally[i,j,] <- log(
+      plogis(pri$beta_p[i,j,] %*% t(modmat)) * exp(rsi$beta_r[i,j,] %*% t(modmat))
+      )
+  }
+}
+
+Ky <- apply(ally,c(1,2),function(x){
+  xabs <- abs(x-0)
+  lNgseq[which(xabs==min(xabs))] 
+  }
+)
+
 ### From simulations
 
 psla$Y <- with(psla,nn/ng)
@@ -334,6 +359,7 @@ pairplot("popchange_pairs_allclimscenarios_alltraits",rcata,3,w=21,h=21)
 
 # Optimal parameters within species ---------------------------------------
 
+### Seed survival
 parplot(goi$alpha_G,log(psla$ns),expression(alpha[G]),expression(ln(N[s15])),t=15)
 parplot(goi$beta_Gz,log(psla$ns),expression(beta[G]),expression(ln(N[s15])),t=15)
 parplot(goi$alpha_m,log(psla$ns),expression(alpha[m]),expression(ln(N[s15])),t=15)
@@ -341,11 +367,19 @@ parplot(goi$beta_m,log(psla$ns),expression(beta[m]),expression(ln(N[s15])),t=15)
 parplot(log(goi$Kn),log(psla$ns),expression(log(K[N])),expression(ln(N[s15])),t=15)
 parplot(log(goi$hn),log(psla$ns),expression(log(h[N])),expression(ln(N[s15])),t=15)
 
+### Reproduction
 parplot(pri$beta_p[,,1],log(psla$ns),expression(beta[p1]),expression(ln(N[s15])),t=15)
-parplot(pri$beta_p[,,4],log(psla$ns),expression(beta[p4]),expression(ln(N[s15])),t=15)
-parplot(pri$sig_y_p,log(psla$ns),expression(sigma[py]),expression(ln(N[s15])),t=15)
 parplot(rsi$beta_r[,,1],log(psla$ns),expression(beta[r1]),expression(ln(N[s15])),t=15)
 
+parplot(pri$beta_p[,,4],log(psla$ns),expression(beta[p4]),expression(ln(N[s15])),t=15)
+parplot(rsi$beta_r[,,4],log(psla$ns),expression(beta[r4]),expression(ln(N[s15])),t=15)
+
+parplot(beta_b[,,4],log(psla$ns),expression(beta[b4]),expression(ln(N[s15])),t=15)
+parplot(Ky,log(psla$ns),expression(Ky),expression(ln(N[s15])),t=15)
+
+parplot(pri$sig_y_p,log(psla$ns),expression(sigma[py]),expression(ln(N[s15])),t=15)
+
+### Other
 parplot(goi$tau_mu,log(psla$ns),expression(tau[mu]),expression(ln(N[s15])),t=15)
 parplot(log(goi$tau_sig),log(psla$ns),expression(ln(tau[sigma])),expression(ln(N[s15])),t=15)
 parplot(goi$rho,log(psla$ns),expression(rho),expression(ln(n[s15])),t=15)
@@ -381,6 +415,11 @@ parplot(log(psla$nn),log(psla$Sn),expression(ln(N[n])),expression(S[n]),type="n"
 
 # Pr(Y>0) ~ gdens
 
+
+# Individual runs ---------------------------------------------------------
+
+with(psla,matplot(t(ns[1:5,,17,1]),type="l",lty=1))
+  # not overcompensating DD because doesn't switch direction every year
 
 # Parameters correlations within species ----------------------------------
 
