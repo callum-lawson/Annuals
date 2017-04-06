@@ -430,8 +430,6 @@ parplot(log(psla$Y),qlogis(psla$Sn),expression(ln(Y)),expression(S[n]),type="n")
 # Pr(Y>0) ~ gdens
 
 pardensplot(log(psla$nn),qlogis(psla$Sn),expression(ln(N[n])),expression(S[n]),type="n")
-x <- log(psla$nn)
-y <- qlogis(psla$Sn)
 
 # Individual runs ---------------------------------------------------------
 
@@ -456,6 +454,16 @@ densplot(log(psla$nn),"ln(N[n])")
 j <- 17
 with(goi,plot(log(Kn[,j])~log(hn[,j])))
 with(goi,plot(log(alpha_m[,j])~log(beta_m[,j])))
+
+parplot(log(psla$nn),qlogis(psla$Sn),expression(ln(N[n])),expression(S[n]),type="n")
+
+# Changes in parameters between climate scenarios -------------------------
+
+dc_Sn <- qlogis(psla$Sn) - rep(qlogis(psla$Sn[,,,1]),nclim)
+dc_ns <- log(psla$ns) - rep(log(psla$ns[,,,1]),nclim)
+# dc = difference current; df = difference future
+
+parplot(dc_Sn,dc_ns,expression(dS[n]),expression(dN[s]),t=15)
 
 # Climate distributions ---------------------------------------------------
 

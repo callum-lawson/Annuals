@@ -373,7 +373,7 @@ parplot <- function(x,y,xname,yname,t=NULL,tran=25,...){
   if(is.null(t)){
     pdf(paste0("Plots/parplot_",xname,"_",yname,"_",format(Sys.Date(),"%d%b%Y"),".pdf"), width=plotwidth,height=plotheight)
   }
-  
+
   plotsetup()
   
   for(j in 1:nspecies){
@@ -460,6 +460,10 @@ pardensplot <- function(x,y,xname,yname,t=NULL,tran=25,...){
   }
   
   plotsetup()
+
+  dcur <- round(relchange(q_ns,scenbase="mu1_cv0",scennew="mu1_cv1",keepsp=rep(T,nj)),2)
+  dfut <- round(relchange(q_ns,scenbase="mu1_cv1",scennew="mu081_cv12",keepsp=rep(T,nj)),2)
+  # build flexibility in later if needed
   
   for(j in 1:nspecies){
     
@@ -514,6 +518,13 @@ pardensplot <- function(x,y,xname,yname,t=NULL,tran=25,...){
     
     if(j %in% 19:22) addxlab(xname) 
     if(j %in% seq(1,23,4)) addylab(yname) 
+    
+    legend("topright",bty="n", 
+      legend=c(
+        paste("dcur",dcur[j]),
+        paste(" dfut",dfut[j])
+        )
+      )
     
   }
   
