@@ -204,6 +204,7 @@ goi$rho <- with(goi, alpha_G + beta_Gz*log(zam/tau_p))
 
 goi$m0 <- exp(goi$alpha_m)
 goi$m1 <- exp(goi$beta_m)
+goi$So3 <- exp(-goi$m0*T3)
 goi$Kn <- with(goi, Kncalc(m0,m1,T3))
 goi$hn <- with(goi, hncalc(m0,m1,T3))
 
@@ -242,7 +243,12 @@ psla$r <- log(abind(psla$ns[,-1,,],aNA,along=2)) - log(psla$ns)
 psla$pY <- apply(psla$nn,2:4,function(x) sum(x>0)/length(x))
   # probability of at least one new seed
   # (could also use to calculate extinction risk)
-psla$YS <- with(psla,log(Ye)-log(So))
+psla$pYr <- apply(psla$Y,2:4,function(x){
+  xnew <- x[!is.nan(x)]
+  sum(xnew>=1)/length(xnew)
+})
+  # self-replacement rate (before seed DD)
+psla$lYS <- with(psla,log(Ye)-log(So))
 psla$mnmo <- with(psla,log(Sn) - log(So)*T3) 
   # log(S) = -m*T
   # ln(Sn/So) = ln(Sn) - ln(So) = -mn + mo
@@ -253,11 +259,14 @@ psla$mnmo <- with(psla,log(Sn) - log(So)*T3)
 
 ### From combination of input parameters and simulations
 
-Knarr <- array(dim=c(nit,nj,nt)) # flip nj and nt later
+Knarr <- hnarr <- array(dim=c(nit,nj,nt)) # flip nj and nt later
 Knarr[] <- goi$Kn*nk/10*tau_s
+hnarr[] <- goi$hn*nk/10*tau_s
   # total K: (K per 0.01m^2) * 10 * (number of 0.1m^2 plots)
   # fill in same for all nt
 Knarr <- aperm(Knarr, c(1,3,2)) # flip nj and nt
+hnarr <- aperm(hnarr, c(1,3,2)) # flip nj and nt
+
 psla$nsK <- psla$ns/rep(Knarr,nclim)
 psla$nnK <- psla$nn/rep(Knarr,nclim)
 
@@ -273,10 +282,11 @@ rcata[,,1] <- unlist(rcatm)
 
 # Aggregate data ----------------------------------------------------------
 
-seriesquant <- function(a,probs=c(0.05,0.50,0.95),keepdims=2:4){
+seriesquant <- function(a,probs=c(0.25,0.50,0.75),keepdims=2:4){
 	qarr <- apply(a,keepdims,quantile,prob=probs,na.rm=T)
 	return(qarr)
 }
+  # 50% quantiles, not 90% quantiles!
 
 q_ns <- seriesquant(log(psla$ns))
 q_nn <- seriesquant(log(psla$nn))
@@ -293,7 +303,7 @@ q_ng <- seriesquant(log(psla$ng))
 q_So <- seriesquant(qlogis(psla$So))
 	# applies quantile function to list of densities for each climate scenario
 	# dims: (quantile,time,species,clim)
-q_YS <- seriesquant(psla$YS)
+q_lYS <- seriesquant(psla$lYS)
 q_nnK <- seriesquant(log(psla$nnK))
 q_mnmo <- seriesquant(psla$mnmo)
 
@@ -308,8 +318,9 @@ seriesplot(q_Y,"Y",yname="ln Y")
 seriesplot(q_Ye,"Ye",yname="ln Yeff")
 seriesplot(q_nnb,"nnb",yname=expression(ln~N[nb]))
 seriesplot(q_no,"no",yname=expression(ln~N[o]))
-seriesplot(psla$pY,"pY",yname="Pr(Y>0)",quantiles=F)
-seriesplot(q_YS,"YS",yname=expression(ln(Y[e]/S[o])))
+seriesplot(psla$pY,"pY",yname="Pr(Nn>0)",quantiles=F)
+seriesplot(psla$pYr,"pYr",yname="Pr(Y>1)",quantiles=F)
+seriesplot(q_lYS,"lYS",yname=expression(ln(Y[e]/S[o])))
 seriesplot(q_nnK,"nnK",yname=expression(ln(N[n]/K[n])))
 seriesplot(q_mnmo,"mnmo",yname=expression(ln(S[n3]/S[o3])))
 
@@ -396,8 +407,8 @@ parplot(psla$z,log(psla$r),expression(z),expression(r),t=15,xlim=c(-0.5,1.5))
 parplot(psla$z,log(psla$r),expression(z),expression(r),
   type="n",xlim=c(-0.5,1.5),ylim=c(-2.5,0.5))
   # doesn't account for zero-reproduction years
-with(psla, parplot(z,YS,expression(z),expression(ln(Y[e])-ln(S[o])),t=15,xlim=c(-1,1),ylim=c(-5,5)))
-with(psla, parplot(z,YS,expression(z),expression(ln(Y[e])-ln(S[o])),type="n",xlim=c(-1,1),ylim=c(-5,5)))
+with(psla, parplot(z,lYS,expression(z),expression(ln(Y[e])-ln(S[o])),t=15,xlim=c(-1,1),ylim=c(-5,5)))
+with(psla, parplot(z,lYS,expression(z),expression(ln(Y[e])-ln(S[o])),type="n",xlim=c(-1,1),ylim=c(-5,5)))
 
 parplot(log(psla$ns),log(psla$r),expression(ln(N[s])),expression(r),type="n",ylim=c(-2.5,0.5))
 parplot(psla$G,log(psla$r),expression(G),expression(r),type="n",ylim=c(-2.5,0.5))
@@ -412,21 +423,35 @@ parplot(psla$z,log(psla$Ye),expression(z),expression(ln(Ye)),xlim=c(-0.5,1.5),ty
 parplot(log(psla$ng),log(psla$Ye),expression(ln(N[g])),expression(ln(Ye)),t=15)
 parplot(qlogis(psla$G),log(psla$Ye),expression(logit(G)),expression(ln(Ye)),t=15,xlim=c(-5,5))
 
-parplot(log(psla$nn),log(psla$Sn),expression(ln(N[n])),expression(S[n]),type="n")
+parplot(log(psla$nn),qlogis(psla$Sn),expression(ln(N[n])),expression(S[n]),type="n")
+  # Show how K affects inflection point? Higher K -> CC doesn't cross inflection?
+parplot(log(psla$Y),qlogis(psla$Sn),expression(ln(Y)),expression(S[n]),type="n")
 
 # Pr(Y>0) ~ gdens
 
+pardensplot(log(psla$nn),qlogis(psla$Sn),expression(ln(N[n])),expression(S[n]),type="n")
+x <- log(psla$nn)
+y <- qlogis(psla$Sn)
 
 # Individual runs ---------------------------------------------------------
 
-with(psla,matplot(t(ns[1:5,,17,1]),type="l",lty=1))
+with(psla,matplot(t(log(ns[1:5,,17,1])),type="l",lty=1))
   # not overcompensating DD because doesn't switch direction every year
+with(psla,matplot(t(log(Y[1:5,,17,1])),type="l",lty=1))
+abline(h=0,lty=3)
+  # basically never falls below replacement rate
+with(psla,matplot(t(log(Y[1:5,,17,5])),type="l",lty=1))
+abline(h=0,lty=3)
+  # basically never falls below replacement rate
 
 # Population density distributions at given time --------------------------
 
 densplot(log(psla$ns),"ln(N[s])")
+densplot(qlogis(psla$Sn),"logit(S[n])",ylim=c(0,1),vab=apply(goi$So3,2,median))
+densplot(psla$mnmo,"log(S[n])-log(S[o])",ylim=c(0,1.5))
+densplot(log(psla$nn),"ln(N[n])")
 
-# Parameters correlations within species ----------------------------------
+# Parameter correlations within a given species ---------------------------
 
 j <- 17
 with(goi,plot(log(Kn[,j])~log(hn[,j])))

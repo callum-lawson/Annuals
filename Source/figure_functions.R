@@ -318,7 +318,7 @@ pairplot <- function(plotname,a,npdim,w=8,h=8){
 #   
 # }
 
-densplot <- function(na,yname,t=tpos){
+densplot <- function(na,yname,t=tpos,vab=NULL,...){
     
     pdf(paste0("Plots/density_",yname,"_",
       format(Sys.Date(),"%d%b%Y"),".pdf"), width=plotwidth,height=plotheight)
@@ -328,11 +328,13 @@ densplot <- function(na,yname,t=tpos){
     for(j in 1:nspecies){
       
       plot(density(na[,t,j,1]),col=cols[1],main="",
-        xlim=round(range(na[,t,j,][is.finite(na[,t,j,])]),0)
+        xlim=round(range(na[,t,j,][is.finite(na[,t,j,])]),0),
+        ...
         )
       for(i in 2:nclim){
         lines(density(na[,t,j,i]),col=cols[i])
         }
+      if(!is.null(vab)) abline(v=vab[j],lty=3)
       
       lettlab(j)
       
@@ -347,7 +349,6 @@ densplot <- function(na,yname,t=tpos){
     dev.off()
     
   }
-
 
 parplot <- function(x,y,xname,yname,t=NULL,tran=25,...){
   
@@ -417,6 +418,98 @@ parplot <- function(x,y,xname,yname,t=NULL,tran=25,...){
       lines(mysupsmu(xs[,k],ys[,k]),col=cols[k])
     }  
     
+    lettlab(j)
+    
+    if(j %in% 19:22) addxlab(xname) 
+    if(j %in% seq(1,23,4)) addylab(yname) 
+    
+  }
+  
+  addledge(ltext=colledgetext,col=cols,lty=1)
+  addledge(ltext=detledgetext)
+  
+  dev.off()
+  
+}
+
+
+# Parplot with density overlay --------------------------------------------
+
+pardensplot <- function(x,y,xname,yname,t=NULL,tran=25,...){
+  
+  cols_rgb <- col2rgb(cols)
+  trancols <- rgb(
+    red=cols_rgb[1,],
+    green=cols_rgb[2,],
+    blue=cols_rgb[3,],
+    alpha=tran,
+    maxColorValue = 255
+  )
+  
+  xdim <- dim(x)
+  ydim <- dim(y)
+  nxdim <- length(dim(x))
+  nydim <- length(dim(y))
+  
+  if(!is.null(t)){
+    pdf(paste0("Plots/pardensplot_",xname,"_",yname,"_t",t,"_",format(Sys.Date(),"%d%b%Y"),".pdf"), width=plotwidth,height=plotheight)
+  }
+  
+  if(is.null(t)){
+    pdf(paste0("Plots/pardensplot_",xname,"_",yname,"_",format(Sys.Date(),"%d%b%Y"),".pdf"), width=plotwidth,height=plotheight)
+  }
+  
+  plotsetup()
+  
+  for(j in 1:nspecies){
+    
+    if(!is.null(t)){
+      ys <- y[,t,j,]
+      if(nxdim==4){
+        xs <- x[,t,j,]
+      }
+      if(nxdim==3){
+        xs <- x[,t,]
+      }
+      if(nxdim==2){
+        xs <- array(dim=dim(ys))
+        xs[] <- rep(x[,j],nclim) # not necessary - matplot
+      }
+    }
+    if(is.null(t)){
+      if(nydim==4){
+        ys <- acast(melt(y[,,j,]), Var1 + Var2 ~ Var3)
+        if(nxdim==4){
+          xs <- acast(melt(x[,,j,]), Var1 + Var2 ~ Var3)
+        }
+        if(nxdim==3){
+          xs <- acast(melt(x), Var1 + Var2 ~ Var3)
+        }
+      }
+      if(nydim==3){
+        ys <- y[,j,]
+        if(nxdim==3){
+          xs <- x[,j,]
+        }
+        if(nxdim==2){
+          xs <- array(dim=dim(ys))
+          xs[] <- rep(x[,j],nclim) # not necessary - matplot
+        }
+      }
+    }
+    
+    propheight <- 0.25
+
+    matplot(xs,ys,col=trancols,pch=16,...)
+    for (k in 1:nclim) {
+      lines(mysupsmu(xs[,k],ys[,k]),col=cols[k])
+      
+      xd <- density(xs[,k])
+      xdyscale <- propheight * diff(range(ys)) / max(xd$y)
+      xd$y <- xd$y * xdyscale - abs(min(ys))
+      lines(xd,col=cols[k])
+    }  
+
     lettlab(j)
     
     if(j %in% 19:22) addxlab(xname) 
