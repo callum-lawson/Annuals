@@ -504,14 +504,15 @@ pardensplot <- function(x,y,xname,yname,t=NULL,tran=25,...){
     
     propheight <- 0.25
 
+    xd <- apply(xs,2,density,na.rm=T)
+    xdymax <- sapply(xd,function(a) max(a$y))
+    xdyscale <- propheight * diff(range(ys)) / max(xdymax)
+    
     matplot(xs,ys,col=trancols,pch=16,...)
     for (k in 1:nclim) {
       lines(mysupsmu(xs[,k],ys[,k]),col=cols[k])
-      
-      xd <- density(xs[,k])
-      xdyscale <- propheight * diff(range(ys)) / max(xd$y)
-      xd$y <- xd$y * xdyscale - abs(min(ys))
-      lines(xd,col=cols[k])
+      xd[[k]]$y <- xd[[k]]$y * xdyscale - abs(min(ys))
+      lines(xd[[k]],col=cols[k])
     }  
 
     lettlab(j)

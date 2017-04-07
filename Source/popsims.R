@@ -430,6 +430,11 @@ parplot(log(psla$Y),qlogis(psla$Sn),expression(ln(Y)),expression(S[n]),type="n")
 # Pr(Y>0) ~ gdens
 
 pardensplot(log(psla$nn),qlogis(psla$Sn),expression(ln(N[n])),expression(S[n]),type="n")
+pardensplot(log(psla$Y),qlogis(psla$Sn),expression(ln(Y)),expression(S[n]),type="n")
+
+x <- log(psla$Y)
+y <- qlogis(psla$Sn)
+
 
 # Individual runs ---------------------------------------------------------
 
