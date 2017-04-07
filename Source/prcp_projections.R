@@ -9,10 +9,7 @@ library(zoo)
 
 # Load Data ---------------------------------------------------------------
 
-rootdir <- getwd()
-setwd(paste0(rootdir,"/Data/Tucson_prcp_monthly/bcsd5"))
-
-allfiles <- list.files()
+allfiles <- list.files("~/Data/Tucson_prcp_monthly/bcsd5")
 pfiles <- allfiles[grep(".csv",allfiles)]
 pnames <- gsub(".csv","",pfiles)
 pnames <- gsub("pr.","",pnames)
@@ -87,18 +84,18 @@ ppy$yearcat <- with(ppy,factor(
 
 pps <- ddply(ppy, .(yearcat,model,scenario), summarise,
   pam = mean(seasprcp) ,
-  pcv = sd(seasprcp)/pam,
+  psd = sd(seasprcp),
   gam = mean(germprcp) ,
-  gcv = sd(germprcp)/gam
+  gsd = sd(germprcp)
   )
   # p -> seasprcp, g -> germprcp
 
 ppm = ddply(pps, .(model,scenario), summarise,
   yearcat=yearcat,
   mpam = pam/pam[yearcat=="0"],
-  mpcv = pcv/pcv[yearcat=="0"],
+  mpsd = psd/psd[yearcat=="0"],
   mgam = gam/gam[yearcat=="0"],
-  mgcv = gcv/gcv[yearcat=="0"]
+  mgsd = gsd/gsd[yearcat=="0"]
   )
 
 myhist <- function(x){
@@ -112,12 +109,12 @@ ppma <- ddply(subset(ppm2,yearcat!="0"),.(measure,yearcat,scenario),summarise,me
 par(mfcol=c(2,4))
 myhist(ppm$mpam[ppm$yearcat=="50"])
 myhist(ppm$mpam[ppm$yearcat=="100"])
-myhist(ppm$mpcv[ppm$yearcat=="50"])
-myhist(ppm$mpcv[ppm$yearcat=="100"])
+myhist(ppm$mpsd[ppm$yearcat=="50"])
+myhist(ppm$mpsd[ppm$yearcat=="100"])
 myhist(ppm$mgam[ppm$yearcat=="50"])
 myhist(ppm$mgam[ppm$yearcat=="100"])
-myhist(ppm$mgcv[ppm$yearcat=="50"])
-myhist(ppm$mgcv[ppm$yearcat=="100"])
+myhist(ppm$mgsd[ppm$yearcat=="50"])
+myhist(ppm$mgsd[ppm$yearcat=="100"])
 
 setwd(rootdir)
 write.csv(ppma,file=paste0("Output/prcp_projection_summaries_",format(Sys.Date(),"%d%b%Y"),".csv"),
@@ -130,9 +127,8 @@ ncy <- subset(ncy,is.na(seasprcp)==F)
 	# removes first value (missing because no previous winter)
   # prcp values given in total mm (NOT 10ths of a mm) over whole period
 
-cv <- function(x) sd(x)/mean(x)
 pmroll <- rollmean(ncy$seasprcp,20)
-pcroll <- rollapply(ncy$seasprcp,20,cv)
+pcroll <- rollapply(ncy$seasprcp,20,sd)
 yroll <- round(rollmean(ncy$year,20),0)
 plot(pmroll~yroll)
 plot(pcroll~yroll)
