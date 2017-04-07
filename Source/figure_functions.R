@@ -327,12 +327,12 @@ densplot <- function(na,yname,t=tpos,vab=NULL,...){
     
     for(j in 1:nspecies){
       
-      plot(density(na[,t,j,1]),col=cols[1],main="",
+      plot(density(na[,t,j,1],na.rm=T),col=cols[1],main="",
         xlim=round(range(na[,t,j,][is.finite(na[,t,j,])]),0),
         ...
         )
       for(i in 2:nclim){
-        lines(density(na[,t,j,i]),col=cols[i])
+        lines(density(na[,t,j,i],na.rm=T),col=cols[i])
         }
       if(!is.null(vab)) abline(v=vab[j],lty=3)
       

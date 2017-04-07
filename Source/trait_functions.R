@@ -62,6 +62,17 @@ hncalc <- function(m0,m1,T3){
 # calculated myself from c1N/(1+c2N) = (1/2)(c1/c2)
 # based on Yodzis, p53
 
+tauncalc <- function(m0,m1,T3){
+  c2 <- (m1/m0)*(1-exp(-m0*T3))/tau_s
+  tau <- log(1/c2)
+  return(tau)
+}
+  # ln(Nn) threshold at which ln(S) starts to rapidly decline
+  # (finding inflection point of S~ln(Nn) curve)
+  # take second dervivative of log(c1*exp(X)/(1+c2*exp(X)))
+  # where X=ln(Nn), set to 0, and solve for X
+  # calculated via Wolfram
+
 # m1 is a slope with density, so affected by tau_s, so c2 needs to be adjusted for tau_s
 
 godmean_f <- function(alpha,beta){

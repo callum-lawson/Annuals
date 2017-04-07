@@ -207,6 +207,7 @@ goi$m1 <- exp(goi$beta_m)
 goi$So3 <- exp(-goi$m0*T3)
 goi$Kn <- with(goi, Kncalc(m0,m1,T3))
 goi$hn <- with(goi, hncalc(m0,m1,T3))
+goi$taun <- with(goi, tauncalc(m0,m1,T3))
 
 beta_b <- pri$beta_p + rsi$beta_r
   # = log(pr/(1-p))
@@ -377,6 +378,7 @@ parplot(goi$alpha_m,log(psla$ns),expression(alpha[m]),expression(ln(N[s15])),t=1
 parplot(goi$beta_m,log(psla$ns),expression(beta[m]),expression(ln(N[s15])),t=15)
 parplot(log(goi$Kn),log(psla$ns),expression(log(K[N])),expression(ln(N[s15])),t=15)
 parplot(log(goi$hn),log(psla$ns),expression(log(h[N])),expression(ln(N[s15])),t=15)
+parplot(goi$taun,log(psla$ns),expression(tau[N]),expression(ln(N[s15])),t=15)
 
 ### Reproduction
 parplot(pri$beta_p[,,1],log(psla$ns),expression(beta[p1]),expression(ln(N[s15])),t=15)
@@ -453,6 +455,7 @@ densplot(log(psla$ns),"ln(N[s])")
 densplot(qlogis(psla$Sn),"logit(S[n])",ylim=c(0,1),vab=apply(goi$So3,2,median))
 densplot(psla$mnmo,"log(S[n])-log(S[o])",ylim=c(0,1.5))
 densplot(log(psla$nn),"ln(N[n])")
+densplot(log(psla$Y),"ln(Y)")
 
 # Parameter correlations within a given species ---------------------------
 
