@@ -9,7 +9,7 @@ library(zoo)
 
 # Load Data ---------------------------------------------------------------
 
-allfiles <- list.files("~/Data/Tucson_prcp_monthly/bcsd5")
+allfiles <- list.files(paste0(getwd(),"/Data/Tucson_prcp_monthly/bcsd5"))
 pfiles <- allfiles[grep(".csv",allfiles)]
 pnames <- gsub(".csv","",pfiles)
 pnames <- gsub("pr.","",pnames)
@@ -18,9 +18,10 @@ pmeta <- colsplit(pnames,pattern=".rcp",names=c("model","scenario"))
 plist <- list()
 np <- length(pnames)
 for(i in 1:np){
-  plist[[i]] <- read.csv(pfiles[i], header = FALSE,
-    col.names = c("year","mon","prcp","prcp_exl") 
-    )
+  plist[[i]] <- read.csv(paste0(getwd(),"/Data/Tucson_prcp_monthly/bcsd5/",pfiles[i]),
+                         header = FALSE,
+                         col.names = c("year","mon","prcp","prcp_exl") 
+                         )
   plist[[i]] <- subset(plist[[i]],select=c("year","mon","prcp"))
     # 2nd pr excluded because from further-away location
   plist[[i]]$model <- pmeta$model[i]
@@ -83,10 +84,10 @@ ppy$yearcat <- with(ppy,factor(
   )
 
 pps <- ddply(ppy, .(yearcat,model,scenario), summarise,
-  pam = mean(seasprcp) ,
-  psd = sd(seasprcp),
-  gam = mean(germprcp) ,
-  gsd = sd(germprcp)
+  pam = mean(log(seasprcp)),
+  psd = sd(log(seasprcp)),
+  gam = mean(log(germprcp)),
+  gsd = sd(log(germprcp))
   )
   # p -> seasprcp, g -> germprcp
 
@@ -116,7 +117,6 @@ myhist(ppm$mgam[ppm$yearcat=="100"])
 myhist(ppm$mgsd[ppm$yearcat=="50"])
 myhist(ppm$mgsd[ppm$yearcat=="100"])
 
-setwd(rootdir)
 write.csv(ppma,file=paste0("Output/prcp_projection_summaries_",format(Sys.Date(),"%d%b%Y"),".csv"),
   row.names=F)
 
