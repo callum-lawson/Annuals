@@ -37,9 +37,9 @@ tau_p <- 100	# adjustment for rainfall
 ### CLIMATE
 
 # DATA
-pp <- read.csv("Output/prcp_projection_summaries_08Apr2016.csv",header=T)
+pp <- read.csv("Output/prcp_projection_summaries_07Apr2017.csv",header=T)
 mpam <- with(pp, median[measure=="mpam" & scenario==60 & yearcat==100])
-mpcv <- with(pp, median[measure=="mpcv" & scenario==60 & yearcat==100])
+mpsd <- with(pp, median[measure=="mpsd" & scenario==60 & yearcat==100])
   # using projected season precipitation for germination season precipitation change
   # (both very similar)
   # year = 2100
@@ -49,11 +49,11 @@ ncy <- read.csv("Output/ncy_15Jan2016.csv",header=T)
 ncy <- subset(ncy,is.na(seasprcp)==F)
 	# removes first value (missing because no previous winter)
 
-zam <- mean(ncy$seasprcp)
-zcv <- sd(ncy$seasprcp)/zam
+zamo <- mean(log(ncy$seasprcp))
+zsdo <- sd(log(ncy$seasprcp))
 
-wam <- mean(ncy$germprcp)
-wcv <- sd(ncy$germprcp)/wam
+wamo <- mean(log(ncy$germprcp))
+wsdo <- sd(log(ncy$germprcp))
 
 ### MODEL PARAMS (already permuted)
 
@@ -72,8 +72,9 @@ pl <- list(
 
 # 1000 per 0.1m^2 - *what does this mean?*
 
-maml <- as.list(c(1,1,mpam,1,mpam))
-mcvl <- as.list(c(0,1,1,mpcv,mpcv))
+maml <- as.list(c(1,1,mpam,1,mpam,mpam))
+msdl <- as.list(c(0,1,1,mpsd,mpsd,0))
+  # scaling mean log rainfall (zamo) only works because sign stays the same
 
 nclim <- length(maml)
 cpc <- 2 # CORES per CLIMATE
@@ -82,9 +83,9 @@ mpos <- rep(1:nclim,each=cpc)
 
 nstart <- rep(10000,nspecies)
 ni <- 500 # iterations PER CORE
-nt <- 50
+nt <- 1 # 50
 nj <- 22
-nk <- 10000
+nk <- 20 # 10000
 
 # ni and nk must be >1
 nit <- ni*cpc
@@ -102,11 +103,9 @@ simp <- function(l){
   })
 }
   
-cnames_unique <- gsub("\\.","",paste0("mu",simp(maml),"_cv",simp(mcvl)))
+cnames_unique <- gsub("\\.","",paste0("mu",simp(maml),"_sd",simp(msdl)))
 cnames_bycore <- paste0(rep(cnames_unique,each=cpc),"_s",rep(1:cpc,times=nclim))
 cnames_merged <- paste(cnames_unique,collapse="_")
-
-# !!! Change to PAIR climate replicates !!!
 
 # Each core focuses on one climate
 # Iterations for one climate can be split up over multiple cores
@@ -114,17 +113,17 @@ cnames_merged <- paste(cnames_unique,collapse="_")
 system.time({
 CL = makeCluster(ncores)
 clusterExport(cl=CL, c("popsim","pl",
-  "zam","zcv","wam","wcv",
-  "mpos","maml","mcvl","cpos",
+  "zamo","zsdo","wamo","wsdo",
+  "mpos","maml","msdl","cpos",
   "nstart","ni","nt","nj","nk",
   "Tvalues","itersetl","cnames_bycore"
   )) 
 parLapply(CL, 1:ncores, function(n){
 	mam <- maml[[mpos[n]]]
-	mcv <- mcvl[[mpos[n]]]
+	msd <- msdl[[mpos[n]]]
 	popsim(pl=pl,ni=ni,nt=nt,nj=nj,nk=nk,
-		nstart=nstart,zam=zam*mam,zcv=zcv*mcv,
-		wam=wam*mam,wcv=wcv*mcv,rho=0.82,
+		nstart=nstart,zam=zamo*mam,zsd=zsdo*msd,
+		wam=wamo*mam,wsd=wsdo*msd,rho=0.82,
 		Tvalues=Tvalues,tau_p=10^2,tau_d=10^2,tau_s=10^2,
 		iterset=itersetl[[cpos[n]]],
 		savefile=paste0(cnames_bycore[n])
@@ -137,7 +136,7 @@ stopCluster(CL)
 
 ### Small RAM read-in
 
-# cnames_bycore_small <- cnames_bycore[grep("mu1_cv1",cnames_bycore)]
+# cnames_bycore_small <- cnames_bycore[grep("mu1_sd1",cnames_bycore)]
 # ncores_small <- length(cnames_bycore_small)
 # psl <- as.list(rep(NA,ncores_small))
 # for(n in 1:ncores_small){
@@ -147,7 +146,7 @@ stopCluster(CL)
 
 psl <- as.list(rep(NA,ncores))
 for(n in 1:ncores){
-  psl[[n]] <- readRDS(paste0("Sims/",cnames_bycore[n],"_17Mar2017.rds"))
+  psl[[n]] <- readRDS(paste0("Sims/",cnames_bycore[n],"_07Apr2017.rds"))
   }
 names(psl) <- cnames_bycore
 
@@ -165,7 +164,7 @@ for(i in 1:nvar){
     for(j in 1:nclim){
       for(k in 1:cpc){
         if(k==1) ast <- psl[[firstmpos[j]]][[i]]
-        else ast <- abind(ast,psl[[j+(k-1)]][[i]],along=1)
+        else ast <- abind(ast,psl[[firstmpos[j]+(k-1)]][[i]],along=1)
       }
       if(j==1){
         psla[[i]] <- array(ast,dim=c(dim(ast),1))
@@ -200,7 +199,7 @@ rsi <- lapply(pl$rs,iterextract)
 
 goi$tau_mu <- with(goi, godmean_f(alpha_G,beta_Gz) )
 goi$tau_sig <- with(goi, godvar_f(beta_Gz) )
-goi$rho <- with(goi, alpha_G + beta_Gz*log(zam/tau_p))
+goi$rho <- with(goi, alpha_G + beta_Gz*log(zamo/tau_p))
 
 goi$m0 <- exp(goi$alpha_m)
 goi$m1 <- exp(goi$beta_m)
@@ -310,6 +309,23 @@ q_mnmo <- seriesquant(psla$mnmo)
 
 # Plot results ------------------------------------------------------------
 
+purples <- brewer.pal(9,"Purples")[5] 
+blues <- brewer.pal(9,"Blues")[5] 
+greens <- brewer.pal(9,"Greens")[5] 
+oranges <- brewer.pal(9,"Oranges")[5]
+reds <- brewer.pal(9,"Reds")[5] 
+
+cols <- c(purples,blues,greens,oranges,reds)
+
+colledgetext <- cnames_unique
+detledgetext <- c(
+  paste0("nstart=",nstart[1]),
+  paste0("ni=",ni),
+  paste0("nt=",nt),
+  paste0("nj=",nj),
+  paste0("nk=",nk)
+)
+
 seriesplot(q_ns,"ns",yname=expression(ln(N[s])))
 seriesplot(q_nn,"nn",yname=expression(ln(N[n])))
 seriesplot(q_G,"G",yname="logit(G)")
@@ -327,8 +343,8 @@ seriesplot(q_mnmo,"mnmo",yname=expression(ln(S[n3]/S[o3])))
 
 # Relative change between scenarios ---------------------------------------
 
-scenbase <- "mu1_cv1"
-scennew <- c("mu081_cv1", "mu1_cv12", "mu081_cv12")
+scenbase <- "mu1_sd1"
+scennew <- c("mu081_sd1", "mu1_sd12", "mu081_sd12")
 tpos <- 15 # averaging over range of z due to different iterations
 keepsp <- (spvals %in% c("plpa","vuoc"))==F
 
@@ -340,7 +356,7 @@ rca <- array(dim=c(dim(rcl[[1]]),length(qal)),
   )
 rca[] <- unlist(rcl)
 
-ccl <- lapply(qal,relchange,scenbase="mu1_cv0",scennew="mu1_cv1",keepsp=keepsp)
+ccl <- lapply(qal,relchange,scenbase="mu1_sd0",scennew="mu1_sd1",keepsp=keepsp)
 cca <- array(dim=c(dim(ccl[[1]]),length(qal)),
   dimnames=c(dimnames(ccl[[1]]),list(names(qal)))
   )
@@ -351,7 +367,7 @@ cca[] <- unlist(ccl)
 mvint <- cca
 mvint[] <- NA
 dimnames(mvint)[[2]] <- "mvint"
-mvint[] <- rca[,"mu081_cv12",] - (rca[,"mu081_cv1",] + rca[,"mu1_cv12",])
+mvint[] <- rca[,"mu081_sd12",] - (rca[,"mu081_sd1",] + rca[,"mu1_sd12",])
   # filling-in only works because mvint has 1 column
 rcaa <- abind(rca,cca,mvint,along=2)
 
@@ -360,7 +376,7 @@ rcaa <- abind(rca,cca,mvint,along=2)
 pna <- with(psla,abind(pY,pY,along=4))
 pna <- aperm(pna,c(4,1,2,3))
   # hack to stack two copies of pYf along 2nd dimension so that relchange works
-rpna <- relchange(qlogis(pna),scenbase="mu1_cv0",scennew="mu1_cv1",keepsp=keepsp)
+rpna <- relchange(qlogis(pna),scenbase="mu1_sd0",scennew="mu1_sd1",keepsp=keepsp)
 
 # Pairs correlations ------------------------------------------------------
 

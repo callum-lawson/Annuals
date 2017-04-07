@@ -28,7 +28,7 @@
 #   iterset,savefile,progress)
 
 popsim <- function(pl,ni,nt,nj=22,nk,nstart,
-	zam,zcv,wam,wcv,rho=0.82,
+	zam,zsd,wam,wsd,rho=0.82,
 	Tvalues,tau_p=10^2,tau_d=10^2,tau_s=10^2,
 	iterset=NULL,savefile=NULL,progress=F
 	){
@@ -54,15 +54,15 @@ popsim <- function(pl,ni,nt,nj=22,nk,nstart,
 	rs <- pl$rs
 
 	BHS <- function(n,m0,m1){
-		exp(-m0*T3) / ( 1 + (m1/m0)*(1-exp(-m0*T3))*n )	
+		exp(-m0*T3) / ( 1 + (m1/m0)*(1-exp(-m0*T3))*n/tau_s )	
 	}
 	  # adjustment for area made when entering n (below)
 	  # (could have instead been made in BHS function)
 	if(progress==T) pb <- txtProgressBar(min=0,max=ni,style=3)
 	kseq <- 1:nk
-	tottarea <- nk/10*tau_s
+	tottarea <- nk/10
   	# nk/10: number of 0.1m^2 plots -> number of 1 m^2 plots 
-  	# tau_s: density in 0.01 m^2 = 10 x 10 cm plots
+  	# tau_s on coefficients: density in 0.01 m^2 = 10 x 10 cm plots
 
 	### SAMPLE ITERATIONS ###
 
@@ -157,16 +157,10 @@ popsim <- function(pl,ni,nt,nj=22,nk,nstart,
 
 	### SIMULATE RAINFALL	###
 
-	z_sig <- sqrt(log(zcv^2+1)) # has to be done first
-	z_mu <- log(zam) - z_sig^2/2
-
-	w_sig <- sqrt(log(wcv^2+1)) # has to be done first
-	w_mu <- log(wam) - w_sig^2/2
-
 	z <- w <- array(NA,c(ni,nt))
 
-	zw_mu <- c(z_mu,w_mu)
-	zw_sig <- matrix(c(z_sig^2,rep(rho*z_sig*w_sig,2),w_sig^2),nr=2,nc=2)
+	zw_mu <- c(zam,wam)
+	zw_sig <- matrix(c(zsd^2,rep(rho*zsd*wsd,2),wsd^2),nr=2,nc=2)
 
 	zw <- mvrnorm(n=ni*nt, mu=zw_mu, Sigma=zw_sig)
 
@@ -259,7 +253,8 @@ popsim <- function(pl,ni,nt,nj=22,nk,nstart,
 
 					x_t[,4] <- log(ng_t[,j]*10/tau_d)
   					# ltgermd=log(rsdat$germd/tau_d)
-						# density per 0.1m^2 plot -> per 1m^2 -> transformed 
+						# density per 0.1m^2 plot -> per 1m^2 (measured at plot scale)
+					  # -> transformed 
 						# end result: 0.01m^2 (10cm by 10cm) plot
 	
 					pi_bar_t[,j] <- beta_p[i,j,] %*% t(x_t)
@@ -312,7 +307,7 @@ popsim <- function(pl,ni,nt,nj=22,nk,nstart,
 		} # i loop
 
 	outlist <- list(
-	    zam=zam,zcv=zcv,
+	    zam=zam,zsd=zsd,
 			ni=ni,nt=nt,nj=nj,nk=nk,
 	    z=z,w=w,
 			G=G,So=So,Sn=Sn,

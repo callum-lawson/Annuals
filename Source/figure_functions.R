@@ -182,23 +182,6 @@ lettlab2 <- function(i,myline=-0.5,...){
 
 ### SIMULATION OUTPUT FIGURES
 
-purples <- brewer.pal(9,"Purples")[5] 
-blues <- brewer.pal(9,"Blues")[5] 
-greens <- brewer.pal(9,"Greens")[5] 
-oranges <- brewer.pal(9,"Oranges")[5]
-reds <- brewer.pal(9,"Reds")[5] 
-
-cols <- c(purples,blues,greens,oranges,reds)
-
-colledgetext <- cnames_unique
-detledgetext <- c(
-  paste0("nstart=",nstart[1]),
-  paste0("ni=",ni),
-  paste0("nt=",nt),
-  paste0("nj=",nj),
-  paste0("nk=",nk)
-)
-
 seriesplot <- function(qa,varname,yname,quantiles=T){
 
   ncols <- length(cols)
