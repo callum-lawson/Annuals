@@ -444,8 +444,8 @@ pardensplot <- function(x,y,xname,yname,t=NULL,tran=25,...){
   
   plotsetup()
 
-  dcur <- round(relchange(q_ns,scenbase="mu1_cv0",scennew="mu1_cv1",keepsp=rep(T,nj)),2)
-  dfut <- round(relchange(q_ns,scenbase="mu1_cv1",scennew="mu081_cv12",keepsp=rep(T,nj)),2)
+  dcur <- round(relchange(q_ns,scenbase="mu1_sd0",scennew="mu1_sd1",keepsp=rep(T,nj)),2)
+  dfut <- round(relchange(q_ns,scenbase="mu1_sd1",scennew="mu095_sd12",keepsp=rep(T,nj)),2)
   # build flexibility in later if needed
   
   for(j in 1:nspecies){

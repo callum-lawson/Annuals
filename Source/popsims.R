@@ -77,15 +77,15 @@ msdl <- as.list(c(0,1,1,mpsd,mpsd,0))
   # scaling mean log rainfall (zamo) only works because sign stays the same
 
 nclim <- length(maml)
-cpc <- 2 # CORES per CLIMATE
+cpc <- 4 # CORES per CLIMATE
 ncores <- nclim*cpc
 mpos <- rep(1:nclim,each=cpc)
 
 nstart <- rep(10000,nspecies)
-ni <- 500 # iterations PER CORE
-nt <- 1 # 50
+ni <- 250 # iterations PER CORE
+nt <- 50
 nj <- 22
-nk <- 20 # 10000
+nk <- 10000
 
 # ni and nk must be >1
 nit <- ni*cpc
@@ -314,8 +314,9 @@ blues <- brewer.pal(9,"Blues")[5]
 greens <- brewer.pal(9,"Greens")[5] 
 oranges <- brewer.pal(9,"Oranges")[5]
 reds <- brewer.pal(9,"Reds")[5] 
+greys <- brewer.pal(9,"Greys")[5] 
 
-cols <- c(purples,blues,greens,oranges,reds)
+cols <- c(purples,blues,greens,oranges,reds,greys)
 
 colledgetext <- cnames_unique
 detledgetext <- c(
@@ -344,7 +345,7 @@ seriesplot(q_mnmo,"mnmo",yname=expression(ln(S[n3]/S[o3])))
 # Relative change between scenarios ---------------------------------------
 
 scenbase <- "mu1_sd1"
-scennew <- c("mu081_sd1", "mu1_sd12", "mu081_sd12")
+scennew <- c("mu095_sd1", "mu1_sd12", "mu095_sd12")
 tpos <- 15 # averaging over range of z due to different iterations
 keepsp <- (spvals %in% c("plpa","vuoc"))==F
 
@@ -367,7 +368,7 @@ cca[] <- unlist(ccl)
 mvint <- cca
 mvint[] <- NA
 dimnames(mvint)[[2]] <- "mvint"
-mvint[] <- rca[,"mu081_sd12",] - (rca[,"mu081_sd1",] + rca[,"mu1_sd12",])
+mvint[] <- rca[,"mu095_sd12",] - (rca[,"mu095_sd1",] + rca[,"mu1_sd12",])
   # filling-in only works because mvint has 1 column
 rcaa <- abind(rca,cca,mvint,along=2)
 
@@ -450,20 +451,17 @@ parplot(log(psla$Y),qlogis(psla$Sn),expression(ln(Y)),expression(S[n]),type="n")
 pardensplot(log(psla$nn),qlogis(psla$Sn),expression(ln(N[n])),expression(S[n]),type="n")
 pardensplot(log(psla$Y),qlogis(psla$Sn),expression(ln(Y)),expression(S[n]),type="n")
 
-x <- log(psla$Y)
-y <- qlogis(psla$Sn)
-
-
 # Individual runs ---------------------------------------------------------
 
 with(psla,matplot(t(log(ns[1:5,,17,1])),type="l",lty=1))
   # not overcompensating DD because doesn't switch direction every year
+  # always some variation because of random year terms in reproduction
 with(psla,matplot(t(log(Y[1:5,,17,1])),type="l",lty=1))
 abline(h=0,lty=3)
   # basically never falls below replacement rate
 with(psla,matplot(t(log(Y[1:5,,17,5])),type="l",lty=1))
 abline(h=0,lty=3)
-  # basically never falls below replacement rate
+  # often below replacement rate
 
 # Population density distributions at given time --------------------------
 
@@ -494,16 +492,18 @@ parplot(dc_Sn,dc_ns,expression(dS[n]),expression(dN[s]),t=15)
 pdf(paste0("Plots/zdists",format(Sys.Date(),"%d%b%Y"),".pdf"),width=4.5,height=4.5)
 
 plot(density(psla$z[,,2]),xlim=c(-2,2),main="",col=cols[2])
-for(i in 3:nclim){
+for(i in 3:(nclim-1)){
   lines(density(psla$z[,,i]),col=cols[i])
 }
-abline(v=psla$z[,,1],col=cols[1],lty=3)
+abline(v=psla$z[1,1,1],col=cols[1],lty=3)
+abline(v=psla$z[1,1,6],col=cols[6],lty=3)
 
 plot(density(tau_p*exp(psla$z[,,2])),xlim=c(0,250),ylim=c(0,0.011),main="",col=cols[2])
-for(i in 3:nclim){
+for(i in 3:(nclim-1)){
   lines(density(tau_p*exp(psla$z[,,i])),col=cols[i])
 }
-abline(v=tau_p*exp(psla$z[,,1]),col=cols[1],lty=3)
+abline(v=tau_p*exp(psla$z[1,1,1]),col=cols[1],lty=3)
+abline(v=tau_p*exp(psla$z[1,1,6]),col=cols[6],lty=3)
 
 dev.off()
 
