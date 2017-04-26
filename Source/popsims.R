@@ -280,6 +280,22 @@ rcata <- array(dim=c(dim(rcatm),1),
 rcata[,,1] <- unlist(rcatm)
 # filling-in only works because rcatm has dim3 of 1
 
+# set reference climate
+# for each climate, plot difference against parameter for each species
+
+dns <- log(psla$ns[,15,,]) - rep(log(psla$ns[,15,,1]),6)
+
+mdns <- apply(dns,c(2,3),median)
+Kn <- apply(Knarr,3,median)
+plot(mdns[,4]~log(Kn))
+
+j <- 19
+plot(log(Knarr[,1,j]),dns[,j,6])
+lines(mysupsmu(log(Knarr[,1,j]),dns[,j,6]),col="red")
+
+plot(qlogis(psla$So[,1,j,6]),dns[,j,6])
+lines(mysupsmu(qlogis(psla$So[,1,j,6]),dns[,j,6]),col="red")
+
 # Aggregate data ----------------------------------------------------------
 
 seriesquant <- function(a,probs=c(0.25,0.50,0.75),keepdims=2:4){
@@ -362,6 +378,8 @@ cca <- array(dim=c(dim(ccl[[1]]),length(qal)),
   dimnames=c(dimnames(ccl[[1]]),list(names(qal)))
   )
 cca[] <- unlist(ccl)
+
+
 
 ### Quantifying mean-var interactions
 
@@ -450,6 +468,10 @@ parplot(log(psla$Y),qlogis(psla$Sn),expression(ln(Y)),expression(S[n]),type="n")
 
 pardensplot(log(psla$nn),qlogis(psla$Sn),expression(ln(N[n])),expression(S[n]),type="n")
 pardensplot(log(psla$Y),qlogis(psla$Sn),expression(ln(Y)),expression(S[n]),type="n")
+
+pardensplot(log(psla$nn),log(psla$nnb),expression(ln(N[n])),expression(N[e]),type="n")
+parplot(log(psla$nn),log(psla$nnb),expression(ln(N[n])),expression(N[e]),t=15)
+log(apply(goi$taun,2,median)*10*nk)
 
 # Individual runs ---------------------------------------------------------
 
