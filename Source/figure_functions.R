@@ -519,6 +519,46 @@ pardensplot <- function(x,y,xname,yname,t=NULL,tran=25,...){
   
 }
 
+
+# Difference between climate scenarios ------------------------------------
+
+diffplot <- function(xarr,yarr,refcl,t,xname,yname,tran=50){
+  
+  pdf(paste0("Plots/diffplot_",xname,"_",yname,"_",refcl,"_",
+    format(Sys.Date(),"%d%b%Y"),".pdf"), width=plotwidth,height=plotheight)
+  
+  cols_rgb <- col2rgb(cols)
+  trancols <- rgb(
+    red=cols_rgb[1,],
+    green=cols_rgb[2,],
+    blue=cols_rgb[3,],
+    alpha=tran,
+    maxColorValue = 255
+  )
+  
+  inclcl <- which(cnames_unique!=refcl) # drop reference climate
+  for(m in inclcl){
+    plotsetup()
+    for(j in 1:nspecies){
+      
+      dyj <- yarr[,t,j,m] - yarr[,t,j,refcl]
+      xj <- xarr[,j]
+      
+      plot(xj,dyj,pch=16,col=trancols[m])
+      lines(mysupsmu(xj,dyj),col="black")
+      
+      lettlab(j)
+      
+      if(j %in% 19:23) addxlab(xname) 
+      if(j %in% seq(1,23,4)) addylab(yname) 
+      
+    }
+    addledge(ltext=paste0(cnames_unique[m],"-",refcl))
+  }
+  
+  dev.off()
+}
+
 ### BEN BOLKER OVERDISPERSION
 
 overdisp_fun <- function(model) {

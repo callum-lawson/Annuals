@@ -283,19 +283,6 @@ rcata[,,1] <- unlist(rcatm)
 # set reference climate
 # for each climate, plot difference against parameter for each species
 
-dns <- log(psla$ns[,15,,]) - rep(log(psla$ns[,15,,1]),6)
-
-mdns <- apply(dns,c(2,3),median)
-Kn <- apply(Knarr,3,median)
-plot(mdns[,4]~log(Kn))
-
-j <- 19
-plot(log(Knarr[,1,j]),dns[,j,6])
-lines(mysupsmu(log(Knarr[,1,j]),dns[,j,6]),col="red")
-
-plot(qlogis(psla$So[,1,j,6]),dns[,j,6])
-lines(mysupsmu(qlogis(psla$So[,1,j,6]),dns[,j,6]),col="red")
-
 # Aggregate data ----------------------------------------------------------
 
 seriesquant <- function(a,probs=c(0.25,0.50,0.75),keepdims=2:4){
@@ -378,8 +365,6 @@ cca <- array(dim=c(dim(ccl[[1]]),length(qal)),
   dimnames=c(dimnames(ccl[[1]]),list(names(qal)))
   )
 cca[] <- unlist(ccl)
-
-
 
 ### Quantifying mean-var interactions
 
@@ -503,11 +488,31 @@ parplot(log(psla$nn),qlogis(psla$Sn),expression(ln(N[n])),expression(S[n]),type=
 
 # Changes in parameters between climate scenarios -------------------------
 
+### Within species
+
+Kn <- goi$Kn*nk/10*tau_s
+
+diffplot(log(Kn),log(psla$ns),refcl="mu1_sd0",t=15,
+  xname=expression(K[n]),yname=expression(N[s]))
+
+
+  mdns <- apply(dns,c(2,3),median)
+Kn <- apply(Knarr,3,median)
+plot(mdns[,4]~log(Kn))
+
+j <- 19
+plot(log(Knarr[,1,j]),dns[,j,6])
+lines(mysupsmu(log(Knarr[,1,j]),dns[,j,6]),col="red")
+
+plot(qlogis(psla$So[,1,j,6]),dns[,j,6])
+lines(mysupsmu(qlogis(psla$So[,1,j,6]),dns[,j,6]),col="red")
+
 dc_Sn <- qlogis(psla$Sn) - rep(qlogis(psla$Sn[,,,1]),nclim)
 dc_ns <- log(psla$ns) - rep(log(psla$ns[,,,1]),nclim)
 # dc = difference current; df = difference future
 
 parplot(dc_Sn,dc_ns,expression(dS[n]),expression(dN[s]),t=15)
+
 
 # Climate distributions ---------------------------------------------------
 
