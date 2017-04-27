@@ -511,6 +511,42 @@ diffplot(qlogis(exp(-exp(goi$alpha_m))),log(psla$ns),refcl="mu1_sd1",t=15,
   xname=expression(S[o]),yname=expression(N[s]))
   # alpha_m determines K, but not particularly strong predictor for dN?
 
+diffplot(qlogis(psla$G),log(psla$ns),refcl="mu1_sd0",t=15,
+  xname=expression(dG),yname=expression(dN[s]),xdiff=T)
+diffplot(qlogis(psla$G),log(psla$ns),refcl="mu1_sd1",t=15,
+  xname=expression(dG),yname=expression(dN[s]),xdiff=T)
+  # in general, greater reductions in G don't -> greater reductions in N
+
+diffplot(log(psla$Y),log(psla$ns),refcl="mu1_sd0",t=15,
+  xname=expression(dY),yname=expression(dN[s]),xdiff=T)
+diffplot(log(psla$Y),log(psla$ns),refcl="mu1_sd1",t=15,
+  xname=expression(dY),yname=expression(dN[s]),xdiff=T)
+  # y reductions explain population decline due to mean environmental change
+  # not an artefact, because y is measured after Ns (?)
+
+diffplot(qlogis(psla$Sn),log(psla$ns),refcl="mu1_sd0",t=15,
+  xname=expression(dS[n]),yname=expression(dN[s]),xdiff=T)
+
+diffplot(log(psla$Y),log(psla$ns),refcl="mu1_sd0",t=NULL,
+  xname=expression(dY),yname=expression(dN[s]),xdiff=T)
+diffplot(qlogis(psla$G),log(psla$ns),refcl="mu1_sd0",t=NULL,
+  xname=expression(dG),yname=expression(dN[s]),xdiff=T)
+  # but only 50 timesteps, so could just reflect which sims happened to 
+  # get lots of rainfall?
+
+diffplot(pri$beta_p[,,1],log(psla$ns),refcl="mu1_sd0",t=NULL,
+  xname=expression(beta[p1]),yname=expression(dN[s]))
+diffplot(rsi$beta_r[,,1],log(psla$ns),refcl="mu1_sd0",t=NULL,
+  xname=expression(beta[r1]),yname=expression(dN[s]))
+diffplot(goi$alpha_G,log(psla$ns),refcl="mu1_sd0",t=NULL,
+  xname=expression(alpha[G]),yname=expression(dN[s]))
+  # parameters themselves don't seem to have big influence on outcome (!)
+diffplot(goi$tau_mu,log(psla$ns),refcl="mu1_sd0",t=NULL,
+  xname=expression(tau[mu]),yname=expression(dN[s]),
+  xlim=quantile(psla$z,probs=c(0.025,0.975))
+  )
+  # no obvious benefit of low germination threshold
+
 mdns <- apply(dns,c(2,3),median)
 Kn <- apply(Knarr,3,median)
 plot(mdns[,4]~log(Kn))

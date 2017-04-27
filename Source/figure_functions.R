@@ -522,10 +522,18 @@ pardensplot <- function(x,y,xname,yname,t=NULL,tran=25,...){
 
 # Difference between climate scenarios ------------------------------------
 
-diffplot <- function(xarr,yarr,refcl,t,xname,yname,tran=50){
+diffplot <- function(xarr,yarr,refcl,t=NULL,xname,yname,xdiff=F,tran=50,...){
   
-  pdf(paste0("Plots/diffplot_",xname,"_",yname,"_",refcl,"_",
-    format(Sys.Date(),"%d%b%Y"),".pdf"), width=plotwidth,height=plotheight)
+  if(!is.null(t)){
+    plotname <- paste0("Plots/diffplot_",xname,"_",yname,"_",refcl,"_t",t,"_",
+      format(Sys.Date(),"%d%b%Y"),".pdf")
+  }
+  else{
+    plotname <- paste0("Plots/diffplot_",xname,"_",yname,"_",refcl,"_median_",
+      format(Sys.Date(),"%d%b%Y"),".pdf")
+  }
+    
+  pdf(plotname, width=plotwidth,height=plotheight)
   
   cols_rgb <- col2rgb(cols)
   trancols <- rgb(
@@ -541,10 +549,18 @@ diffplot <- function(xarr,yarr,refcl,t,xname,yname,tran=50){
     plotsetup()
     for(j in 1:nspecies){
       
-      dyj <- yarr[,t,j,m] - yarr[,t,j,refcl]
-      xj <- xarr[,j]
+      if(!is.null(t)){
+        dyj <- yarr[,t,j,m] - yarr[,t,j,refcl]
+        if(xdiff==F) xj <- xarr[,j]
+        if(xdiff==T) xj <- xarr[,t,j,m] - xarr[,t,j,refcl]
+      }
+      else{
+        dyj <- apply(yarr[,,j,m],1,median) - apply(yarr[,,j,refcl],1,median)
+        if(xdiff==F) xj <- xarr[,j]
+        if(xdiff==T) xj <- apply(xarr[,,j,m],1,median) - apply(xarr[,,j,refcl],1,median)
+      }
       
-      plot(xj,dyj,pch=16,col=trancols[m])
+      plot(xj,dyj,pch=16,col=trancols[m],...)
       lines(mysupsmu(xj,dyj),col="black")
       
       lettlab(j)
