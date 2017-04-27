@@ -382,13 +382,6 @@ pna <- aperm(pna,c(4,1,2,3))
   # hack to stack two copies of pYf along 2nd dimension so that relchange works
 rpna <- relchange(qlogis(pna),scenbase="mu1_sd0",scennew="mu1_sd1",keepsp=keepsp)
 
-# Pairs correlations ------------------------------------------------------
-
-pairplot("popchange_pairs_vitalratechange_newenv",rca,2)
-pairplot("popchange_pairs_vitalratechange_consenv",cca,2)
-pairplot("popchange_pairs_allclimscenarios_",rcaa,3)
-pairplot("popchange_pairs_allclimscenarios_alltraits",rcata,3,w=21,h=21)
-
 # Optimal parameters within species ---------------------------------------
 
 ### Seed survival
@@ -486,17 +479,39 @@ with(goi,plot(log(alpha_m[,j])~log(beta_m[,j])))
 
 parplot(log(psla$nn),qlogis(psla$Sn),expression(ln(N[n])),expression(S[n]),type="n")
 
-# Changes in parameters between climate scenarios -------------------------
+# Changes between climate scenarios ---------------------------------------
+
+### Pairs correlations
+
+pairplot("popchange_pairs_vitalratechange_newenv",rca,2)
+pairplot("popchange_pairs_vitalratechange_consenv",cca,2)
+pairplot("popchange_pairs_allclimscenarios_",rcaa,3)
+pairplot("popchange_pairs_allclimscenarios_alltraits",rcata,3,w=21,h=21)
 
 ### Within species
 
 Kn <- goi$Kn*nk/10*tau_s
-
 diffplot(log(Kn),log(psla$ns),refcl="mu1_sd0",t=15,
   xname=expression(K[n]),yname=expression(N[s]))
+diffplot(log(Kn),log(psla$ns),refcl="mu1_sd1",t=15,
+  xname=expression(K[n]),yname=expression(N[s]))
 
+diffplot(goi$alpha_G,log(psla$ns),refcl="mu1_sd0",t=15,
+  xname=expression(alpha[G]),yname=expression(N[s]))
+diffplot(goi$alpha_G,log(psla$ns),refcl="mu1_sd1",t=15,
+  xname=expression(alpha[G]),yname=expression(N[s]))
 
-  mdns <- apply(dns,c(2,3),median)
+diffplot(goi$alpha_m,log(psla$ns),refcl="mu1_sd0",t=15,
+  xname=expression(alpha[m]),yname=expression(N[s]))
+diffplot(goi$alpha_m,log(psla$ns),refcl="mu1_sd1",t=15,
+  xname=expression(alpha[m]),yname=expression(N[s]))
+diffplot(qlogis(exp(-exp(goi$alpha_m))),log(psla$ns),refcl="mu1_sd0",t=15,
+  xname=expression(S[o]),yname=expression(N[s]))
+diffplot(qlogis(exp(-exp(goi$alpha_m))),log(psla$ns),refcl="mu1_sd1",t=15,
+  xname=expression(S[o]),yname=expression(N[s]))
+  # alpha_m determines K, but not particularly strong predictor for dN?
+
+mdns <- apply(dns,c(2,3),median)
 Kn <- apply(Knarr,3,median)
 plot(mdns[,4]~log(Kn))
 
@@ -513,6 +528,9 @@ dc_ns <- log(psla$ns) - rep(log(psla$ns[,,,1]),nclim)
 
 parplot(dc_Sn,dc_ns,expression(dS[n]),expression(dN[s]),t=15)
 
+with(goi,plot(alpha_G[,j]~alpha_m[,j]))
+with(goi,plot(apply(alpha_G,2,median)~apply(alpha_m,2,median)))
+with(goi,cor.test(apply(alpha_G,2,median),apply(alpha_m,2,median)))
 
 # Climate distributions ---------------------------------------------------
 
