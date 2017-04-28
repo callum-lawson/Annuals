@@ -253,6 +253,8 @@ psla$mnmo <- with(psla,log(Sn) - log(So)*T3)
   # log(S) = -m*T
   # ln(Sn/So) = ln(Sn) - ln(So) = -mn + mo
   # Convert to T3: ln(Sn) - ln(So)*T3
+psla$pP <- apply(psla$ns,2:4,function(x) sum(x>0)/length(x))
+  # Probability of persistence
 
 # not surprising that differ in seed numbers (e.g. if make smaller seeds)
 # calculate relative reproduction instead?
@@ -341,6 +343,7 @@ seriesplot(q_nnb,"nnb",yname=expression(ln~N[nb]))
 seriesplot(q_no,"no",yname=expression(ln~N[o]))
 seriesplot(psla$pY,"pY",yname="Pr(Nn>0)",quantiles=F)
 seriesplot(psla$pYr,"pYr",yname="Pr(Y>1)",quantiles=F)
+seriesplot(psla$pP,"pP",yname="Pr(N>0)",quantiles=F)
 seriesplot(q_lYS,"lYS",yname=expression(ln(Y[e]/S[o])))
 seriesplot(q_nnK,"nnK",yname=expression(ln(N[n]/K[n])))
 seriesplot(q_mnmo,"mnmo",yname=expression(ln(S[n3]/S[o3])))
@@ -527,9 +530,15 @@ diffplot(log(psla$Y),log(psla$ns),refcl="mu1_sd1",t=15,
 diffplot(qlogis(psla$Sn),log(psla$ns),refcl="mu1_sd0",t=15,
   xname=expression(dS[n]),yname=expression(dN[s]),xdiff=T)
 
+### Median population sizes
+
 diffplot(log(psla$Y),log(psla$ns),refcl="mu1_sd0",t=NULL,
   xname=expression(dY),yname=expression(dN[s]),xdiff=T)
 diffplot(qlogis(psla$G),log(psla$ns),refcl="mu1_sd0",t=NULL,
+  xname=expression(dG),yname=expression(dN[s]),xdiff=T)
+diffplot(log(psla$Y),log(psla$ns),refcl="mu1_sd1",t=NULL,
+  xname=expression(dY),yname=expression(dN[s]),xdiff=T)
+diffplot(qlogis(psla$G),log(psla$ns),refcl="mu1_sd1",t=NULL,
   xname=expression(dG),yname=expression(dN[s]),xdiff=T)
   # but only 50 timesteps, so could just reflect which sims happened to 
   # get lots of rainfall?
@@ -546,10 +555,32 @@ diffplot(goi$tau_mu,log(psla$ns),refcl="mu1_sd0",t=NULL,
   xlim=quantile(psla$z,probs=c(0.025,0.975))
   )
   # no obvious benefit of low germination threshold
+diffplot(qlogis(exp(-exp(goi$alpha_m))),log(psla$ns),refcl="mu1_sd1",t=NULL,
+  xname=expression(S[o]),yname=expression(dN[s]))
+  # Seed survival seems to be more important for mean than for variance adaptation
 
-mdns <- apply(dns,c(2,3),median)
-Kn <- apply(Knarr,3,median)
-plot(mdns[,4]~log(Kn))
+Kn <- goi$Kn*nk/10*tau_s
+dns <- with(psla,log(ns[,15,,"mu095_sd1"])-log(ns[,15,,"mu1_sd1"]))
+dns[is.nan(dns)] <- NA
+mdns <- apply(dns,2,median,na.rm=T)
+mKn <- apply(Kn,2,median)
+So <- apply(exp(-exp(goi$alpha_m)),2,median)
+plot(mdns~log(mKn))
+plot(mdns~qlogis(So))
+exclsp <- c(18,22)
+plot(mdns[-exclsp]~log(mKn[-exclsp]))
+  # a few species with low K seem to decline less strongly
+plot(mdns[-exclsp]~qlogis(So[-exclsp]))
+  # no obvious pattern
+
+Kn <- goi$Kn*nk/10*tau_s
+dns <- with(psla,
+  log(apply(ns[,,,"mu095_sd1"],c(1,3),median)) 
+  - log(apply(ns[,,,"mu1_sd1"],c(1,3),median))
+)
+mdns <- apply(dns,2,median)
+mKn <- apply(Kn,2,median)
+plot(mdns~log(mKn))
 
 j <- 19
 plot(log(Knarr[,1,j]),dns[,j,6])
