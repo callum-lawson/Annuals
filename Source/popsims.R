@@ -68,6 +68,21 @@ pl <- list(
 	rs = readRDS("Models/rs_pars_yearhet_squared_pc_trunc_05Mar2016.rds")
 	)
 
+### PARAMS FOR SENSITIVITY ANALYSES
+
+pls <- pl
+nsens <- 100
+Gsens <- expand.grid(
+  alpha_G=seq(-5,5,length.out=100),
+  beta_Gz=seq(-10,10,length.out=100)
+  )
+pls$go$alpha_G[] <- Gsens$alpha_G
+pls$go$beta_Gz[] <- Gsens$beta_Gz
+
+# range(pls$go$alpha_G)
+# range(pls$go$beta_Gz)
+# with(Gsensmat, curve(plogis(alpha_G[1] + beta_G[1]*x),xlim=c(-0.5,1.5)))
+  
 # Sims --------------------------------------------------------------------
 
 # 1000 per 0.1m^2 - *what does this mean?*
@@ -85,7 +100,7 @@ nstart <- rep(10000,nspecies)
 ni <- 250 # iterations PER CORE
 nt <- 50
 nj <- 22
-nk <- 10000
+nk <- 1000 # 10000
 
 # ni and nk must be >1
 nit <- ni*cpc
@@ -112,7 +127,7 @@ cnames_merged <- paste(cnames_unique,collapse="_")
 # (controlled by cpc)
 system.time({
 CL = makeCluster(ncores)
-clusterExport(cl=CL, c("popsim","pl",
+clusterExport(cl=CL, c("popsim","pls", # was pl
   "zamo","zsdo","wamo","wsdo",
   "mpos","maml","msdl","cpos",
   "nstart","ni","nt","nj","nk",
@@ -121,12 +136,12 @@ clusterExport(cl=CL, c("popsim","pl",
 parLapply(CL, 1:ncores, function(n){
 	mam <- maml[[mpos[n]]]
 	msd <- msdl[[mpos[n]]]
-	popsim(pl=pl,ni=ni,nt=nt,nj=nj,nk=nk,
+	popsim(pl=pls,ni=ni,nt=nt,nj=nj,nk=nk, # was pl
 		nstart=nstart,zam=zamo*mam,zsd=zsdo*msd,
 		wam=wamo*mam,wsd=wsdo*msd,rho=0.82,
 		Tvalues=Tvalues,tau_p=10^2,tau_d=10^2,tau_s=10^2,
 		iterset=itersetl[[cpos[n]]],
-		savefile=paste0(cnames_bycore[n])
+		savefile=paste0("s_",cnames_bycore[n]) # added "s_"
 		)
 	})
 stopCluster(CL)
@@ -146,8 +161,8 @@ stopCluster(CL)
 
 psl <- as.list(rep(NA,ncores))
 for(n in 1:ncores){
-  psl[[n]] <- readRDS(paste0("Sims/",cnames_bycore[n],"_07Apr2017.rds"))
-  }
+  psl[[n]] <- readRDS(paste0("Sims/s_",cnames_bycore[n],"_07Apr2017.rds"))
+  } # added "s_"
 names(psl) <- cnames_bycore
 
 varl <- psl[[1]]
