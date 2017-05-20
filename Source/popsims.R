@@ -92,12 +92,12 @@ msdl <- as.list(c(0,1,1,mpsd,mpsd,0))
   # scaling mean log rainfall (zamo) only works because sign stays the same
 
 nclim <- length(maml)
-cpc <- 4 # CORES per CLIMATE
+cpc <- 5 # CORES per CLIMATE
 ncores <- nclim*cpc
 mpos <- rep(1:nclim,each=cpc)
 
 nstart <- rep(10000,nspecies)
-ni <- 250 # iterations PER CORE
+ni <- 2000 # iterations PER CORE
 nt <- 50
 nj <- 22
 nk <- 1000 # 10000
@@ -161,7 +161,7 @@ stopCluster(CL)
 
 psl <- as.list(rep(NA,ncores))
 for(n in 1:ncores){
-  psl[[n]] <- readRDS(paste0("Sims/s_",cnames_bycore[n],"_07Apr2017.rds"))
+  psl[[n]] <- readRDS(paste0("Sims/s_",cnames_bycore[n],"_11May2017.rds"))
   } # added "s_"
 names(psl) <- cnames_bycore
 
