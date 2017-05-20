@@ -161,7 +161,7 @@ stopCluster(CL)
 
 psl <- as.list(rep(NA,ncores))
 for(n in 1:ncores){
-  psl[[n]] <- readRDS(paste0("Sims/s_",cnames_bycore[n],"_11May2017.rds"))
+  psl[[n]] <- readRDS(paste0("Sims/s_",cnames_bycore[n],"_12May2017.rds"))
   } # added "s_"
 names(psl) <- cnames_bycore
 
@@ -208,6 +208,8 @@ goi <- lapply(pl$go,iterextract)
 pri <- lapply(pl$pr,iterextract)
 rsi <- lapply(pl$rs,iterextract)
 
+gois <- lapply(pls$go,iterextract)
+
 # Derived parameters ------------------------------------------------------
 
 ### From input parameters
@@ -215,6 +217,10 @@ rsi <- lapply(pl$rs,iterextract)
 goi$tau_mu <- with(goi, godmean_f(alpha_G,beta_Gz) )
 goi$tau_sig <- with(goi, godvar_f(beta_Gz) )
 goi$rho <- with(goi, alpha_G + beta_Gz*log(zamo/tau_p))
+
+gois$tau_mu <- with(gois, godmean_f(alpha_G,beta_Gz) )
+gois$tau_sig <- with(gois, godvar_f(beta_Gz) )
+gois$rho <- with(gois, alpha_G + beta_Gz*log(zamo/tau_p))
 
 goi$m0 <- exp(goi$alpha_m)
 goi$m1 <- exp(goi$beta_m)
@@ -402,9 +408,47 @@ rpna <- relchange(qlogis(pna),scenbase="mu1_sd0",scennew="mu1_sd1",keepsp=keepsp
 
 # Optimal parameters within species ---------------------------------------
 
-### Seed survival
+### Germination
 parplot(goi$alpha_G,log(psla$ns),expression(alpha[G]),expression(ln(N[s15])),t=15)
 parplot(goi$beta_Gz,log(psla$ns),expression(beta[G]),expression(ln(N[s15])),t=15)
+
+parplot(gois$alpha_G,log(psla$ns),expression(alpha[G]),expression(ln(N[s15])),t=15,type="n")
+parplot(gois$beta_Gz,log(psla$ns),expression(beta[G]),expression(ln(N[s15])),t=15,type="n")
+pb <- gois$beta_Gz[,1]>=0
+parplot(gois$tau_mu[pb,],log(psla$ns[pb,,,]),expression(tau[mu]),expression(ln(N[s15])),t=15,type="n",xlim=c(-2,2))
+parplot(log(gois$tau_sig[pb,]),log(psla$ns[pb,,,]),expression(ln(tau[sigma])),expression(ln(N[s15])),t=15,type="n")
+  # For G sensitivity simulations (too many points to plot)
+
+quantile(gois$tau_mu[,1],probs=c(0.025,0.975))
+hist(log(gois$tau_mu[,1]),breaks=1000,xlim=c(-5,5))
+quantile(gois$tau_sig[,1],probs=c(0.95))
+hist(log(gois$tau_sig[,1]),breaks=1000,xlim=c(0,7))
+
+parplot(gois$alpha_G,log(psla$ns),expression(alpha[G]),expression(ln(N[s15])),t=15,type="n")
+parplot(gois$beta_Gz,log(psla$ns),expression(beta[G]),expression(ln(N[s15])),t=15,type="n")
+parplot(gois$rho,log(psla$ns),expression(rho[G]),expression(ln(N[s15])),t=15,type="n",xlim=c(-5,5))
+parplot(plogis(gois$rho),log(psla$ns),"G",expression(ln(N[s15])),t=15,type="n")
+
+cols_rgb <- col2rgb(cols)
+trancols <- rgb(
+  red=cols_rgb[1,],
+  green=cols_rgb[2,],
+  blue=cols_rgb[3,],
+  alpha=50,
+  maxColorValue = 255
+)
+
+i <- 19
+plot(gois$rho[,i],log(psla$ns[,15,i,1]),pch="+",col=cols[1])
+points(gois$rho[,i],log(psla$ns[,15,i,6]),pch="+",col=cols[6])
+
+par(mfrow=c(2,1),mar=c(4,4,1,1))
+plot(gois$rho[,i],log(psla$ns[,15,i,1]),pch="+")
+lines(mysupsmu(gois$rho[,i],log(psla$ns[,15,i,1])),col="red")
+plot(gois$rho[,i],log(psla$ns[,15,i,6]),pch="+")
+lines(mysupsmu(gois$rho[,i],log(psla$ns[,15,i,6])),col="red")
+
+### Seed survival
 parplot(goi$alpha_m,log(psla$ns),expression(alpha[m]),expression(ln(N[s15])),t=15)
 parplot(goi$beta_m,log(psla$ns),expression(beta[m]),expression(ln(N[s15])),t=15)
 parplot(log(goi$Kn),log(psla$ns),expression(log(K[N])),expression(ln(N[s15])),t=15)
