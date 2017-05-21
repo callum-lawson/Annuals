@@ -91,16 +91,30 @@ maml <- as.list(c(1,1,mpam,1,mpam,mpam))
 msdl <- as.list(c(0,1,1,mpsd,mpsd,0))
   # scaling mean log rainfall (zamo) only works because sign stays the same
 
+
+### Actual data
 nclim <- length(maml)
-cpc <- 5 # CORES per CLIMATE
+cpc <- 4 # CORES per CLIMATE
 ncores <- nclim*cpc
 mpos <- rep(1:nclim,each=cpc)
 
 nstart <- rep(10000,nspecies)
-ni <- 2000 # iterations PER CORE
+ni <- 250 # iterations PER CORE
 nt <- 50
 nj <- 22
-nk <- 1000 # 10000
+nk <- 10000
+
+### Sensitivity analyses
+# nclim <- length(maml)
+# cpc <- 5 # CORES per CLIMATE
+# ncores <- nclim*cpc
+# mpos <- rep(1:nclim,each=cpc)
+# 
+# nstart <- rep(10000,nspecies)
+# ni <- 2000 # iterations PER CORE
+# nt <- 50
+# nj <- 22
+# nk <- 1000 # 10000
 
 # ni and nk must be >1
 nit <- ni*cpc
@@ -161,7 +175,8 @@ stopCluster(CL)
 
 psl <- as.list(rep(NA,ncores))
 for(n in 1:ncores){
-  psl[[n]] <- readRDS(paste0("Sims/s_",cnames_bycore[n],"_12May2017.rds"))
+  psl[[n]] <- readRDS(paste0("Sims/",cnames_bycore[n],"_07Apr2017.rds"))
+  # psl[[n]] <- readRDS(paste0("Sims/s_",cnames_bycore[n],"_12May2017.rds"))
   } # added "s_"
 names(psl) <- cnames_bycore
 
@@ -414,15 +429,16 @@ parplot(goi$beta_Gz,log(psla$ns),expression(beta[G]),expression(ln(N[s15])),t=15
 
 parplot(gois$alpha_G,log(psla$ns),expression(alpha[G]),expression(ln(N[s15])),t=15,type="n")
 parplot(gois$beta_Gz,log(psla$ns),expression(beta[G]),expression(ln(N[s15])),t=15,type="n")
-pb <- gois$beta_Gz[,1]>=0
-parplot(gois$tau_mu[pb,],log(psla$ns[pb,,,]),expression(tau[mu]),expression(ln(N[s15])),t=15,type="n",xlim=c(-2,2))
-parplot(log(gois$tau_sig[pb,]),log(psla$ns[pb,,,]),expression(ln(tau[sigma])),expression(ln(N[s15])),t=15,type="n")
-  # For G sensitivity simulations (too many points to plot)
 
 quantile(gois$tau_mu[,1],probs=c(0.025,0.975))
 hist(log(gois$tau_mu[,1]),breaks=1000,xlim=c(-5,5))
 quantile(gois$tau_sig[,1],probs=c(0.95))
 hist(log(gois$tau_sig[,1]),breaks=1000,xlim=c(0,7))
+
+pb <- gois$beta_Gz[,1]>=0
+parplot(gois$tau_mu[pb,],log(psla$ns[pb,,,]),expression(tau[mu]),expression(ln(N[s15])),t=15,type="n",xlim=c(-2,2))
+parplot(log(gois$tau_sig[pb,]),log(psla$ns[pb,,,]),expression(ln(tau[sigma])),expression(ln(N[s15])),t=15,type="n")
+  # For G sensitivity simulations (too many points to plot)
 
 parplot(gois$alpha_G,log(psla$ns),expression(alpha[G]),expression(ln(N[s15])),t=15,type="n")
 parplot(gois$beta_Gz,log(psla$ns),expression(beta[G]),expression(ln(N[s15])),t=15,type="n")
@@ -438,15 +454,34 @@ trancols <- rgb(
   maxColorValue = 255
 )
 
-i <- 19
-plot(gois$rho[,i],log(psla$ns[,15,i,1]),pch="+",col=cols[1])
-points(gois$rho[,i],log(psla$ns[,15,i,6]),pch="+",col=cols[6])
+j <- 19
+plot(gois$rho[,j],log(psla$ns[,15,j,1]),pch="+",col=cols[1])
+points(gois$rho[,j],log(psla$ns[,15,j,6]),pch="+",col=cols[6])
 
 par(mfrow=c(2,1),mar=c(4,4,1,1))
-plot(gois$rho[,i],log(psla$ns[,15,i,1]),pch="+")
-lines(mysupsmu(gois$rho[,i],log(psla$ns[,15,i,1])),col="red")
-plot(gois$rho[,i],log(psla$ns[,15,i,6]),pch="+")
-lines(mysupsmu(gois$rho[,i],log(psla$ns[,15,i,6])),col="red")
+plot(gois$rho[,j],log(psla$ns[,15,j,1]),pch="+")
+lines(mysupsmu(gois$rho[,j],log(psla$ns[,15,j,1])),col="red")
+plot(gois$rho[,j],log(psla$ns[,15,j,6]),pch="+")
+lines(mysupsmu(gois$rho[,j],log(psla$ns[,15,j,6])),col="red")
+
+### Extinction
+
+j <- 19
+par(mfrow=c(1,1))
+plot(gois$tau_mu[pb,j],psla$ns[pb,50,j,5]>0,pch="+",xlim=c(-5,5))
+for(i in 1:nclim){
+  lines(mysupsmu(gois$tau_mu[pb,j],ifelse(psla$ns[pb,50,j,i]>0,1,0)),col=cols[i])
+}
+  # high threshold (low G) better 
+plot(gois$tau_mu[!pb,j],psla$ns[!pb,50,j,5]>0,pch="+",xlim=c(-5,5))
+lines(mysupsmu(gois$tau_mu[!pb,j],ifelse(psla$ns[!pb,50,j,5]>0,1,0)),col="red")
+
+psla$P <- ifelse(psla$ns>0,1,0)
+parplot(gois$tau_mu[pb,],psla$P[pb,,,],expression(tau[mu]),expression(P[50]),t=50,type="n",xlim=c(-2,2))
+bs <- gois$tau_sig[,1]>=median(gois$tau_sig[,1])
+
+parplot(gois$tau_mu[pb&!bs,],psla$P[pb&!bs,,,],expression(tau[mu]),"P50smallvar",t=50,type="n",xlim=c(-2,2))
+parplot(gois$tau_mu[pb&bs,],psla$P[pb&bs,,,],expression(tau[mu]),"P50bigvar",t=50,type="n",xlim=c(-2,2))
 
 ### Seed survival
 parplot(goi$alpha_m,log(psla$ns),expression(alpha[m]),expression(ln(N[s15])),t=15)
