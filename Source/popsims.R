@@ -421,6 +421,21 @@ pna <- aperm(pna,c(4,1,2,3))
   # hack to stack two copies of pYf along 2nd dimension so that relchange works
 rpna <- relchange(qlogis(pna),scenbase="mu1_sd0",scennew="mu1_sd1",keepsp=keepsp)
 
+# Vital rate plots for individual runs ------------------------------------
+
+i <- 1
+j <- 19
+par(mfrow=c(1,1))
+plot(density(qlogis(psla$G[i,,j,2])))
+lines(density(qlogis(psla$G[i,,j,5])),col="red")
+
+par(mfrow=c(2,1),mar=c(4,4,1,1))
+hist(psla$G[i,,j,2],breaks=1000,main="")
+hist(psla$G[i,,j,5],breaks=1000,main="")
+
+hist(qlogis(psla$G[i,,16,2]),breaks=1000)
+hist(qlogis(psla$G[i,,19,2]),breaks=1000)
+
 # Optimal parameters within species ---------------------------------------
 
 ### Germination
