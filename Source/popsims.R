@@ -177,7 +177,7 @@ psl <- as.list(rep(NA,ncores))
 for(n in 1:ncores){
   psl[[n]] <- readRDS(paste0("Sims/",cnames_bycore[n],"_07Apr2017.rds"))
   # psl[[n]] <- readRDS(paste0("Sims/s_",cnames_bycore[n],"_12May2017.rds"))
-  } # added "s_"
+  }
 names(psl) <- cnames_bycore
 
 varl <- psl[[1]]
@@ -460,26 +460,8 @@ parplot(gois$beta_Gz,log(psla$ns),expression(beta[G]),expression(ln(N[s15])),t=1
 parplot(gois$rho,log(psla$ns),expression(rho[G]),expression(ln(N[s15])),t=15,type="n",xlim=c(-5,5))
 parplot(plogis(gois$rho),log(psla$ns),"G",expression(ln(N[s15])),t=15,type="n")
 
-cols_rgb <- col2rgb(cols)
-trancols <- rgb(
-  red=cols_rgb[1,],
-  green=cols_rgb[2,],
-  blue=cols_rgb[3,],
-  alpha=50,
-  maxColorValue = 255
-)
-
-j <- 19
-plot(gois$rho[,j],log(psla$ns[,15,j,1]),pch="+",col=cols[1])
-points(gois$rho[,j],log(psla$ns[,15,j,6]),pch="+",col=cols[6])
-
-par(mfrow=c(2,1),mar=c(4,4,1,1))
-plot(gois$rho[,j],log(psla$ns[,15,j,1]),pch="+")
-lines(mysupsmu(gois$rho[,j],log(psla$ns[,15,j,1])),col="red")
-plot(gois$rho[,j],log(psla$ns[,15,j,6]),pch="+")
-lines(mysupsmu(gois$rho[,j],log(psla$ns[,15,j,6])),col="red")
-
 ### Extinction
+psla$P <- ifelse(psla$ns>0,1,0)
 
 j <- 19
 par(mfrow=c(1,1))
@@ -491,12 +473,30 @@ for(i in 1:nclim){
 plot(gois$tau_mu[!pb,j],psla$ns[!pb,50,j,5]>0,pch="+",xlim=c(-5,5))
 lines(mysupsmu(gois$tau_mu[!pb,j],ifelse(psla$ns[!pb,50,j,5]>0,1,0)),col="red")
 
-psla$P <- ifelse(psla$ns>0,1,0)
 parplot(gois$tau_mu[pb,],psla$P[pb,,,],expression(tau[mu]),expression(P[50]),t=50,type="n",xlim=c(-2,2))
 bs <- gois$tau_sig[,1]>=median(gois$tau_sig[,1])
 
 parplot(gois$tau_mu[pb&!bs,],psla$P[pb&!bs,,,],expression(tau[mu]),"P50smallvar",t=50,type="n",xlim=c(-2,2))
 parplot(gois$tau_mu[pb&bs,],psla$P[pb&bs,,,],expression(tau[mu]),"P50bigvar",t=50,type="n",xlim=c(-2,2))
+
+parplot(log(gois$tau_sig[pb,]),psla$P[pb,,,],expression(ln(tau[sigma])),expression(P[50]),t=50,type="n")
+bm <- gois$tau_mu[,1]>=median(gois$tau_mu[,1])
+parplot(log(gois$tau_sig[pb&bm,]),psla$P[pb&bm,,,],expression(ln(tau[sigma])),expression("P50bigmu"),t=50,type="n")
+parplot(log(gois$tau_sig[pb&!bm,]),psla$P[pb&!bm,,,],expression(ln(tau[sigma])),expression("P50smallmu"),t=50,type="n")
+
+ba <- gois$alpha_G[,1]>=median(gois$alpha_G[,1])
+parplot(gois$beta_Gz[ba,],psla$P[ba,,,],expression(beta[G]),expression(P[50]*alpha[G]>0),t=50,type="n")
+parplot(gois$beta_Gz[!ba,],psla$P[!ba,,,],expression(beta[G]),expression(P[50]*alpha[G]<0),t=50,type="n")
+
+bb <- gois$beta_Gz[,1]>=quantile(gois$beta_Gz[,1],probs=0.75)
+parplot(gois$alpha_G[bb,],psla$P[bb,,,],expression(alpha[G]),expression(P[50]*beta[G]>5),t=50,type="n")
+parplot(gois$alpha_G[!bb,],psla$P[!bb,,,],expression(alpha[G]),expression(P[50]*beta[G]<5),t=50,type="n")
+
+parplot(gois$beta_Gz[ba,],log(psla$ns[ba,,,]),expression(beta[G]),expression(ln(N[s]*alpha[G]>0)),t=15,type="n")
+parplot(gois$beta_Gz[!ba,],log(psla$ns[!ba,,,]),expression(beta[G]),expression(ln(N[s]*alpha[G]<0)),t=15,type="n")
+
+parplot(gois$alpha_G[bb,],log(psla$ns[bb,,,]),expression(alpha[G]),expression(ln(N[s]*beta[G]>5)),t=15,type="n")
+parplot(gois$alpha_G[!bb,],log(psla$ns[!bb,,,]),expression(alpha[G]),expression(ln(N[s]*beta[G]<5)),t=15,type="n")
 
 ### Seed survival
 parplot(goi$alpha_m,log(psla$ns),expression(alpha[m]),expression(ln(N[s15])),t=15)
@@ -582,6 +582,41 @@ densplot(qlogis(psla$Sn),"logit(S[n])",ylim=c(0,1),vab=apply(goi$So3,2,median))
 densplot(psla$mnmo,"log(S[n])-log(S[o])",ylim=c(0,1.5))
 densplot(log(psla$nn),"ln(N[n])")
 densplot(log(psla$Y),"ln(Y)")
+
+psla$ns_p <- psla$ns_e <- psla$ns
+for(m in 1:nclim){
+  for(j in 1:nspecies){
+    psla$ns_p[psla$ns[,50,j,m]==0,,j,m] <- NA # extinct -> NA
+    psla$ns_e[psla$ns[,50,j,m]>0,,j,m] <- NA  # alive -> NA
+  }
+}
+densplot(log(psla$ns_p),"ln(N[s]|N[s]>0)")
+densplot(log(psla$ns_e),"ln(N[s]|N[s]=0)")
+
+j <- 19
+par(mfrow=c(2,1),mar=c(4,4,1,1))
+plot(gois$rho[,j],log(psla$ns[,15,j,1]),pch="+",ylim=c(0,15))
+lines(mysupsmu(gois$rho[,j],log(psla$ns[,15,j,1])),col="red")
+plot(gois$rho[,j],log(psla$ns[,15,j,6]),pch="+",ylim=c(0,15))
+lines(mysupsmu(gois$rho[,j],log(psla$ns[,15,j,6])),col="red")
+
+p1 <- psla$ns[,50,j,1]>0
+p2 <- psla$ns[,50,j,6]>0
+plot(gois$rho[p1,j],log(psla$ns[p1,15,j,1]),pch="+",ylim=c(0,15))
+lines(mysupsmu(gois$rho[p1,j],log(psla$ns[p1,15,j,1])),col="red")
+plot(gois$rho[p2,j],log(psla$ns[p2,15,j,6]),pch="+",ylim=c(0,15))
+lines(mysupsmu(gois$rho[p2,j],log(psla$ns[p2,15,j,6])),col="red")
+
+plot(gois$rho[!p1,j],log(psla$ns[!p1,15,j,1]),pch="+",ylim=c(0,15))
+lines(mysupsmu(gois$rho[!p1,j],log(psla$ns[!p1,15,j,1])),col="red")
+plot(gois$rho[!p2,j],log(psla$ns[!p2,15,j,6]),pch="+",ylim=c(0,15))
+lines(mysupsmu(gois$rho[!p2,j],log(psla$ns[!p2,15,j,6])),col="red")
+
+par(mfrow=c(2,1),mar=c(4,4,1,1))
+plot(gois$rho[,j],log(psla$ns[,15,j,2]),pch="+",ylim=c(0,15))
+lines(mysupsmu(gois$rho[,j],log(psla$ns[,15,j,2])),col="red")
+plot(gois$rho[,j],log(psla$ns[,15,j,5]),pch="+",ylim=c(0,15))
+lines(mysupsmu(gois$rho[,j],log(psla$ns[,15,j,5])),col="red")
 
 # Parameter correlations within a given species ---------------------------
 
