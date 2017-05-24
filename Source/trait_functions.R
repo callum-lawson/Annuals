@@ -83,3 +83,11 @@ godvar_f <- function(beta){
   pi^2/(3*beta^2)
 }
 # from Godfray & Rees 2002
+
+godalpha_f <- function(tau_mu,tau_sd){
+  -tau_mu*sqrt(pi^2/(3*tau_sd^2))
+}
+  
+godbeta_f <- function(tau_sd){
+  sqrt(pi^2/(3*tau_sd^2))
+}

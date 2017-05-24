@@ -70,18 +70,54 @@ pl <- list(
 
 ### PARAMS FOR SENSITIVITY ANALYSES
 
+# transformed climate range approx. -1 -> 1
+tmrange <- c(-1,1)
+tsrange <- c(-2,2)
 pls <- pl
 nsens <- 100
-Gsens <- expand.grid(
-  alpha_G=seq(-5,5,length.out=100),
-  beta_Gz=seq(-10,10,length.out=100)
+plasticity <- F
+
+if(plasticity==F){
+  Gsens <- data.frame(
+    alpha_G=qlogis(seq(0.001,0.999,length.out=nsens^2)),
+    beta_Gz=rep(0,nsens^2)
   )
+}
+
+if(plasticity==T){
+  Gsens <- expand.grid(
+    tau_mu = seq(tmrange[1],tmrange[2],length.out=100),
+    tau_sd = exp(seq(tsrange[1],tsrange[2],length.out=100))
+  )
+  Gsens$alpha_G <- with(Gsens,godalpha_f(tau_mu,tau_sd))
+  Gsens$beta_Gz <- with(Gsens,godbeta_f(tau_sd))
+}
+
 pls$go$alpha_G[] <- Gsens$alpha_G
 pls$go$beta_Gz[] <- Gsens$beta_Gz
 
-# range(pls$go$alpha_G)
-# range(pls$go$beta_Gz)
-# with(Gsensmat, curve(plogis(alpha_G[1] + beta_G[1]*x),xlim=c(-0.5,1.5)))
+nplot <- 4
+Gshow <- round(
+  rep(seq(1,100,length.out=nplot),times=nplot)
+  + rep(seq(0,nsens^2-nsens,length.out=nplot),each=nplot),
+  0)
+Gplot <- Gsens[Gshow,]
+
+# pdf(paste0("Plots/Germination_functions_", format(Sys.Date(),"%d%b%Y"),".pdf"),
+# 		width=7,height=7)
+par(mfrow=c(nplot,nplot),mar=c(3,3,1,1),las=1,ann=F,bty="l")
+for(i in 1:nrow(Gplot)){
+  with(Gplot, curve(plogis(alpha_G[i]+beta_Gz[i]*x),
+    xlim=c(-2,2),ylim=c(0,1)) )
+  if(plasticity==T){
+    legend("topleft",bty="n",
+      legend=c(paste0("mu=",signif(Gplot$tau_mu[i],2)),
+        paste0("sd=",signif(Gplot$tau_sd[i],2))
+        )
+      )
+  }
+}
+# dev.off()
   
 # Sims --------------------------------------------------------------------
 
@@ -90,7 +126,6 @@ pls$go$beta_Gz[] <- Gsens$beta_Gz
 maml <- as.list(c(1,1,mpam,1,mpam,mpam))
 msdl <- as.list(c(0,1,1,mpsd,mpsd,0))
   # scaling mean log rainfall (zamo) only works because sign stays the same
-
 
 ### Actual data
 nclim <- length(maml)
@@ -175,8 +210,8 @@ stopCluster(CL)
 
 psl <- as.list(rep(NA,ncores))
 for(n in 1:ncores){
-  psl[[n]] <- readRDS(paste0("Sims/",cnames_bycore[n],"_07Apr2017.rds"))
-  # psl[[n]] <- readRDS(paste0("Sims/s_",cnames_bycore[n],"_12May2017.rds"))
+  # psl[[n]] <- readRDS(paste0("Sims/",cnames_bycore[n],"_07Apr2017.rds"))
+  psl[[n]] <- readRDS(paste0("Sims/s_",cnames_bycore[n],"_23May2017.rds"))
   }
 names(psl) <- cnames_bycore
 
