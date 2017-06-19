@@ -128,34 +128,34 @@ msdl <- as.list(c(0,1,1,mpsd,mpsd,0))
   # scaling mean log rainfall (zamo) only works because sign stays the same
 
 ### Actual data
-nclim <- length(maml)
-cpc <- 4 # CORES per CLIMATE
-ncores <- nclim*cpc
-mpos <- rep(1:nclim,each=cpc)
-
-nstart <- rep(10000,nspecies)
-ni <- 250 # iterations PER CORE
-nt <- 50
-nj <- 22
-nk <- 10000
-
-### Sensitivity analyses
 # nclim <- length(maml)
-# cpc <- 5 # CORES per CLIMATE
+# cpc <- 4 # CORES per CLIMATE
 # ncores <- nclim*cpc
 # mpos <- rep(1:nclim,each=cpc)
 # 
 # nstart <- rep(10000,nspecies)
-# ni <- 2000 # iterations PER CORE
+# ni <- 250 # iterations PER CORE
 # nt <- 50
 # nj <- 22
-# nk <- 1000 # 10000
+# nk <- 10000
+
+### Sensitivity analyses
+nclim <- length(maml)
+cpc <- 5 # CORES per CLIMATE
+ncores <- nclim*cpc
+mpos <- rep(1:nclim,each=cpc)
+
+nstart <- rep(10000,nspecies)
+ni <- 2000 # iterations PER CORE
+nt <- 50
+nj <- 22
+nk <- 1000 # 10000
 
 # ni and nk must be >1
 nit <- ni*cpc
 
 set.seed(1)
-maxiter <- 10000 # max number of itertions in PARAMETERISATION
+maxiter <- 10000 # max number of iterations in PARAMETERISATION
 cpos <- rep(1:cpc,times=nclim)
 cipos <- rep(1:cpc,each=ni)
 itersetl <- split(1:(ni*cpc),cipos)
@@ -211,7 +211,7 @@ stopCluster(CL)
 psl <- as.list(rep(NA,ncores))
 for(n in 1:ncores){
   # psl[[n]] <- readRDS(paste0("Sims/",cnames_bycore[n],"_07Apr2017.rds"))
-  psl[[n]] <- readRDS(paste0("Sims/s_",cnames_bycore[n],"_23May2017.rds"))
+  psl[[n]] <- readRDS(paste0("Sims/s_",cnames_bycore[n],"_24May2017.rds"))
   }
 names(psl) <- cnames_bycore
 
@@ -326,6 +326,15 @@ psla$mnmo <- with(psla,log(Sn) - log(So)*T3)
   # Convert to T3: ln(Sn) - ln(So)*T3
 psla$pP <- apply(psla$ns,2:4,function(x) sum(x>0)/length(x))
   # Probability of persistence
+
+psla$ns_p <- psla$ns_e <- psla$ns
+for(m in 1:nclim){
+  for(j in 1:nspecies){
+    psla$ns_p[psla$ns[,50,j,m]==0,,j,m] <- NA # extinct -> NA
+    psla$ns_e[psla$ns[,50,j,m]>0,,j,m] <- NA  # alive -> NA
+  }
+}
+  # population density given that survived to t=50
 
 # not surprising that differ in seed numbers (e.g. if make smaller seeds)
 # calculate relative reproduction instead?
@@ -480,6 +489,8 @@ parplot(goi$beta_Gz,log(psla$ns),expression(beta[G]),expression(ln(N[s15])),t=15
 parplot(gois$alpha_G,log(psla$ns),expression(alpha[G]),expression(ln(N[s15])),t=15,type="n")
 parplot(gois$beta_Gz,log(psla$ns),expression(beta[G]),expression(ln(N[s15])),t=15,type="n")
 
+parplot(plogis(gois$alpha_G),log(psla$ns_p),expression(G),expression(ln(N[s50])),t=50,type="n",ylim=c(6,12))
+
 quantile(gois$tau_mu[,1],probs=c(0.025,0.975))
 hist(log(gois$tau_mu[,1]),breaks=1000,xlim=c(-5,5))
 quantile(gois$tau_sig[,1],probs=c(0.95))
@@ -491,6 +502,7 @@ parplot(log(gois$tau_sig[pb,]),log(psla$ns[pb,,,]),expression(ln(tau[sigma])),ex
   # For G sensitivity simulations (too many points to plot)
 
 parplot(gois$alpha_G,log(psla$ns),expression(alpha[G]),expression(ln(N[s15])),t=15,type="n")
+parplot(plogis(gois$alpha_G),log(psla$ns),expression(G),expression(ln(N[s15])),t=15,type="n")
 parplot(gois$beta_Gz,log(psla$ns),expression(beta[G]),expression(ln(N[s15])),t=15,type="n")
 parplot(gois$rho,log(psla$ns),expression(rho[G]),expression(ln(N[s15])),t=15,type="n",xlim=c(-5,5))
 parplot(plogis(gois$rho),log(psla$ns),"G",expression(ln(N[s15])),t=15,type="n")
@@ -532,6 +544,8 @@ parplot(gois$beta_Gz[!ba,],log(psla$ns[!ba,,,]),expression(beta[G]),expression(l
 
 parplot(gois$alpha_G[bb,],log(psla$ns[bb,,,]),expression(alpha[G]),expression(ln(N[s]*beta[G]>5)),t=15,type="n")
 parplot(gois$alpha_G[!bb,],log(psla$ns[!bb,,,]),expression(alpha[G]),expression(ln(N[s]*beta[G]<5)),t=15,type="n")
+
+parplot(plogis(gois$alpha_G),psla$P,"G",expression(P[50]),t=50,type="n")
 
 ### Seed survival
 parplot(goi$alpha_m,log(psla$ns),expression(alpha[m]),expression(ln(N[s15])),t=15)
@@ -618,15 +632,8 @@ densplot(psla$mnmo,"log(S[n])-log(S[o])",ylim=c(0,1.5))
 densplot(log(psla$nn),"ln(N[n])")
 densplot(log(psla$Y),"ln(Y)")
 
-psla$ns_p <- psla$ns_e <- psla$ns
-for(m in 1:nclim){
-  for(j in 1:nspecies){
-    psla$ns_p[psla$ns[,50,j,m]==0,,j,m] <- NA # extinct -> NA
-    psla$ns_e[psla$ns[,50,j,m]>0,,j,m] <- NA  # alive -> NA
-  }
-}
-densplot(log(psla$ns_p),"ln(N[s]|N[s]>0)")
-densplot(log(psla$ns_e),"ln(N[s]|N[s]=0)")
+densplot(log(psla$ns_p),"ln(N[s]|N[s]>0)",t=50)
+densplot(log(psla$ns_e),"ln(N[s]|N[s]=0)",t=50)
 
 j <- 19
 par(mfrow=c(2,1),mar=c(4,4,1,1))
