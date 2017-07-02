@@ -230,7 +230,7 @@ stopCluster(CL)
 psl <- as.list(rep(NA,ncores))
 for(n in 1:ncores){
   # psl[[n]] <- readRDS(paste0("Sims/",cnames_bycore[n],"_07Apr2017.rds"))
-  psl[[n]] <- readRDS(paste0("Sims/s_",cnames_bycore[n],"_24May2017.rds"))
+  psl[[n]] <- readRDS(paste0("Sims/s_",cnames_bycore[n],"_19Jun2017.rds"))
   }
 names(psl) <- cnames_bycore
 
@@ -345,6 +345,8 @@ psla$mnmo <- with(psla,log(Sn) - log(So)*T3)
   # Convert to T3: ln(Sn) - ln(So)*T3
 psla$pP <- apply(psla$ns,2:4,function(x) sum(x>0)/length(x))
   # Probability of persistence
+psla$P <- ifelse(psla$ns>0,1,0)
+  # Binary persistence variable
 
 psla$ns_p <- psla$ns_e <- psla$ns
 for(m in 1:nclim){
@@ -508,6 +510,7 @@ parplot(goi$beta_Gz,log(psla$ns),expression(beta[G]),expression(ln(N[s15])),t=15
 parplot(gois$alpha_G,log(psla$ns),expression(alpha[G]),expression(ln(N[s15])),t=15,type="n")
 parplot(gois$beta_Gz,log(psla$ns),expression(beta[G]),expression(ln(N[s15])),t=15,type="n")
 
+parplot(gois$alpha_G,log(psla$ns_p),expression(alpha[G]),expression(ln(N[s50])),t=50,type="n",ylim=c(6,12))
 parplot(plogis(gois$alpha_G),log(psla$ns_p),expression(G),expression(ln(N[s50])),t=50,type="n",ylim=c(6,12))
 
 quantile(gois$tau_mu[,1],probs=c(0.025,0.975))
@@ -527,8 +530,6 @@ parplot(gois$rho,log(psla$ns),expression(rho[G]),expression(ln(N[s15])),t=15,typ
 parplot(plogis(gois$rho),log(psla$ns),"G",expression(ln(N[s15])),t=15,type="n")
 
 ### Extinction
-psla$P <- ifelse(psla$ns>0,1,0)
-
 j <- 19
 par(mfrow=c(1,1))
 plot(gois$tau_mu[pb,j],psla$ns[pb,50,j,5]>0,pch="+",xlim=c(-5,5))
@@ -564,7 +565,8 @@ parplot(gois$beta_Gz[!ba,],log(psla$ns[!ba,,,]),expression(beta[G]),expression(l
 parplot(gois$alpha_G[bb,],log(psla$ns[bb,,,]),expression(alpha[G]),expression(ln(N[s]*beta[G]>5)),t=15,type="n")
 parplot(gois$alpha_G[!bb,],log(psla$ns[!bb,,,]),expression(alpha[G]),expression(ln(N[s]*beta[G]<5)),t=15,type="n")
 
-parplot(plogis(gois$alpha_G),psla$P,"G",expression(P[50]),t=50,type="n")
+parplot(gois$alpha_G,psla$P,expression(alpha[G50]),expression(P[50]),t=50,type="n")
+parplot(plogis(gois$alpha_G),psla$pP,"G",expression(P[50]),t=50,type="n")
 
 ### Seed survival
 parplot(goi$alpha_m,log(psla$ns),expression(alpha[m]),expression(ln(N[s15])),t=15)
