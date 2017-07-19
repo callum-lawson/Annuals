@@ -826,3 +826,22 @@ abline(v=tau_p*exp(psla$z[1,1,6]),col=cols[6],lty=3)
 
 dev.off()
 
+# Summary stats -----------------------------------------------------------
+
+Yeps <- psla$Y
+Yeps[Yeps==0] <- min(psla$Y[!is.nan(psla$Y)],na.rm=T)
+pehe_Ysd <- apply(log(Yeps[,,14,2]),1,function(x) sd(x[!is.nan(x) & is.finite(x)],na.rm=T))
+scba_Ysd <- apply(log(Yeps[,,19,2]),1,function(x) sd(x[!is.nan(x) & is.finite(x)],na.rm=T))
+hist(pehe_Ysd,breaks=100)
+hist(scba_Ysd,breaks=100)
+  # about 3
+
+pehe_Ymean <- apply(log(Yeps[,,14,2]),1,function(x) mean(x[!is.nan(x) & is.finite(x)],na.rm=T))
+scba_Ymean <- apply(log(Yeps[,,19,2]),1,function(x) mean(x[!is.nan(x) & is.finite(x)],na.rm=T))
+hist(pehe_Ymean,breaks=100)
+hist(scba_Ymean,breaks=100)
+  # about 2
+
+  # calculated in current climate (2)
+  # but overall magnitude similar for future climate (3)
+  # but *both measures biased because ignore zeroes*
