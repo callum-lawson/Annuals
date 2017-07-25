@@ -181,8 +181,8 @@ popsim <- function(pl,ni,nt,nj=22,nstart,
 	nl <- 100
 	lngseq <- seq(-5,5,length.out=nl)
 	
-	x_t <- matrix(1,nr=nl,nc=4)
-		# makes intercept already; other params will be filled in later
+	x_t <- rep(1,4)
+		# 1 makes intercept already; other params will be filled in later
 		# prcp replaced every (i,t)
 		# dens replaced every (i,t,j)
 
@@ -222,48 +222,23 @@ popsim <- function(pl,ni,nt,nj=22,nstart,
 
 			### REPRODUCTION ###
 
-			x_t[,2] <- z[i,t]
-			x_t[,3] <- z[i,t]^2
+			x_t[2] <- z[i,t]
+			x_t[3] <- z[i,t]^2
 			  # climate data into model matrix
 			
 			for(j in 1:nj){
 			
-				# running all this within a loop to avoid many calculations on zeroes
-				# when species has gone extinct
-
-			  lgmu <- array(dim=c(ni,nj)) # re-generated every t
-			  dlg <- array(dim=c(nl,nj)) # re-generated every i,t
-			    # move up?
-			    # remove i indexing?
-			  lgmu[i,] <- log(ng[i,t,]) - (sig_s_g[i,]^2 / 2)
-  			  # arithmetic mean = ng[i,t,]
-  			  # logarithmic sd = sig_s_g[i,,j]
-  			  # mean of lognormal distribution = log(am) - sig^2 / 2
-			  
-			  dlg[] <- dnorm(rep(lngseq,times=nj),
-			                 mean=rep(lgmu[i,],each=nl),
-			                 sd=rep(sig_s_g[i,],each=nl)
-			                 )
-			  
-			  x_t[,4] <- lngseq - log(tau_d) 
-			    # replace every i,t
-			    # check this - double-adjusting for tau?
-			  
-			  pi_bar_t[,j] <- beta_p[i,j,] %*% t(x_t)
-			  eta_bar_t[,j] <- beta_r[i,j,] %*% t(x_t)
-			    # each density (lng) has own associated world of sites
-			    # but spatial aspects of pr(Y>0) and pr(Y|Y>0) considered independent,
-			    # so can be simply added together
-			    # can't average across years because non-independent (unlike sites etc.)
+				# running all this within a loop because integration has to be run 
+			  # one-at-a-time
 			  
 			  logitmean <- function(mu,sigma,abs.tol=0){
 			    flogit <- function(x){
 			      plogis(x) * dnorm(x, mean=mu, sd=sigma)
 			    }
-			    integrate(flogit, -Inf, Inf, abs.tol=abs.tol)$value
+			    integrate(flogit, -20, 20, abs.tol=abs.tol)$value
 			  }
-			    # code borrowed from logitnorm package
-			 
+			  # code borrowed from logitnorm package
+			  
 			  nbtmean <- function(mu,phi){
 			    mu / ( 1 - (phi/(mu+phi))^phi )
 			  } # mean for hurdle model
@@ -284,30 +259,55 @@ popsim <- function(pl,ni,nt,nj=22,nstart,
   			  # = sum( negbin(exp(mu+sig),phi) + negbin(exp(mu,-sig),phi) )
   			  # Ref: Econometric Analysis of Count Data - Rainer Winkelmann
 			  
-			  pr_t <- rs_t <- pcr_t <- pi_t 
+  			  # check <- rtrunc(n=10^6,spec="nbinom",
+  			  #        mu=exp(rnorm(10^6,eta_bar_t[l,j]+eps_y_r[i,t,j],sig_s_r[i])),
+  			  #        size=rep(phi[i],10^6),
+  			  #        a=0)
 			  
-			  for(l in 1:nl){
-			    pr_t[l,j] <- logitmean(
-			      mu = pi_bar_t[l,j] + eps_y_p[i,t,j], 
-			      sigma = sig_s_p[i] + sig_o_p[i]
-			    )
-			    rs_t[l,j] <- nbtlnmean(
-			      eta = eta_bar_t[l,j] + eps_y_r[i,t,j], 
-			      sigma = sig_s_r[i], 
-			      phi = phi[i]
+			  #### integrate wrt lg
+			  
+			  whatever <- function(g){
+			    
+			    lgmu <- log(ng[i,t,j]) - (sig_s_g[i,j]^2 / 2)
+			    # arithmetic mean = ng[i,t,]
+			    # logarithmic sd = sig_s_g[i,,j]
+			    # mean of lognormal distribution = log(am) - sig^2 / 2
+			    
+			    dg <- dnorm(g,mean=lgmu,sd=sig_s_g[i,j])
+			    
+			    nl <- length(g)
+			    x_tt <- matrix(nr=nl,nc=4)
+			    x_tt[,1:3] <- rep(x_t[-4],each=nl) 
+			    x_tt[,4] <- g - log(tau_d)
+			    pi_bar_t <- beta_p[i,j,] %*% t(x_tt)
+			    eta_bar_t <- beta_r[i,j,] %*% t(x_tt)
+			    # each density (lng) has own associated world of sites
+			    # but spatial aspects of pr(Y>0) and pr(Y|Y>0) considered independent,
+			    # so can be simply added together
+			    # can't average across years because non-independent (unlike sites etc.)
+			   
+			    # ***DOES lg NEED TO BE ADJUSTED FOR TAU?***
+			    
+			    pr_t <- rs_t <- rep(NA,nl)
+			    for(l in 1:nl){
+			      pr_t[l] <- logitmean(
+			        mu = pi_bar_t[l] + eps_y_p[i,t,j], 
+			        sigma = sig_s_p[i] + sig_o_p[i]
 			      )
+			      rs_t[l] <- nbtlnmean(
+			        eta = eta_bar_t[l] + eps_y_r[i,t,j], 
+			        sigma = sig_s_r[i], 
+			        phi = phi[i]
+			      )
+			    }
+		
+			    nY_t <- ng[i,t,j] * pr_t * rs_t
+			    # expected final density of seeds for each possible germinant density
+			    
+			    return(dg * nY_t) # expected overall density of seeds
 			  }
-			
-			  # check <- rtrunc(n=10^6,spec="nbinom",
-			  #        mu=exp(rnorm(10^6,eta_bar_t[l,j]+eps_y_r[i,t,j],sig_s_r[i])),
-			  #        size=rep(phi[i],10^6),
-			  #        a=0)
-
-			  nY_t[,j] <- ng_t * pr_t * rs_t
-			  # expected final density of seeds for each possible germinant density
-			
-			  nn[i,t,j] <- sum(nY_t[,j] * dg) / sum(dg)
-			    # make integration routine?
+			    
+			  integrate(whatever, -10, 10, abs.tol=0)$value
 
 				} # close j loop
 
