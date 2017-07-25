@@ -68,6 +68,7 @@ R code.
 * *traitmeasures*: Calculate species-level predictive traits (partially obsolete).
 * *trait_functions*: Functions for calculating derived trait values from popualtion parameters.
 * *simulation_functions*: Functions for simulations of population dynamics for finite area.
+* *simulation_functions_analytical*: Functions for simulations of population dynamics for infinite area.
 * *figure_functions*: Functions to plot figures from Stan model output.
 * *reprod*: Estimate per-capita reproduction parameters in Stan.
 * *GO_descriptive*: Model to describe G and O values as function of species, year, and site, comparing negative binomial and lognormal-Poisson models (currently saving two versions, not sure which is right)
