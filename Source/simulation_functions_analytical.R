@@ -11,11 +11,10 @@
 ni <- 2
 nt <- 10
 nj <- 22
-nk <- 5
-zam <- zam
-zcv <- zcv
-wam <- wam
-wcv <- wcv
+zam <- zamo
+zsd <- zsdo
+wam <- wamo
+wsd <- wsdo
 rho <- 0.82
 nstart <- 1
 iterset <- NULL
@@ -23,7 +22,7 @@ savefile <- NULL
 progress <- F
 
 # hi <- popsim(pl,ni,nt,nj=22,nk,nstart,
-#   zam,zcv,wam,wcv,rho,
+#   zam,zsd,wam,wsd,rho,
 #   Tvalues,tau_p,tau_d,tau_s,
 #   iterset,savefile,progress)
 
@@ -84,11 +83,11 @@ popsim <- function(pl,ni,nt,nj=22,nstart,
 	beta_m <- go$alpha_m[iter_go,]
 	
 	sig_s_g <- gs$sig_s_g[iter_gs,]
-	theta_g <- gs$theta_g[iter_gs,]
+	# theta_g <- gs$theta_g[iter_gs,]
 		# zero-inflated, NOT hurdle
 		# theta_g is prob(0)
-	  # possible to get all zero sites, but v. unlikely for large sites,
-	  # so ignoring
+	  # but ignoring here because zero-germinant sites don't contribute
+	  # (i.e. lognormal portion of G distribution can be considered in isolation)
 
 	beta_p <- pr$beta_p[iter_pr,,]
 	sig_y_p <- pr$sig_y_p[iter_pr,]
@@ -124,8 +123,8 @@ popsim <- function(pl,ni,nt,nj=22,nstart,
 	# # SIMULATE AS VECTORS
 	# 	# same-scale eps values for all species
 	# 	# i.e. simulating for boin and will re-scale later
-	# eps_y_p1 <- rnorm(ni*nt,0,rep(sig_y_p1,times=nt))
-	# eps_y_r1 <- rnorm(ni*nt,0,rep(sig_y_r1,times=nt))
+	eps_y_p1 <- rnorm(ni*nt,0,rep(sig_y_p1,times=nt))
+	eps_y_r1 <- rnorm(ni*nt,0,rep(sig_y_r1,times=nt))
 	# eps_s_g1 <- rnorm(ni*nk,0,rep(sig_s_g1,times=nk))
 	# eps_s_p1 <- rnorm(ni*nk,0,rep(sig_s_p1,times=nk))
 	# eps_s_r1 <- rnorm(ni*nk,0,rep(sig_s_r1,times=nk))
@@ -133,10 +132,10 @@ popsim <- function(pl,ni,nt,nj=22,nstart,
 	# 
 	# # CONVERT TO SPECIES-SPECIFIC VALUES AS ARRAYS
 	# 
-	# eps_y_p <- eps_y_r <- array(NA,c(ni,nt,nj))
+	eps_y_p <- eps_y_r <- array(NA,c(ni,nt,nj))
 	# eps_s_g <- eps_s_p <- eps_s_r <- array(NA,c(ni,nk,nj))
-	# eps_y_p[] <- rep(eps_y_p1,times=nj) * rep(scale_y_p,each=nt)
-	# eps_y_r[] <- rep(eps_y_r1,times=nj) * rep(scale_y_r,each=nt)
+	eps_y_p[] <- rep(eps_y_p1,times=nj) * rep(scale_y_p,each=nt)
+	eps_y_r[] <- rep(eps_y_r1,times=nj) * rep(scale_y_r,each=nt)
 	# eps_s_g[] <- rep(eps_s_g1,times=nj) * rep(scale_s_g,each=nk)
 	# eps_s_p[] <- rep(eps_s_p1,times=nj) * rep(scale_s_p,each=nk)
 	# eps_s_r[] <- rep(eps_s_r1,times=nj) * rep(scale_s_r,each=nk)
@@ -176,12 +175,16 @@ popsim <- function(pl,ni,nt,nj=22,nstart,
 		# derived params - permanently saved
 
 	# ng_t <- nr_t <- pi_bar_t <- pi_t <- eta_bar_t <- eta_t <- eps_o_p_t <- array(NA,c(nk,nj))
+	pi_bar_t <- pi_t <- eta_bar_t <- eta_t <- eps_o_p_t <- array(NA,c(nl,nj))
 	# 	# site-level counts and params - replaced every new (i,t)
-
-	# x_t <- matrix(1,nr=nk,nc=4)
-	# 	# makes intercept already; other params will be filled in later
-	# 	# prcp replaced every (i,t)
-	# 	# dens replaced every (i,t,j) [for each k]
+	
+	nl <- 100
+	lngseq <- seq(-5,5,length.out=nl)
+	
+	x_t <- matrix(1,nr=nl,nc=4)
+		# makes intercept already; other params will be filled in later
+		# prcp replaced every (i,t)
+		# dens replaced every (i,t,j)
 
 	ns[,1,] <- rep(nstart,each=ni)
 		# for each i, replicate vector of starting densities for all species
@@ -207,12 +210,6 @@ popsim <- function(pl,ni,nt,nj=22,nstart,
   	  # tau-adjusted rainfall included in Gmod
 	  
 		for(t in 1:nt){
-
-		  # G[i,t,] <- plogis(
-		  #   alpha_G[i,]
-		  #   + beta_Gz[i,]*w[i,t]
-		  #   + beta_Gd[i,]*log(ns[i,t,]/tottarea)
-		  #   )
 		  
 			### GERMINATION ###
 		
@@ -232,8 +229,6 @@ popsim <- function(pl,ni,nt,nj=22,nstart,
 			#  eps_o_p_t[] <- rnorm(nk*nj,0,sig_o_p[i])
 			   # MIGHT NOT NEED THIS ANY MORE
 			
-			sig_o_p[i]
-			
 			# arithmetic mean = ng[i,t,]
 			# logarithmic sd = eps_s_g[i,,j]
 
@@ -244,32 +239,79 @@ popsim <- function(pl,ni,nt,nj=22,nstart,
 
 			  # STILL NECESSARY?
 			  
-			  lgmu[i,t,] <- log(ng[i,t,]) - (eps_s_g[i,,j]^2)
+			  lgmu <- array(dim=c(ni,nj)) # re-generated every t
+			  dlg <- array(dim=c(nl,nj)) # re-generated every i,t
+			    # move up?
+			    # remove i indexing?
+			  lgmu[i,] <- log(ng[i,t,]) - (sig_s_g[i,]^2 / 2)
 			  # mean of lognormal distribution = log(am) - sig^2 / 2
 			  
-			  lngseq <- seq(-5,5,length.out=100)
-			  dg <- dnorm(lngseq,mean=lgmu[i,t,],sd=eps_s_g[i,,j])
+			  dlg[] <- dnorm(rep(lngseq,times=nj),
+			                 mean=rep(lgmu[i,],each=nl),
+			                 sd=rep(sig_s_g[i,],each=nl)
+			                 )
 			  
 			  # nseq REPLACING nk?
 			  
-			  x_t[,4] <- lngseq - log(tau_d) # check this - double-adjusting for tau?
+			  x_t[,4] <- lngseq - log(tau_d) 
+			    # replace every i,t
+			    # check this - double-adjusting for tau?
 			  
 			  pi_bar_t[,j] <- beta_p[i,j,] %*% t(x_t)
-			  pi_t[,j] <- pi_bar_t[,j] + eps_y_p[i,t,j] + eps_s_p[i,,j] + eps_o_p_t[,j]
+			  eta_bar_t[,j] <- beta_r[i,j,] %*% t(x_t)
 			  
+			    # each density (lng) has own associated world of sites
+			    # but spatial aspects of pr(Y>0) and pr(Y|Y>0) considered independent,
+			    # so can be simply added together
+			    # can't average across years because non-independent (unlike sites etc.)
+			  
+			  logitmean <- function(mu,sigma,abs.tol=0){
+			    fExp <- function(x){
+			      plogis(x) * dnorm(x, mean=mu, sd=sigma)
+			    }
+			    integrate(fExp, -Inf, Inf, abs.tol=abs.tol)$value
+			  }
+			    # code borrowed from logitnorm package
+			 
+			  pr_t <- rs_t <- pcr_t <- pi_t 
+			  
+			  for(l in 1:nl){
+			    pr_t[l,j] <- logitmean(
+			      mu = pi_bar_t[l,j] + eps_y_p[i,t,j], 
+			      sigma = sig_s_p[i] + sig_o_p[i]
+			    )
+			    rs_t[l,j] <- nbtlnmean(
+			      eta = eta_bar_t[l,j] + eps_y_r[i,t,j], 
+			      sigma = sig_s_r[i], 
+			      phi = phi[i]
+			      )
+			  }
+			
+			  nY_t[,j] <- ng_t * pr_t * rs_t
+			  # expected final density of seeds for each possible germinant density
+			
 			  nbtmean <- function(mu,phi){
 			    mu / ( 1 - (phi/(mu+phi))^phi )
-			  }
-			  eta_bar_t[,j] <- beta_r[i,j,] %*% t(x_t)
-			  eta_t[,j] <- eta_bar_t[,j] + eps_y_r[i,t,j] + eps_s_r[i,,j]
-			  rmu[,j] <- nbtmean(exp(eta_t[,j]),rs$phi[i])
-			  # does this fully account for NLA?
-			  # what to do with site variable here and above?
+			  } # mean for hurdle model
 			  
-			  nY_t[,j] <- plogis(pi_t[,j])*ng_t[,j]*rmu[,j] 
-			  # expected final density of seeds for each possible germinant density
+			  nbtlnmean <- function(eta,sigma,phi,abs.tol=0){
+			    fnbt <- function(x){
+			      nbtmean(mu=exp(x),phi) * dnorm(x, mean=eta, sd=sigma)
+			    }
+			    integrate(fnbt, -20, 20, abs.tol=abs.tol)$value
+			  }
+			    # finite limits required to stop integration from crashing
+			  
+			  # - calculate probability of each value from lognormal distribution
+			  # - each of these values produces a mean from a truncated negbin distribution
+			  # - then integrate to calculate the mean of these means
+			  # - can be done because:
+			  # sum(negbin(lognormal(mu,sig),phi)) 
+			  # = sum( negbin(exp(mu+sig),phi) + negbin(exp(mu,-sig),phi) )
+			  # Ref: Econometric Analysis of Count Data - Rainer Winkelmann
 			  
 			  nn[i,t,j] <- sum(nY_t[,j] * dg) / sum(dg)
+			    # make integration routine?
 
 				} # close j loop
 
