@@ -226,32 +226,24 @@ popsim <- function(pl,ni,nt,nj=22,nstart,
 			x_t[,3] <- z[i,t]^2
 			  # climate data into model matrix
 			
-			#  eps_o_p_t[] <- rnorm(nk*nj,0,sig_o_p[i])
-			   # MIGHT NOT NEED THIS ANY MORE
-			
-			# arithmetic mean = ng[i,t,]
-			# logarithmic sd = eps_s_g[i,,j]
-
 			for(j in 1:nj){
 			
 				# running all this within a loop to avoid many calculations on zeroes
 				# when species has gone extinct
 
-			  # STILL NECESSARY?
-			  
 			  lgmu <- array(dim=c(ni,nj)) # re-generated every t
 			  dlg <- array(dim=c(nl,nj)) # re-generated every i,t
 			    # move up?
 			    # remove i indexing?
 			  lgmu[i,] <- log(ng[i,t,]) - (sig_s_g[i,]^2 / 2)
-			  # mean of lognormal distribution = log(am) - sig^2 / 2
+  			  # arithmetic mean = ng[i,t,]
+  			  # logarithmic sd = sig_s_g[i,,j]
+  			  # mean of lognormal distribution = log(am) - sig^2 / 2
 			  
 			  dlg[] <- dnorm(rep(lngseq,times=nj),
 			                 mean=rep(lgmu[i,],each=nl),
 			                 sd=rep(sig_s_g[i,],each=nl)
 			                 )
-			  
-			  # nseq REPLACING nk?
 			  
 			  x_t[,4] <- lngseq - log(tau_d) 
 			    # replace every i,t
@@ -259,20 +251,39 @@ popsim <- function(pl,ni,nt,nj=22,nstart,
 			  
 			  pi_bar_t[,j] <- beta_p[i,j,] %*% t(x_t)
 			  eta_bar_t[,j] <- beta_r[i,j,] %*% t(x_t)
-			  
 			    # each density (lng) has own associated world of sites
 			    # but spatial aspects of pr(Y>0) and pr(Y|Y>0) considered independent,
 			    # so can be simply added together
 			    # can't average across years because non-independent (unlike sites etc.)
 			  
 			  logitmean <- function(mu,sigma,abs.tol=0){
-			    fExp <- function(x){
+			    flogit <- function(x){
 			      plogis(x) * dnorm(x, mean=mu, sd=sigma)
 			    }
-			    integrate(fExp, -Inf, Inf, abs.tol=abs.tol)$value
+			    integrate(flogit, -Inf, Inf, abs.tol=abs.tol)$value
 			  }
 			    # code borrowed from logitnorm package
 			 
+			  nbtmean <- function(mu,phi){
+			    mu / ( 1 - (phi/(mu+phi))^phi )
+			  } # mean for hurdle model
+			  
+			  nbtlnmean <- function(eta,sigma,phi,abs.tol=0){
+			    fnbt <- function(x){
+			      nbtmean(mu=exp(x),phi) * dnorm(x, mean=eta, sd=sigma)
+			    }
+			    integrate(fnbt, -20, 20, abs.tol=abs.tol)$value
+			  }
+  			  # finite limits required to stop integration from crashing
+  			  
+  			  # - calculate probability of each value from lognormal distribution
+  			  # - each of these values produces a mean from a trunc negbin distribution
+  			  # - then integrate to calculate the mean of these means
+  			  # - can be done because:
+  			  # sum(negbin(lognormal(mu,sig),phi)) 
+  			  # = sum( negbin(exp(mu+sig),phi) + negbin(exp(mu,-sig),phi) )
+  			  # Ref: Econometric Analysis of Count Data - Rainer Winkelmann
+			  
 			  pr_t <- rs_t <- pcr_t <- pi_t 
 			  
 			  for(l in 1:nl){
@@ -287,29 +298,14 @@ popsim <- function(pl,ni,nt,nj=22,nstart,
 			      )
 			  }
 			
+			  # check <- rtrunc(n=10^6,spec="nbinom",
+			  #        mu=exp(rnorm(10^6,eta_bar_t[l,j]+eps_y_r[i,t,j],sig_s_r[i])),
+			  #        size=rep(phi[i],10^6),
+			  #        a=0)
+
 			  nY_t[,j] <- ng_t * pr_t * rs_t
 			  # expected final density of seeds for each possible germinant density
 			
-			  nbtmean <- function(mu,phi){
-			    mu / ( 1 - (phi/(mu+phi))^phi )
-			  } # mean for hurdle model
-			  
-			  nbtlnmean <- function(eta,sigma,phi,abs.tol=0){
-			    fnbt <- function(x){
-			      nbtmean(mu=exp(x),phi) * dnorm(x, mean=eta, sd=sigma)
-			    }
-			    integrate(fnbt, -20, 20, abs.tol=abs.tol)$value
-			  }
-			    # finite limits required to stop integration from crashing
-			  
-			  # - calculate probability of each value from lognormal distribution
-			  # - each of these values produces a mean from a truncated negbin distribution
-			  # - then integrate to calculate the mean of these means
-			  # - can be done because:
-			  # sum(negbin(lognormal(mu,sig),phi)) 
-			  # = sum( negbin(exp(mu+sig),phi) + negbin(exp(mu,-sig),phi) )
-			  # Ref: Econometric Analysis of Count Data - Rainer Winkelmann
-			  
 			  nn[i,t,j] <- sum(nY_t[,j] * dg) / sum(dg)
 			    # make integration routine?
 
