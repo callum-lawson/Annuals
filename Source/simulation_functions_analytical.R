@@ -28,7 +28,7 @@ hi1 <- popsim(pl,ni,nt,nj=22,nstart,zam,zsd,wam,wsd,rho=0.82,Tvalues,tau_p=10^2,
 set.seed(1)
 hi2 <- popsim(pl,ni,nt,nj=22,nstart,zam,zsd,wam,wsd,rho=0.82,Tvalues,tau_p=10^2,tau_d=10^2,tau_s=10^2,iterset=NULL,savefile=NULL,abs.tol=.Machine$double.eps^0.25/10000)
 
-popsim <- function(pl,ni,nt,nj=22,nstart,
+popana <- function(pl,ni,nt,nj=22,nstart,
 	zam,zsd,wam,wsd,rho=0.82,
 	Tvalues,tau_p=10^2,tau_d=10^2,tau_s=10^2,
 	iterset=NULL,savefile=NULL,abs.tol=.Machine$double.eps^0.25

@@ -1,6 +1,7 @@
-##########################################################
-### Simulations of population dynamics for finite area ###
-##########################################################
+#############################################################################
+### Simulations of population dynamics for finite area, using species-level #
+### median values for all parameters except germination ones                #
+#############################################################################
 
 library(plyr)
 library(reshape2)

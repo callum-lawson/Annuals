@@ -20,18 +20,17 @@
 # nstart <- 10^3
 # iterset <- NULL
 # savefile <- NULL
-# progress <- F
 
 # hi <- popsim(pl,ni,nt,nj=22,nk,nstart,
 #   zam,zcv,wam,wcv,rho,
 #   Tvalues,tau_p,tau_d,tau_s,
-#   iterset,savefile,progress)
+#   iterset,savefile)
 
 popsim <- function(pl,ni,nt,nj=22,nk,nstart,
 	zam,zsd,wam,wsd,rho=0.82,
 	Tvalues,tau_p=10^2,tau_d=10^2,tau_s=10^2,
-	iterset=NULL,savefile=NULL,progress=F
-	){
+	iterset=NULL,savefile=NULL
+  ){
 	# dstart = vector of starting seed totals
 	# (can adjust area or density independently)
 	# ni = runs; nt = years; nj = species; nk = 0.1 m^2 sites 
@@ -58,7 +57,6 @@ popsim <- function(pl,ni,nt,nj=22,nk,nstart,
 	}
 	  # adjustment for area made when entering n (below)
 	  # (could have instead been made in BHS function)
-	if(progress==T) pb <- txtProgressBar(min=0,max=ni,style=3)
 	kseq <- 1:nk
 	tottarea <- nk/10
   	# nk/10: number of 0.1m^2 plots -> number of 1 m^2 plots 
@@ -278,7 +276,8 @@ popsim <- function(pl,ni,nt,nj=22,nk,nstart,
 						nmus <- sum(nr_t[nzpos,j])
 						nn[i,t,j] <- sum(
 							rtrunc(n=nmus,spec="nbinom",mu=mus,size=rs$phi[i],a=0)
-							) 
+						  ) 
+						}
 						# Warning message - CHECK!
 						# In if (G.a == G.b)
 						# the condition has length > 1 and only the first element will be used
@@ -301,8 +300,6 @@ popsim <- function(pl,ni,nt,nj=22,nk,nstart,
 			if(t<nt) ns[i,t+1,] <- nnb[i,t,] + no[i,t,]
 
 			} # t loop
-
-   		if(progress==T) setTxtProgressBar(pb, i)
 
 		} # i loop
 

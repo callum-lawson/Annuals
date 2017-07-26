@@ -61,18 +61,19 @@ R code.
 * *prediction_functions*: Functions for predicting reproduction, germination, and seed survival. 
 * *bootstrap_nonparametric*: Non-parametric bootstrap of total counts.
 * *seedpredict*: Predictions of new seed density for all plots. 
-* *popsims*: Simulations of population dynamics for finite area ("squared"=misnomer). 
+* *popsims_stochastic*: Simulations of population dynamics for finite area.
+* *popsims_stochastic_medpars*: Simulations of population dynamics for finite area, using species-level median values for all parameters except germination ones.
 * *poplevel_binomialG*: Germination and seed survival models in Stan, with binomial germination calculation.
 * *poplevel_lnpoisdist*: Germination and seed survival models in Stan, with poisson seed counts.
 * *talk_plots*: Population size and germination graphs for presentations.
 * *traitmeasures*: Calculate species-level predictive traits (partially obsolete).
 * *trait_functions*: Functions for calculating derived trait values from popualtion parameters.
-* *simulation_functions*: Functions for simulations of population dynamics for finite area.
+* *simulation_functions_stochastic*: Functions for simulations of population dynamics for finite area.
 * *simulation_functions_analytical*: Functions for simulations of population dynamics for infinite area.
 * *figure_functions*: Functions to plot figures from Stan model output.
 * *reprod*: Estimate per-capita reproduction parameters in Stan.
 * *GO_descriptive*: Model to describe G and O values as function of species, year, and site, comparing negative binomial and lognormal-Poisson models (currently saving two versions, not sure which is right)
-* *popsims_analytical*: Simulations of population dynamics for infinite area, density-independnet growth (work in progress).
+* *popsims_analytical_old*: Simulations of population dynamics for infinite area, density-independent growth (depricated).
 * *mortality_priors*: Simulate gamma distributions to develop reasonable priors for density-independent seed mortality.
 * *seasonwindow*: Find best times for open and close of growing season.
 * *correlations*: Look at among-species correlations across years and plots.
