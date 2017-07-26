@@ -2,14 +2,17 @@
 ### Functions for simulations of population dynamics for infinite area ###
 ##########################################################################
 
-# treat as different species (with different parameters), but link densities?
-# (i.e. j indexs competitors, not species)
+# TODO
+# - check predictions
+# - tau adjustments
 
-# every run uses new param samples AND year/site/obs effects
-# make sites bigger instead of using larger number of sites...?
+# check <- rtrunc(n=10^6,spec="nbinom",
+#        mu=exp(rnorm(10^6,eta_bar_t[l,j]+eps_y_r[i,t,j],sig_s_r[i])),
+#        size=rep(phi[i],10^6),
+#        a=0)
 
 ni <- 2
-nt <- 10
+nt <- 20
 nj <- 22
 zam <- zamo
 zsd <- zsdo
@@ -19,19 +22,16 @@ rho <- 0.82
 nstart <- 1
 iterset <- NULL
 savefile <- NULL
-progress <- F
 
-# hi <- popsim(pl,ni,nt,nj=22,nk,nstart,
-#   zam,zsd,wam,wsd,rho,
-#   Tvalues,tau_p,tau_d,tau_s,
-#   iterset,savefile,progress)
-
-# Modelling densities per 10 x 10cm, or 1 x 1m?
+set.seed(1)
+hi1 <- popsim(pl,ni,nt,nj=22,nstart,zam,zsd,wam,wsd,rho=0.82,Tvalues,tau_p=10^2,tau_d=10^2,tau_s=10^2,iterset=NULL,savefile=NULL,abs.tol=.Machine$double.eps^0.25)
+set.seed(1)
+hi2 <- popsim(pl,ni,nt,nj=22,nstart,zam,zsd,wam,wsd,rho=0.82,Tvalues,tau_p=10^2,tau_d=10^2,tau_s=10^2,iterset=NULL,savefile=NULL,abs.tol=.Machine$double.eps^0.25/10000)
 
 popsim <- function(pl,ni,nt,nj=22,nstart,
 	zam,zsd,wam,wsd,rho=0.82,
 	Tvalues,tau_p=10^2,tau_d=10^2,tau_s=10^2,
-	iterset=NULL,savefile=NULL,progress=F
+	iterset=NULL,savefile=NULL,abs.tol=.Machine$double.eps^0.25
 	){
 	# dstart = vector of starting seed totals
 	# (can adjust area or density independently)
@@ -40,7 +40,6 @@ popsim <- function(pl,ni,nt,nj=22,nstart,
 
 	if(ni*nt*nj > 10^9 | ni*nt*nj > 10^9) stop("matrices are too large")
 
-	require(truncdist)
 	require(MASS)
 
   cur_date <- format(Sys.Date(),"%d%b%Y")
@@ -59,10 +58,38 @@ popsim <- function(pl,ni,nt,nj=22,nstart,
 	}
 	  # adjustment for area made when entering n (below)
 	  # (could have instead been made in BHS function)
-	if(progress==T) pb <- txtProgressBar(min=0,max=ni,style=3)
   	# nk/10: number of 0.1m^2 plots -> number of 1 m^2 plots 
   	# tau_s on coefficients: density in 0.01 m^2 = 10 x 10 cm plots
 
+	logitmean <- function(mu,sigma){
+	  flogit <- function(x){
+	    plogis(x) * dnorm(x, mean=mu, sd=sigma)
+	  }
+	  integrate(flogit, -Inf, Inf, abs.tol=abs.tol)$value
+	}
+	  # code borrowed from logitnorm package
+	
+	nbtmean <- function(mu,phi){
+	  mu / ( 1 - (phi/(mu+phi))^phi )
+	} 
+	  # mean for hurdle model
+	
+	nbtlnmean <- function(eta,sigma,phi){
+	  fnbt <- function(x){
+	    nbtmean(mu=exp(x),phi) * dnorm(x, mean=eta, sd=sigma)
+	  }
+	  integrate(fnbt, -20, 20, abs.tol=abs.tol)$value
+	}
+  	# finite limits required to stop integration from crashing
+  	
+  	# - calculate probability of each value from lognormal distribution
+  	# - each of these values produces a mean from a trunc negbin distribution
+  	# - then integrate to calculate the mean of these means
+  	# - can be done because:
+  	# sum(negbin(lognormal(mu,sig),phi)) 
+  	# = sum( negbin(exp(mu+sig),phi) + negbin(exp(mu,-sig),phi) )
+  	# Ref: Econometric Analysis of Count Data - Rainer Winkelmann 
+	
 	### SAMPLE ITERATIONS ###
 
 	if(is.null(iterset)==T){
@@ -104,54 +131,25 @@ popsim <- function(pl,ni,nt,nj=22,nstart,
 	
 	sig_y_p1 <- sig_y_p[,1]
 	sig_y_r1 <- sig_y_r[,1]
-	sig_s_g1 <- sig_s_g[,1]
-	sig_s_p1 <- sig_s_p[]					# doesn't vary by species
-	sig_s_r1 <- sig_s_r[]					# now doesn't vary by species	
 		# sds for boin
-
 	scale_y_p <- as.vector(sig_y_p / sig_y_p1)
 	scale_y_r <- as.vector(sig_y_r / sig_y_r1)	
-	scale_s_g <- as.vector(sig_s_g / sig_s_g1)
 	# for each iter and species, i*j vector of sd scales relative to boin
 	# (i varies faster than j) 
-	scale_s_p <- as.vector(rep(1,ni*nj))
-	scale_s_r <- as.vector(rep(1,ni*nj))
-	# doesn't vary by species
 
 	### SIMULATE YEAR / SITE EFFECTS ###
 
-	# # SIMULATE AS VECTORS
-	# 	# same-scale eps values for all species
-	# 	# i.e. simulating for boin and will re-scale later
+	# SIMULATE AS VECTORS
+		# same-scale eps values for all species
+		# i.e. simulating for boin and will re-scale later
 	eps_y_p1 <- rnorm(ni*nt,0,rep(sig_y_p1,times=nt))
 	eps_y_r1 <- rnorm(ni*nt,0,rep(sig_y_r1,times=nt))
-	# eps_s_g1 <- rnorm(ni*nk,0,rep(sig_s_g1,times=nk))
-	# eps_s_p1 <- rnorm(ni*nk,0,rep(sig_s_p1,times=nk))
-	# eps_s_r1 <- rnorm(ni*nk,0,rep(sig_s_r1,times=nk))
-	# 	# using same sites, but doesn't matter
-	# 
-	# # CONVERT TO SPECIES-SPECIFIC VALUES AS ARRAYS
-	# 
+	# CONVERT TO SPECIES-SPECIFIC VALUES AS ARRAYS
 	eps_y_p <- eps_y_r <- array(NA,c(ni,nt,nj))
-	# eps_s_g <- eps_s_p <- eps_s_r <- array(NA,c(ni,nk,nj))
 	eps_y_p[] <- rep(eps_y_p1,times=nj) * rep(scale_y_p,each=nt)
 	eps_y_r[] <- rep(eps_y_r1,times=nj) * rep(scale_y_r,each=nt)
-	# eps_s_g[] <- rep(eps_s_g1,times=nj) * rep(scale_s_g,each=nk)
-	# eps_s_p[] <- rep(eps_s_p1,times=nj) * rep(scale_s_p,each=nk)
-	# eps_s_r[] <- rep(eps_s_r1,times=nj) * rep(scale_s_r,each=nk)
-	# 	# relying on automatic (reverse) filling order: 
-	# 	# rows vary fastest, then cols, then gridno 
-	# 
-	# zsites <- array(NA,c(ni,nj,nk))
-	#   # dim(zsites) != dim(eps_s_g)
-	# zsites[] <- rbinom(ni*nj*nk,size=1,prob=rep(theta_g,times=nk))
-	#   # theta_g has dim c(ni,nj)
-	#   # so rep(as.vector(theta_g),times=nk) -> (i then j), nk times
-	#   # theta = prob of zero
-	# zsites <- aperm(zsites, c(1,3,2))
-	#   # [i,j,k] -> [i,k,j] (to match eps_s_g)
-	# eps_s_g[zsites==1] <- -Inf
-	#   # p(germ) = exp(-Inf) = 0
+		# relying on automatic (reverse) filling order:
+		# rows vary fastest, then cols, then gridno
 
 	### SIMULATE RAINFALL	###
 
@@ -174,17 +172,8 @@ popsim <- function(pl,ni,nt,nj=22,nstart,
 	G <- m0 <- m1 <- So <- Sn <- array(NA,c(ni,nt,nj))
 		# derived params - permanently saved
 
-	# ng_t <- nr_t <- pi_bar_t <- pi_t <- eta_bar_t <- eta_t <- eps_o_p_t <- array(NA,c(nk,nj))
-	pi_bar_t <- pi_t <- eta_bar_t <- eta_t <- eps_o_p_t <- array(NA,c(nl,nj))
+	# pi_bar_t <- pi_t <- eta_bar_t <- eta_t <- eps_o_p_t <- array(NA,c(nl,nj))
 	# 	# site-level counts and params - replaced every new (i,t)
-	
-	nl <- 100
-	lngseq <- seq(-5,5,length.out=nl)
-	
-	x_t <- rep(1,4)
-		# 1 makes intercept already; other params will be filled in later
-		# prcp replaced every (i,t)
-		# dens replaced every (i,t,j)
 
 	ns[,1,] <- rep(nstart,each=ni)
 		# for each i, replicate vector of starting densities for all species
@@ -222,8 +211,7 @@ popsim <- function(pl,ni,nt,nj=22,nstart,
 
 			### REPRODUCTION ###
 
-			x_t[2] <- z[i,t]
-			x_t[3] <- z[i,t]^2
+			xvec <- c(1,z[i,t],z[i,t]^2)
 			  # climate data into model matrix
 			
 			for(j in 1:nj){
@@ -231,42 +219,10 @@ popsim <- function(pl,ni,nt,nj=22,nstart,
 				# running all this within a loop because integration has to be run 
 			  # one-at-a-time
 			  
-			  logitmean <- function(mu,sigma,abs.tol=0){
-			    flogit <- function(x){
-			      plogis(x) * dnorm(x, mean=mu, sd=sigma)
-			    }
-			    integrate(flogit, -20, 20, abs.tol=abs.tol)$value
-			  }
-			  # code borrowed from logitnorm package
-			  
-			  nbtmean <- function(mu,phi){
-			    mu / ( 1 - (phi/(mu+phi))^phi )
-			  } # mean for hurdle model
-			  
-			  nbtlnmean <- function(eta,sigma,phi,abs.tol=0){
-			    fnbt <- function(x){
-			      nbtmean(mu=exp(x),phi) * dnorm(x, mean=eta, sd=sigma)
-			    }
-			    integrate(fnbt, -20, 20, abs.tol=abs.tol)$value
-			  }
-  			  # finite limits required to stop integration from crashing
-  			  
-  			  # - calculate probability of each value from lognormal distribution
-  			  # - each of these values produces a mean from a trunc negbin distribution
-  			  # - then integrate to calculate the mean of these means
-  			  # - can be done because:
-  			  # sum(negbin(lognormal(mu,sig),phi)) 
-  			  # = sum( negbin(exp(mu+sig),phi) + negbin(exp(mu,-sig),phi) )
-  			  # Ref: Econometric Analysis of Count Data - Rainer Winkelmann
-			  
-  			  # check <- rtrunc(n=10^6,spec="nbinom",
-  			  #        mu=exp(rnorm(10^6,eta_bar_t[l,j]+eps_y_r[i,t,j],sig_s_r[i])),
-  			  #        size=rep(phi[i],10^6),
-  			  #        a=0)
-			  
 			  #### integrate wrt lg
 			  
-			  whatever <- function(g){
+			  fnn <- function(g){
+			    # g = log(N[g]) for a given plot
 			    
 			    lgmu <- log(ng[i,t,j]) - (sig_s_g[i,j]^2 / 2)
 			    # arithmetic mean = ng[i,t,]
@@ -276,15 +232,15 @@ popsim <- function(pl,ni,nt,nj=22,nstart,
 			    dg <- dnorm(g,mean=lgmu,sd=sig_s_g[i,j])
 			    
 			    nl <- length(g)
-			    x_tt <- matrix(nr=nl,nc=4)
-			    x_tt[,1:3] <- rep(x_t[-4],each=nl) 
-			    x_tt[,4] <- g - log(tau_d)
-			    pi_bar_t <- beta_p[i,j,] %*% t(x_tt)
-			    eta_bar_t <- beta_r[i,j,] %*% t(x_tt)
+			    x_t <- matrix(nr=nl,nc=4)
+			    x_t[,1:3] <- rep(xvec,each=nl) 
+			    x_t[,4] <- g - log(tau_d)
+			    pi_bar_t <- beta_p[i,j,] %*% t(x_t)
+			    eta_bar_t <- beta_r[i,j,] %*% t(x_t)
 			    # each density (lng) has own associated world of sites
 			    # but spatial aspects of pr(Y>0) and pr(Y|Y>0) considered independent,
 			    # so can be simply added together
-			    # can't average across years because non-independent (unlike sites etc.)
+			    # can't average across years in this way because non-independent
 			   
 			    # ***DOES lg NEED TO BE ADJUSTED FOR TAU?***
 			    
@@ -304,10 +260,11 @@ popsim <- function(pl,ni,nt,nj=22,nstart,
 			    nY_t <- ng[i,t,j] * pr_t * rs_t
 			    # expected final density of seeds for each possible germinant density
 			    
-			    return(dg * nY_t) # expected overall density of seeds
+			    return(dg * nY_t) 
+			    # expected overall mean density of seeds
 			  }
 			    
-			  integrate(whatever, -10, 10, abs.tol=0)$value
+			  nn[i,t,j] <- integrate(fnn, -Inf, Inf, abs.tol=abs.tol)$value
 
 				} # close j loop
 
@@ -322,13 +279,11 @@ popsim <- function(pl,ni,nt,nj=22,nstart,
 
 			} # t loop
 
-   		if(progress==T) setTxtProgressBar(pb, i)
-
 		} # i loop
 
 	outlist <- list(
 	    zam=zam,zsd=zsd,
-			ni=ni,nt=nt,nj=nj,nk=nk,
+			ni=ni,nt=nt,nj=nj,
 	    z=z,w=w,
 			G=G,So=So,Sn=Sn,
 			ns=ns,ng=ng,no=no,nn=nn,nnb=nnb
