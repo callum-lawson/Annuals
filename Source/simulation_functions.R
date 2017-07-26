@@ -278,11 +278,11 @@ popsim <- function(pl,ni,nt,nj=22,nk,nstart,
 						nmus <- sum(nr_t[nzpos,j])
 						nn[i,t,j] <- sum(
 							rtrunc(n=nmus,spec="nbinom",mu=mus,size=rs$phi[i],a=0)
-							)
-						}
-
+							) 
+						# Warning message - CHECK!
+						# In if (G.a == G.b)
+						# the condition has length > 1 and only the first element will be used
 					}
-						# getting warning here
 
 				if(ng[i,t,j]==0){
 					nn[i,t,j] <- 0
