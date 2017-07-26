@@ -63,6 +63,7 @@ R code.
 * *seedpredict*: Predictions of new seed density for all plots. 
 * *popsims_stochastic*: Simulations of population dynamics for finite area.
 * *popsims_stochastic_medpars*: Simulations of population dynamics for finite area, using species-level median values for all parameters except germination ones.
+* *popsims_analytical*: Simulations of population dynamics for infinite area.
 * *poplevel_binomialG*: Germination and seed survival models in Stan, with binomial germination calculation.
 * *poplevel_lnpoisdist*: Germination and seed survival models in Stan, with poisson seed counts.
 * *talk_plots*: Population size and germination graphs for presentations.

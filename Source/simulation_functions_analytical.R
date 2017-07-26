@@ -10,23 +10,23 @@
 #        mu=exp(rnorm(10^6,eta_bar_t[l,j]+eps_y_r[i,t,j],sig_s_r[i])),
 #        size=rep(phi[i],10^6),
 #        a=0)
+# 
+# ni <- 2
+# nt <- 20
+# nj <- 22
+# zam <- zamo
+# zsd <- zsdo
+# wam <- wamo
+# wsd <- wsdo
+# rho <- 0.82
+# nstart <- 1
+# iterset <- NULL
+# savefile <- NULL
 
-ni <- 2
-nt <- 20
-nj <- 22
-zam <- zamo
-zsd <- zsdo
-wam <- wamo
-wsd <- wsdo
-rho <- 0.82
-nstart <- 1
-iterset <- NULL
-savefile <- NULL
-
-set.seed(1)
-hi1 <- popsim(pl,ni,nt,nj=22,nstart,zam,zsd,wam,wsd,rho=0.82,Tvalues,tau_p=10^2,tau_d=10^2,tau_s=10^2,iterset=NULL,savefile=NULL,abs.tol=.Machine$double.eps^0.25)
-set.seed(1)
-hi2 <- popsim(pl,ni,nt,nj=22,nstart,zam,zsd,wam,wsd,rho=0.82,Tvalues,tau_p=10^2,tau_d=10^2,tau_s=10^2,iterset=NULL,savefile=NULL,abs.tol=.Machine$double.eps^0.25/10000)
+# set.seed(1)
+# hi1 <- popsim(pl,ni,nt,nj=22,nstart,zam,zsd,wam,wsd,rho=0.82,Tvalues,tau_p=10^2,tau_d=10^2,tau_s=10^2,iterset=NULL,savefile=NULL,abs.tol=.Machine$double.eps^0.25)
+# set.seed(1)
+# hi2 <- popsim(pl,ni,nt,nj=22,nstart,zam,zsd,wam,wsd,rho=0.82,Tvalues,tau_p=10^2,tau_d=10^2,tau_s=10^2,iterset=NULL,savefile=NULL,abs.tol=.Machine$double.eps^0.25/10000)
 
 popana <- function(pl,ni,nt,nj=22,nstart,
 	zam,zsd,wam,wsd,rho=0.82,
@@ -54,18 +54,18 @@ popana <- function(pl,ni,nt,nj=22,nstart,
 	rs <- pl$rs
 
 	BHS <- function(n,m0,m1){
-		exp(-m0*T3) / ( 1 + (m1/m0)*(1-exp(-m0*T3))*n/tau_s )	
+		exp(-m0*T3) / ( 1 + (m1/m0)*(1-exp(-m0*T3))*n/(tau_s/10) )	
 	}
-	  # adjustment for area made when entering n (below)
-	  # (could have instead been made in BHS function)
-  	# nk/10: number of 0.1m^2 plots -> number of 1 m^2 plots 
-  	# tau_s on coefficients: density in 0.01 m^2 = 10 x 10 cm plots
+	  # original model in m^2
+	  # DD functions use density in 0.01 m^2 = 10 x 10 cm plots
+	  # But we want to use 0.1m^2 plots (to match scale of quadrats)
+	  # Therefore, only need to divide by 10, not 100
 
-	logitmean <- function(mu,sigma){
+	logitmean <- function(mu,sigma,...){
 	  flogit <- function(x){
 	    plogis(x) * dnorm(x, mean=mu, sd=sigma)
 	  }
-	  integrate(flogit, -Inf, Inf, abs.tol=abs.tol)$value
+	  integrate(flogit, ...)$value
 	}
 	  # code borrowed from logitnorm package
 	
@@ -74,11 +74,11 @@ popana <- function(pl,ni,nt,nj=22,nstart,
 	} 
 	  # mean for hurdle model
 	
-	nbtlnmean <- function(eta,sigma,phi){
+	nbtlnmean <- function(eta,sigma,phi,...){
 	  fnbt <- function(x){
 	    nbtmean(mu=exp(x),phi) * dnorm(x, mean=eta, sd=sigma)
 	  }
-	  integrate(fnbt, -20, 20, abs.tol=abs.tol)$value
+	  integrate(fnbt, ...)$value
 	}
   	# finite limits required to stop integration from crashing
   	
@@ -89,6 +89,7 @@ popana <- function(pl,ni,nt,nj=22,nstart,
   	# sum(negbin(lognormal(mu,sig),phi)) 
   	# = sum( negbin(exp(mu+sig),phi) + negbin(exp(mu,-sig),phi) )
   	# Ref: Econometric Analysis of Count Data - Rainer Winkelmann 
+	  # (checked by simulation that still works with zero-truncation)
 	
 	### SAMPLE ITERATIONS ###
 
@@ -202,11 +203,11 @@ popana <- function(pl,ni,nt,nj=22,nstart,
 		  
 			### GERMINATION ###
 		
-			ng[i,t,] <- G[i,t,]*ns[i,t,]
+			ng[i,t,] <- G[i,t,] * ns[i,t,]
 
 			### OLD SEED SURVIVAL ###
 
-			no[i,t,] <- So[i,t,]*(ns[i,t,]-ng[i,t,])
+			no[i,t,] <- So[i,t,] * (ns[i,t,]-ng[i,t,])
 				# no defined at START of year, so same for initial year too
 
 			### REPRODUCTION ###
@@ -219,52 +220,61 @@ popana <- function(pl,ni,nt,nj=22,nstart,
 				# running all this within a loop because integration has to be run 
 			  # one-at-a-time
 			  
-			  #### integrate wrt lg
+			  lgmu <- log(ng[i,t,j]) - (sig_s_g[i,j]^2 / 2)
+  			  # arithmetic mean = ng[i,t,]
+  			  # logarithmic sd = sig_s_g[i,,j]
+  			  # mean of lognormal distribution = log(am) - sig^2 / 2
+			  
+			  intlo <- log(ng[i,t,j]) - 5*sig_s_g[i,j]
+			  inthi <- log(ng[i,t,j]) + 5*sig_s_g[i,j]
+  			  # setting range to 10 sds to improve convergence
+  			  # (outside this range, ng=0 -> nn=0)
 			  
 			  fnn <- function(g){
-			    # g = log(N[g]) for a given plot
-			    
-			    lgmu <- log(ng[i,t,j]) - (sig_s_g[i,j]^2 / 2)
-			    # arithmetic mean = ng[i,t,]
-			    # logarithmic sd = sig_s_g[i,,j]
-			    # mean of lognormal distribution = log(am) - sig^2 / 2
-			    
+			      # g = log(N[g]) for a given plot
+  			    
 			    dg <- dnorm(g,mean=lgmu,sd=sig_s_g[i,j])
 			    
 			    nl <- length(g)
 			    x_t <- matrix(nr=nl,nc=4)
 			    x_t[,1:3] <- rep(xvec,each=nl) 
-			    x_t[,4] <- g - log(tau_d)
+			    x_t[,4] <- g - log(tau_d/10) 
+			      # tau_d/10 density adjustment explained above
 			    pi_bar_t <- beta_p[i,j,] %*% t(x_t)
 			    eta_bar_t <- beta_r[i,j,] %*% t(x_t)
-			    # each density (lng) has own associated world of sites
-			    # but spatial aspects of pr(Y>0) and pr(Y|Y>0) considered independent,
-			    # so can be simply added together
-			    # can't average across years in this way because non-independent
+  			    # each density (lng) has own associated world of sites
+  			    # but spatial aspects of pr(Y>0) and pr(Y|Y>0) considered independent,
+  			    # so can be simply added together
+  			    # can't average across years in this way because non-independent
 			   
-			    # ***DOES lg NEED TO BE ADJUSTED FOR TAU?***
-			    
 			    pr_t <- rs_t <- rep(NA,nl)
 			    for(l in 1:nl){
 			      pr_t[l] <- logitmean(
 			        mu = pi_bar_t[l] + eps_y_p[i,t,j], 
-			        sigma = sig_s_p[i] + sig_o_p[i]
+			        sigma = sqrt(sig_s_p[i]^2 + sig_o_p[i]^2),
+			        lower=intlo,
+			        upper=inthi,
+			        abs.tol=abs.tol
 			      )
 			      rs_t[l] <- nbtlnmean(
 			        eta = eta_bar_t[l] + eps_y_r[i,t,j], 
 			        sigma = sig_s_r[i], 
-			        phi = phi[i]
+			        phi = phi[i],
+			        lower=intlo,
+			        upper=inthi,
+			        abs.tol=abs.tol
 			      )
 			    }
 		
-			    nY_t <- ng[i,t,j] * pr_t * rs_t
-			    # expected final density of seeds for each possible germinant density
+			    lnY_t <- g + log(pr_t) + log(rs_t)
+			      # expected log density of new seeds for each possible germinant density
+			      # log-transforming to try and improve numerical stability
 			    
-			    return(dg * nY_t) 
-			    # expected overall mean density of seeds
+			    return(exp(log(dg) + lnY_t)) 
+			      # expected overall mean density of seeds
 			  }
 			    
-			  nn[i,t,j] <- integrate(fnn, -Inf, Inf, abs.tol=abs.tol)$value
+			  nn[i,t,j] <- integrate(fnn, intlo, inthi, abs.tol=abs.tol)$value
 
 				} # close j loop
 
