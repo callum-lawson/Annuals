@@ -11,7 +11,7 @@ library(RColorBrewer)
 ### LOAD DATA 
 
 source("Source/simulation_functions_analytical.R")
-source("Source/simulation_functions_stochastic.R")
+# source("Source/simulation_functions_stochastic.R")
 source("Source/figure_functions.R")
 source("Source/prediction_functions.R")
 source("Source/trait_functions.R")
@@ -106,49 +106,19 @@ Gplot <- Gsens[Gshow,]
 
 # pdf(paste0("Plots/Germination_functions_", format(Sys.Date(),"%d%b%Y"),".pdf"),
 # 		width=7,height=7)
-par(mfrow=c(nplot,nplot),mar=c(3,3,1,1),las=1,ann=F,bty="l")
-for(i in 1:nrow(Gplot)){
-  with(Gplot, curve(plogis(alpha_G[i]+beta_Gz[i]*x),
-    xlim=c(-2,2),ylim=c(0,1)) )
-  if(plasticity==T){
-    legend("topleft",bty="n",
-      legend=c(paste0("mu=",signif(Gplot$tau_mu[i],2)),
-        paste0("sd=",signif(Gplot$tau_sd[i],2))
-        )
-      )
-  }
-}
+# par(mfrow=c(nplot,nplot),mar=c(3,3,1,1),las=1,ann=F,bty="l")
+# for(i in 1:nrow(Gplot)){
+#   with(Gplot, curve(plogis(alpha_G[i]+beta_Gz[i]*x),
+#     xlim=c(-2,2),ylim=c(0,1)) )
+#   if(plasticity==T){
+#     legend("topleft",bty="n",
+#       legend=c(paste0("mu=",signif(Gplot$tau_mu[i],2)),
+#         paste0("sd=",signif(Gplot$tau_sd[i],2))
+#         )
+#       )
+#   }
+# }
 # dev.off()
-  
-
-# Compare stochastic and analytical simulations ---------------------------
-
-ni <- 2
-nt <- 10
-nj <- 22
-zam <- zamo
-zsd <- zsdo
-wam <- wamo
-wsd <- wsdo
-rho <- 0.82
-iterset <- NULL
-savefile <- NULL
-
-nstart <- 1
-set.seed(1)
-
-system.time({
-  hi1 <- popana(pl,ni,nt,nj=22,nstart,zam,zsd,wam,wsd,rho=0.82,Tvalues,tau_p=10^2,tau_d=10^2,tau_s=10^2,iterset=NULL,savefile=NULL,abs.tol=.Machine$double.eps^0.25)
-})
-
-set.seed(1)
-
-nk <- 10^6
-nstart <- 10^6
-
-system.time({
-hi2 <- popsim(pl,ni,nt,nj=22,nk,nstart,zam,zsd,wam,wsd,rho=0.82,Tvalues,tau_p=10^2,tau_d=10^2,tau_s=10^2,iterset=NULL,savefile=NULL)
-})
 
 # Sims --------------------------------------------------------------------
 
@@ -165,10 +135,9 @@ ncores <- nclim*cpc
 mpos <- rep(1:nclim,each=cpc)
 
 nstart <- rep(10000,nspecies)
-ni <- 250 # iterations PER CORE
-nt <- 50
+ni <- 10 # 250 # iterations PER CORE
+nt <- 100
 nj <- 22
-nk <- 10000
 
 ### Sensitivity analyses
 # nclim <- length(maml)
@@ -180,13 +149,12 @@ nk <- 10000
 # ni <- 2000 # iterations PER CORE
 # nt <- 50
 # nj <- 22
-# nk <- 1000 # 10000
 
 # ni and nk must be >1
 nit <- ni*cpc
 
 set.seed(1)
-maxiter <- 10000 # max number of iterations in PARAMETERISATION
+maxiter <- 10 # 10000 # max number of iterations in PARAMETERISATION
 cpos <- rep(1:cpc,times=nclim)
 cipos <- rep(1:cpc,each=ni)
 itersetl <- split(1:(ni*cpc),cipos)
@@ -202,12 +170,25 @@ cnames_unique <- gsub("\\.","",paste0("mu",simp(maml),"_sd",simp(msdl)))
 cnames_bycore <- paste0(rep(cnames_unique,each=cpc),"_s",rep(1:cpc,times=nclim))
 cnames_merged <- paste(cnames_unique,collapse="_")
 
+n <- 1
+mam <- maml[[mpos[n]]]
+msd <- msdl[[mpos[n]]]
+trial <- popana(pl=pls,ni=ni,nt=nt,nj=nj, 
+  nstart=nstart,zam=zamo*mam,zsd=zsdo*msd,
+  wam=wamo*mam,wsd=wsdo*msd,rho=0.82,
+  Tvalues=Tvalues,tau_p=10^2,tau_d=10^2,tau_s=10^2,
+  iterset=itersetl[[cpos[n]]]
+  )
+
+matplot(t(log(trial$ns[,,19])),type="l",lty=1)
+matplot(t(log(trial$ns[,,15])),type="l",lty=1)
+
 # Each core focuses on one climate
 # Iterations for one climate can be split up over multiple cores
 # (controlled by cpc)
 system.time({
 CL = makeCluster(ncores)
-clusterExport(cl=CL, c("popsim","pls", # was pl
+clusterExport(cl=CL, c("popana","pls", # was pl
   "zamo","zsdo","wamo","wsdo",
   "mpos","maml","msdl","cpos",
   "nstart","ni","nt","nj","nk",
@@ -216,7 +197,7 @@ clusterExport(cl=CL, c("popsim","pls", # was pl
 parLapply(CL, 1:ncores, function(n){
 	mam <- maml[[mpos[n]]]
 	msd <- msdl[[mpos[n]]]
-	popsim(pl=pls,ni=ni,nt=nt,nj=nj,nk=nk, # was pl
+	popsim(pl=pls,ni=ni,nt=nt,nj=nj, # was pl
 		nstart=nstart,zam=zamo*mam,zsd=zsdo*msd,
 		wam=wamo*mam,wsd=wsdo*msd,rho=0.82,
 		Tvalues=Tvalues,tau_p=10^2,tau_d=10^2,tau_s=10^2,

@@ -2,36 +2,46 @@
 ### Functions for simulations of population dynamics for infinite area ###
 ##########################################################################
 
-# TODO
-# - check predictions
-# - tau adjustments
-
 # check <- rtrunc(n=10^6,spec="nbinom",
 #        mu=exp(rnorm(10^6,eta_bar_t[l,j]+eps_y_r[i,t,j],sig_s_r[i])),
 #        size=rep(phi[i],10^6),
 #        a=0)
 # 
 # ni <- 2
-# nt <- 20
+# nt <- 2
 # nj <- 22
 # zam <- zamo
 # zsd <- zsdo
 # wam <- wamo
 # wsd <- wsdo
 # rho <- 0.82
-# nstart <- 1
 # iterset <- NULL
 # savefile <- NULL
-
+# abs.tol <- .Machine$double.eps^0.25/100
+# intsd <- 10
+# ngmin <- 0
+# 
 # set.seed(1)
-# hi1 <- popsim(pl,ni,nt,nj=22,nstart,zam,zsd,wam,wsd,rho=0.82,Tvalues,tau_p=10^2,tau_d=10^2,tau_s=10^2,iterset=NULL,savefile=NULL,abs.tol=.Machine$double.eps^0.25)
-# set.seed(1)
-# hi2 <- popsim(pl,ni,nt,nj=22,nstart,zam,zsd,wam,wsd,rho=0.82,Tvalues,tau_p=10^2,tau_d=10^2,tau_s=10^2,iterset=NULL,savefile=NULL,abs.tol=.Machine$double.eps^0.25/10000)
+# 
+# nk <- 10^3
+# nstart <- 10^3
+# # run full code of popsim and save as outlist1
+# 
+# nstart <- 10^(5-3)
+# # run i loop of popana using same parameters and save as outlist 2
+# 
+# plot(outlist1$nn[1,1,]/nk ~ outlist2$nn[1,1,],
+#   xlab=expression(N[n]~infinite), ylab=expression(N[n]~finite))
+# plot(outlist1$nn[2,1,]/nk ~ outlist2$nn[2,1,])
+# abline(0,1,col="red")
 
 popana <- function(pl,ni,nt,nj=22,nstart,
 	zam,zsd,wam,wsd,rho=0.82,
 	Tvalues,tau_p=10^2,tau_d=10^2,tau_s=10^2,
-	iterset=NULL,savefile=NULL,abs.tol=.Machine$double.eps^0.25
+	iterset=NULL,savefile=NULL,
+  abs.tol=10^-5, # .Machine$double.eps^0.25
+  intsd=10,
+  ngmin=10^-50
 	){
 	# dstart = vector of starting seed totals
 	# (can adjust area or density independently)
@@ -59,7 +69,7 @@ popana <- function(pl,ni,nt,nj=22,nstart,
 	  # original model in m^2
 	  # DD functions use density in 0.01 m^2 = 10 x 10 cm plots
 	  # But we want to use 0.1m^2 plots (to match scale of quadrats)
-	  # Therefore, only need to divide by 10, not 100
+	  # Therefore, tau_s set to 10 instead of 100
 
 	logitmean <- function(mu,sigma,...){
 	  flogit <- function(x){
@@ -216,67 +226,76 @@ popana <- function(pl,ni,nt,nj=22,nstart,
 			  # climate data into model matrix
 			
 			for(j in 1:nj){
-			
-				# running all this within a loop because integration has to be run 
+			  
+			  # running all this within a loop because integration has to be run 
 			  # one-at-a-time
 			  
-			  lgmu <- log(ng[i,t,j]) - (sig_s_g[i,j]^2 / 2)
-  			  # arithmetic mean = ng[i,t,]
-  			  # logarithmic sd = sig_s_g[i,,j]
-  			  # mean of lognormal distribution = log(am) - sig^2 / 2
+			  if(ng[i,t,j] < ngmin){
+			    nn[i,t,j] <- 0
+			  }
 			  
-			  intlo <- log(ng[i,t,j]) - 5*sig_s_g[i,j]
-			  inthi <- log(ng[i,t,j]) + 5*sig_s_g[i,j]
-  			  # setting range to 10 sds to improve convergence
-  			  # (outside this range, ng=0 -> nn=0)
-			  
-			  fnn <- function(g){
-			      # g = log(N[g]) for a given plot
-  			    
-			    dg <- dnorm(g,mean=lgmu,sd=sig_s_g[i,j])
+			  else{
+			    lgmu <- log(ng[i,t,j]) - (sig_s_g[i,j]^2 / 2)
+  			    # arithmetic mean = ng[i,t,]
+  			    # logarithmic sd = sig_s_g[i,,j]
+  			    # mean of lognormal distribution = log(am) - sig^2 / 2
 			    
-			    nl <- length(g)
-			    x_t <- matrix(nr=nl,nc=4)
-			    x_t[,1:3] <- rep(xvec,each=nl) 
-			    x_t[,4] <- g - log(tau_d/10) 
-			      # tau_d/10 density adjustment explained above
-			    pi_bar_t <- beta_p[i,j,] %*% t(x_t)
-			    eta_bar_t <- beta_r[i,j,] %*% t(x_t)
-  			    # each density (lng) has own associated world of sites
-  			    # but spatial aspects of pr(Y>0) and pr(Y|Y>0) considered independent,
-  			    # so can be simply added together
-  			    # can't average across years in this way because non-independent
-			   
-			    pr_t <- rs_t <- rep(NA,nl)
-			    for(l in 1:nl){
-			      pr_t[l] <- logitmean(
-			        mu = pi_bar_t[l] + eps_y_p[i,t,j], 
-			        sigma = sqrt(sig_s_p[i]^2 + sig_o_p[i]^2),
-			        lower=intlo,
-			        upper=inthi,
-			        abs.tol=abs.tol
-			      )
-			      rs_t[l] <- nbtlnmean(
-			        eta = eta_bar_t[l] + eps_y_r[i,t,j], 
-			        sigma = sig_s_r[i], 
-			        phi = phi[i],
-			        lower=intlo,
-			        upper=inthi,
-			        abs.tol=abs.tol
-			      )
-			    }
-		
-			    lnY_t <- g + log(pr_t) + log(rs_t)
+			    intlo <- lgmu - intsd * sig_s_g[i,j]
+			    inthi <- lgmu + intsd * sig_s_g[i,j]
+  			    # setting range to 10 sds to improve convergence
+  			    # (outside this range, ng=0 -> nn=0)
+			    
+			    fnn <- function(g){
+			      # g = log(N[g]) for a given plot
+			      
+			      dg <- dnorm(g,mean=lgmu,sd=sig_s_g[i,j])
+			      
+			      nl <- length(g)
+			      x_t <- matrix(nr=nl,nc=4)
+			      x_t[,1:3] <- rep(xvec,each=nl) 
+			      x_t[,4] <- g - log(tau_d/10) 
+			        # tau_d/10 density adjustment explained above
+			      pi_bar_t <- beta_p[i,j,] %*% t(x_t)
+			      eta_bar_t <- beta_r[i,j,] %*% t(x_t)
+  			      # each density (lng) has own associated world of sites
+  			      # but spatial aspects of pr(Y>0) and pr(Y|Y>0) considered independent,
+  			      # so can be simply added together
+  			      # can't average across years in this way because non-independent
+			      
+			      pr_t <- rs_t <- rep(NA,nl)
+			      for(l in 1:nl){
+			        pr_t[l] <- logitmean(
+			          mu = pi_bar_t[l] + eps_y_p[i,t,j], 
+			          sigma = sqrt(sig_s_p[i]^2 + sig_o_p[i]^2),
+			          lower=-Inf,
+			          upper=Inf,
+			          abs.tol=abs.tol
+			          )
+			        
+			        eta_t <- eta_bar_t[l] + eps_y_r[i,t,j]
+			        sigma_t <- sig_s_r[i]
+			        rs_t[l] <- nbtlnmean(
+			          eta = eta_t, 
+			          sigma = sigma_t, 
+			          phi = phi[i],
+			          lower = eta_t - intsd * sigma_t,
+			          upper = eta_t + intsd * sigma_t,
+			          abs.tol=abs.tol
+			          )
+			        }
+			      
+			      lnY_t <- g + log(pr_t) + log(rs_t)
 			      # expected log density of new seeds for each possible germinant density
 			      # log-transforming to try and improve numerical stability
-			    
-			    return(exp(log(dg) + lnY_t)) 
+			      
+			      return(exp(log(dg) + lnY_t)) 
 			      # expected overall mean density of seeds
-			  }
+			      }
 			    
-			  nn[i,t,j] <- integrate(fnn, intlo, inthi, abs.tol=abs.tol)$value
-
-				} # close j loop
+			    nn[i,t,j] <- integrate(fnn, intlo, inthi, abs.tol=abs.tol)$value
+			    
+			    }
+			  } # close j loop
 
 			### NEW SEED SURVIVAL ###
 

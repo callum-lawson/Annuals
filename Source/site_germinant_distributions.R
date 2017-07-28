@@ -38,7 +38,8 @@ for(i in 1:nnk){
 tk[] <- rep( (exp(ssd^2)-1)*exp(2*(log(ng/nkseq) - (ssd^2 / 2)) + ssd^2), each=nsim)
 ok/tk
 
-
+# among-site variance in germinant density becomes larger the fewer germinants
+# there are per plot
 
 
 
