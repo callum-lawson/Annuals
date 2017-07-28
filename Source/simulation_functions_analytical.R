@@ -38,13 +38,15 @@
 popana <- function(pl,ni,nt,nj=22,nstart,
 	zam,zsd,wam,wsd,rho=0.82,
 	Tvalues,tau_p=10^2,tau_d=10^2,tau_s=10^2,
-	iterset=NULL,savefile=NULL,
+	iterset=NULL,
+  pl2=NULL,
+  iterset2=NULL,
+  savefile=NULL,
   abs.tol=10^-5, # .Machine$double.eps^0.25
   intsd=10,
-  ngmin=10^-50
+  ngmin=10^-50, # still necessary?
+  tmin=1
 	){
-	# dstart = vector of starting seed totals
-	# (can adjust area or density independently)
 	# ni = runs; nt = years; nj = species; nk = 0.1 m^2 sites 
 	# nk must be >1
 
@@ -137,60 +139,66 @@ popana <- function(pl,ni,nt,nj=22,nstart,
 	sig_s_r <- rs$sig_s_r[iter_rs] 	# now doesn't vary by species
 	phi <- rs$phi[iter_rs]
 
-	### RESCALE VARIANCE TERMS ###
-	# relative to first species (boin)
+	if(is.null(pl2)){
+	  ### RESCALE VARIANCE TERMS ###
+	  # relative to first species (boin)
+	  
+	  sig_y_p1 <- sig_y_p[,1]
+	  sig_y_r1 <- sig_y_r[,1]
+	  # sds for boin
+	  scale_y_p <- as.vector(sig_y_p / sig_y_p1)
+	  scale_y_r <- as.vector(sig_y_r / sig_y_r1)	
+	  # for each iter and species, i*j vector of sd scales relative to boin
+	  # (i varies faster than j) 
+	  
+	  ### SIMULATE YEAR / SITE EFFECTS ###
+	  
+	  # SIMULATE AS VECTORS
+	  # same-scale eps values for all species
+	  # i.e. simulating for boin and will re-scale later
+	  eps_y_p1 <- rnorm(ni*nt,0,rep(sig_y_p1,times=nt))
+	  eps_y_r1 <- rnorm(ni*nt,0,rep(sig_y_r1,times=nt))
+	  
+	  # CONVERT TO SPECIES-SPECIFIC VALUES AS ARRAYS
+	  eps_y_p <- eps_y_r <- array(NA,c(ni,nt,nj))
+	  eps_y_p[] <- rep(eps_y_p1,times=nj) * rep(scale_y_p,each=nt)
+	  eps_y_r[] <- rep(eps_y_r1,times=nj) * rep(scale_y_r,each=nt)
+	  # relying on automatic (reverse) filling order:
+	  # rows vary fastest, then cols, then gridno
+	  
+	  ### SIMULATE RAINFALL	###
+	  
+	  z <- w <- array(NA,c(ni,nt))
+	  
+	  zw_mu <- c(zam,wam)
+	  zw_sig <- matrix(c(zsd^2,rep(rho*zsd*wsd,2),wsd^2),nr=2,nc=2)
+	  
+	  zw <- mvrnorm(n=ni*nt, mu=zw_mu, Sigma=zw_sig)
+	  
+	  z[] <- zw[,1] - log(tau_p)
+	  # transformed log winter rainfall
+	  w[] <- zw[,2] - log(tau_p)
+	  # transformed log germination rainfall
+	}
 	
-	sig_y_p1 <- sig_y_p[,1]
-	sig_y_r1 <- sig_y_r[,1]
-		# sds for boin
-	scale_y_p <- as.vector(sig_y_p / sig_y_p1)
-	scale_y_r <- as.vector(sig_y_r / sig_y_r1)	
-	# for each iter and species, i*j vector of sd scales relative to boin
-	# (i varies faster than j) 
-
-	### SIMULATE YEAR / SITE EFFECTS ###
-
-	# SIMULATE AS VECTORS
-		# same-scale eps values for all species
-		# i.e. simulating for boin and will re-scale later
-	eps_y_p1 <- rnorm(ni*nt,0,rep(sig_y_p1,times=nt))
-	eps_y_r1 <- rnorm(ni*nt,0,rep(sig_y_r1,times=nt))
-	# CONVERT TO SPECIES-SPECIFIC VALUES AS ARRAYS
-	eps_y_p <- eps_y_r <- array(NA,c(ni,nt,nj))
-	eps_y_p[] <- rep(eps_y_p1,times=nj) * rep(scale_y_p,each=nt)
-	eps_y_r[] <- rep(eps_y_r1,times=nj) * rep(scale_y_r,each=nt)
-		# relying on automatic (reverse) filling order:
-		# rows vary fastest, then cols, then gridno
-
-	### SIMULATE RAINFALL	###
-
-	z <- w <- array(NA,c(ni,nt))
-
-	zw_mu <- c(zam,wam)
-	zw_sig <- matrix(c(zsd^2,rep(rho*zsd*wsd,2),wsd^2),nr=2,nc=2)
-
-	zw <- mvrnorm(n=ni*nt, mu=zw_mu, Sigma=zw_sig)
-
-	z[] <- zw[,1] - log(tau_p)
-		# transformed log winter rainfall
-	w[] <- zw[,2] - log(tau_p)
-		# transformed log germination rainfall
-
+	else{
+	  eps_y_p <- pl2$eps_y_p[iterset2,,]
+	  eps_y_r <- pl2$eps_y_r[iterset2,,]
+	  z <- pl2$z[iterset2,]
+	  w <- pl2$w[iterset2,]
+	}
+	
 	### CREATE DENSITY STORAGE OBJECTS ###
 
 	ns <- ng <- no <- nn <- nnb <- array(NA,c(ni,nt,nj))
 		# summed counts - permanently saved
 	G <- m0 <- m1 <- So <- Sn <- array(NA,c(ni,nt,nj))
 		# derived params - permanently saved
-
-	# pi_bar_t <- pi_t <- eta_bar_t <- eta_t <- eps_o_p_t <- array(NA,c(nl,nj))
-	# 	# site-level counts and params - replaced every new (i,t)
-
-	ns[,1,] <- rep(nstart,each=ni)
+	ns[,tmin,] <- rep(nstart,each=ni)
 		# for each i, replicate vector of starting densities for all species
 
 	### BEGIN CALCULATIONS ###
-
+	
 	for(i in 1:ni){
 
 	  m0[i,,] <- exp(rep(alpha_m[i,],each=nt))
@@ -209,7 +217,7 @@ popana <- function(pl,ni,nt,nj=22,nstart,
   	  # G not DD, so can calculate all beforehand
   	  # tau-adjusted rainfall included in Gmod
 	  
-		for(t in 1:nt){
+		for(t in tmin:nt){
 		  
 			### GERMINATION ###
 		
@@ -235,7 +243,12 @@ popana <- function(pl,ni,nt,nj=22,nstart,
 			  }
 			  
 			  else{
-			    lgmu <- log(ng[i,t,j]) - (sig_s_g[i,j]^2 / 2)
+			    if(is.null(pl2)){
+			      lgmu <- log(ng[i,t,j]) - (sig_s_g[i,j]^2 / 2)
+			    }
+			    else{
+			      lgmu <- log(pl2$ng[iterset2[i],t,j]) - (sig_s_g[i,j]^2 / 2)
+			    }
   			    # arithmetic mean = ng[i,t,]
   			    # logarithmic sd = sig_s_g[i,,j]
   			    # mean of lognormal distribution = log(am) - sig^2 / 2
@@ -310,14 +323,29 @@ popana <- function(pl,ni,nt,nj=22,nstart,
 
 		} # i loop
 
-	outlist <- list(
-	    zam=zam,zsd=zsd,
-			ni=ni,nt=nt,nj=nj,
-	    z=z,w=w,
-			G=G,So=So,Sn=Sn,
-			ns=ns,ng=ng,no=no,nn=nn,nnb=nnb
-			)
-
+	if(is.null(pl2)){
+  	outlist <- list(
+  	    zam=zam,zsd=zsd,
+  			ni=ni,nt=nt,nj=nj,
+  	    z=z,w=w,
+  			G=G,So=So,Sn=Sn,
+  			ns=ns,ng=ng,no=no,nn=nn,nnb=nnb,
+  	    eps_y_p=eps_y_p,eps_y_r=eps_y_r
+  			)
+	}
+  else{
+    outlist <- list(
+      zam=zam,zsd=zsd,
+      ni=ni,nt=nt,nj=nj,
+      z=z,w=w,
+      G=G,So=So,Sn=Sn,
+      ns=ns,ng=ng,no=no,nn=nn,nnb=nnb,
+      eps_y_p=eps_y_p,eps_y_r=eps_y_r,
+      G2=pl2$G[iterset2,,], ng2=pl2$ng[iterset2,,],
+      eps_y_p2=pl2$eps_y_p[iterset2,,],eps_y_r2=pl2$eps_y_p[iterset2,,]
+    )
+  }
+	
 	if(is.null(savefile)==T){
 		return(outlist)
 		}

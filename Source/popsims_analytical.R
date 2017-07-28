@@ -75,20 +75,22 @@ pl <- list(
 tmrange <- c(-1,1)
 tsrange <- c(-2,2)
 pls <- pl
-nsens <- 100
+# nsens <- 10
+# nsenst <- nsens^2
+nsenst <- 3
 plasticity <- F
 
 if(plasticity==F){
   Gsens <- data.frame(
-    alpha_G=qlogis(seq(0.001,0.999,length.out=nsens^2)),
-    beta_Gz=rep(0,nsens^2)
+    alpha_G=qlogis(seq(0.001,0.999,length.out=nsenst)),
+    beta_Gz=rep(0,nsenst)
   )
 }
 
 if(plasticity==T){
   Gsens <- expand.grid(
-    tau_mu = seq(tmrange[1],tmrange[2],length.out=100),
-    tau_sd = exp(seq(tsrange[1],tsrange[2],length.out=100))
+    tau_mu = seq(tmrange[1],tmrange[2],length.out=nsens),
+    tau_sd = exp(seq(tsrange[1],tsrange[2],length.out=nsens))
   )
   Gsens$alpha_G <- with(Gsens,godalpha_f(tau_mu,tau_sd))
   Gsens$beta_Gz <- with(Gsens,godbeta_f(tau_sd))
@@ -97,12 +99,12 @@ if(plasticity==T){
 pls$go$alpha_G[] <- Gsens$alpha_G
 pls$go$beta_Gz[] <- Gsens$beta_Gz
 
-nplot <- 4
-Gshow <- round(
-  rep(seq(1,100,length.out=nplot),times=nplot)
-  + rep(seq(0,nsens^2-nsens,length.out=nplot),each=nplot),
-  0)
-Gplot <- Gsens[Gshow,]
+# nplot <- 4
+# Gshow <- round(
+#   rep(seq(1,100,length.out=nplot),times=nplot)
+#   + rep(seq(0,nsens^2-nsens,length.out=nplot),each=nplot),
+#   0)
+# Gplot <- Gsens[Gshow,]
 
 # pdf(paste0("Plots/Germination_functions_", format(Sys.Date(),"%d%b%Y"),".pdf"),
 # 		width=7,height=7)
@@ -128,27 +130,16 @@ maml <- as.list(c(1,1,mpam,1,mpam,mpam))
 msdl <- as.list(c(0,1,1,mpsd,mpsd,0))
   # scaling mean log rainfall (zamo) only works because sign stays the same
 
-### Actual data
 nclim <- length(maml)
 cpc <- 4 # CORES per CLIMATE
 ncores <- nclim*cpc
 mpos <- rep(1:nclim,each=cpc)
 
-nstart <- rep(10000,nspecies)
-ni <- 10 # 250 # iterations PER CORE
-nt <- 100
+nstart <- rep(1,nspecies)
+ni <- 3 # 250 # iterations PER CORE
+  # should equal nsenst?
+nt <- 25
 nj <- 22
-
-### Sensitivity analyses
-# nclim <- length(maml)
-# cpc <- 5 # CORES per CLIMATE
-# ncores <- nclim*cpc
-# mpos <- rep(1:nclim,each=cpc)
-# 
-# nstart <- rep(10000,nspecies)
-# ni <- 2000 # iterations PER CORE
-# nt <- 50
-# nj <- 22
 
 # ni and nk must be >1
 nit <- ni*cpc
@@ -158,7 +149,15 @@ maxiter <- 10 # 10000 # max number of iterations in PARAMETERISATION
 cpos <- rep(1:cpc,times=nclim)
 cipos <- rep(1:cpc,each=ni)
 itersetl <- split(1:(ni*cpc),cipos)
+itersetlr <- list()
+for(i in 1:cpc){
+  itersetlr[[i]] <- rep(itersetl[[i]], each=ni)
+}
   # requires that ni < maxiter
+  # resident simulations split between cores
+itersetli <- rep(list(rep(1:ni, times=ni)), cpc)
+  # invader simulations replicated once for every resident in each core  
+nii <- ni^2
 
 simp <- function(l){
   lapply(l,function(x){
@@ -173,15 +172,28 @@ cnames_merged <- paste(cnames_unique,collapse="_")
 n <- 1
 mam <- maml[[mpos[n]]]
 msd <- msdl[[mpos[n]]]
-trial <- popana(pl=pls,ni=ni,nt=nt,nj=nj, 
+trial1 <- popana(pl=pls,ni=ni,nt=nt,nj=nj, 
   nstart=nstart,zam=zamo*mam,zsd=zsdo*msd,
   wam=wamo*mam,wsd=wsdo*msd,rho=0.82,
   Tvalues=Tvalues,tau_p=10^2,tau_d=10^2,tau_s=10^2,
   iterset=itersetl[[cpos[n]]]
   )
 
-matplot(t(log(trial$ns[,,19])),type="l",lty=1)
-matplot(t(log(trial$ns[,,15])),type="l",lty=1)
+trial2 <- popana(pl=pls,ni=nii,nt=nt,nj=nj, 
+  nstart=nstart,zam=zamo*mam,zsd=zsdo*msd,
+  wam=wamo*mam,wsd=wsdo*msd,rho=0.82,
+  Tvalues=Tvalues,tau_p=10^2,tau_d=10^2,tau_s=10^2,
+  iterset=itersetli[[cpos[n]]],
+  pl2=trial1,
+  iterset2=itersetlr[[cpos[n]]],
+  tmin=20
+)
+
+matplot(t(log(trial1$ns[,,19])),type="l",lty=1,col=1:3)
+matplot(t(log(trial2$ns[-(1:3),,19])),type="l",lty=rep(1:3,each=3),col=rep(1:3,times=3))
+trial2$G[-(1:3),1,19]
+trial2$G2[-(1:3),1,19]
+  # Something wrong - check this
 
 # Each core focuses on one climate
 # Iterations for one climate can be split up over multiple cores
