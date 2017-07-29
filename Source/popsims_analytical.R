@@ -75,19 +75,18 @@ pl <- list(
 tmrange <- c(-1,1)
 tsrange <- c(-2,2)
 pls <- pl
-# nsens <- 10
-# nsenst <- nsens^2
-nsenst <- 3
 plasticity <- F
 
 if(plasticity==F){
+  nsens <- 10
   Gsens <- data.frame(
-    alpha_G=qlogis(seq(0.001,0.999,length.out=nsenst)),
-    beta_Gz=rep(0,nsenst)
+    alpha_G=qlogis(seq(0.001,0.999,length.out=nsens)),
+    beta_Gz=rep(0,nsens)
   )
 }
 
 if(plasticity==T){
+  nsens <- 10 # total is square of this
   Gsens <- expand.grid(
     tau_mu = seq(tmrange[1],tmrange[2],length.out=nsens),
     tau_sd = exp(seq(tsrange[1],tsrange[2],length.out=nsens))
@@ -98,6 +97,7 @@ if(plasticity==T){
 
 pls$go$alpha_G[] <- Gsens$alpha_G
 pls$go$beta_Gz[] <- Gsens$beta_Gz
+  # still full 10000 iterations - subsetting done below
 
 # nplot <- 4
 # Gshow <- round(
@@ -124,103 +124,86 @@ pls$go$beta_Gz[] <- Gsens$beta_Gz
 
 # Sims --------------------------------------------------------------------
 
-# 1000 per 0.1m^2 - *what does this mean?*
+# Each core focuses on one climate
+# Iterations for one climate can be split up over multiple cores
+# (controlled by cpc)
 
-maml <- as.list(c(1,1,mpam,1,mpam,mpam))
-msdl <- as.list(c(0,1,1,mpsd,mpsd,0))
+# maml <- as.list(c(1,1,mpam,1,mpam,mpam))
+# msdl <- as.list(c(0,1,1,mpsd,mpsd,0))
+maml <- as.list(1)
+msdl <- as.list(0)
   # scaling mean log rainfall (zamo) only works because sign stays the same
 
 nclim <- length(maml)
-cpc <- 4 # CORES per CLIMATE
+cpc <- 5 # CORES per CLIMATE (assumed equal for resident and invader)
 ncores <- nclim*cpc
 mpos <- rep(1:nclim,each=cpc)
 
 nstart <- rep(1,nspecies)
-ni <- 3 # 250 # iterations PER CORE
-  # should equal nsenst?
+nir <- 2 # 250 # iterations PER CORE for RESIDENT simulations
+nii <- 20 # iterations per core for INVADER simulations
 nt <- 25
 nj <- 22
+  # nir must be >1
 
-# ni and nk must be >1
-nit <- ni*cpc
+nirt <- nir*cpc
+niit <- nii*cpc
+if(nirt!=nsens | niit!=nsens^2) warning("check iterations")
+
+tmin <- 10
+  # start time for invasion
 
 set.seed(1)
 maxiter <- 10 # 10000 # max number of iterations in PARAMETERISATION
 cpos <- rep(1:cpc,times=nclim)
-cipos <- rep(1:cpc,each=ni)
-itersetl <- split(1:(ni*cpc),cipos)
+cipos <- rep(1:cpc,each=nir)
+itersetl <- split(1:(nir*cpc),cipos)
 itersetlr <- list()
 for(i in 1:cpc){
-  itersetlr[[i]] <- rep(itersetl[[i]], each=ni)
+  itersetlr[[i]] <- rep(itersetl[[i]], each=nsens)
 }
   # requires that ni < maxiter
   # resident simulations split between cores
-itersetli <- rep(list(rep(1:ni, times=ni)), cpc)
+itersetli <- rep(list(rep(1:nsens, times=nir)), cpc)
   # invader simulations replicated once for every resident in each core  
-nii <- ni^2
 
 simp <- function(l){
   lapply(l,function(x){
     signif(x,2)
   })
 }
-  
+ 
 cnames_unique <- gsub("\\.","",paste0("mu",simp(maml),"_sd",simp(msdl)))
 cnames_bycore <- paste0(rep(cnames_unique,each=cpc),"_s",rep(1:cpc,times=nclim))
 cnames_merged <- paste(cnames_unique,collapse="_")
+  # same for both invaders and residents
 
-n <- 1
-mam <- maml[[mpos[n]]]
-msd <- msdl[[mpos[n]]]
-trial1 <- popana(pl=pls,ni=ni,nt=nt,nj=nj, 
-  nstart=nstart,zam=zamo*mam,zsd=zsdo*msd,
-  wam=wamo*mam,wsd=wsdo*msd,rho=0.82,
-  Tvalues=Tvalues,tau_p=10^2,tau_d=10^2,tau_s=10^2,
-  iterset=itersetl[[cpos[n]]]
-  )
+# Resident simulations ----------------------------------------------------
 
-trial2 <- popana(pl=pls,ni=nii,nt=nt,nj=nj, 
-  nstart=nstart,zam=zamo*mam,zsd=zsdo*msd,
-  wam=wamo*mam,wsd=wsdo*msd,rho=0.82,
-  Tvalues=Tvalues,tau_p=10^2,tau_d=10^2,tau_s=10^2,
-  iterset=itersetli[[cpos[n]]],
-  pl2=trial1,
-  iterset2=itersetlr[[cpos[n]]],
-  tmin=20
-)
-
-matplot(t(log(trial1$ns[,,19])),type="l",lty=1,col=1:3)
-matplot(t(log(trial2$ns[-(1:3),,19])),type="l",lty=rep(1:3,each=3),col=rep(1:3,times=3))
-trial2$G[-(1:3),1,19]
-trial2$G2[-(1:3),1,19]
-  # Something wrong - check this
-
-# Each core focuses on one climate
-# Iterations for one climate can be split up over multiple cores
-# (controlled by cpc)
 system.time({
 CL = makeCluster(ncores)
-clusterExport(cl=CL, c("popana","pls", # was pl
+clusterExport(cl=CL, c("popana","pls", 
+  "nir","nt","nj","nstart",
   "zamo","zsdo","wamo","wsdo",
   "mpos","maml","msdl","cpos",
-  "nstart","ni","nt","nj","nk",
-  "Tvalues","itersetl","cnames_bycore"
+  "Tvalues","cnames_bycore",
+  "itersetl"
   )) 
 parLapply(CL, 1:ncores, function(n){
 	mam <- maml[[mpos[n]]]
 	msd <- msdl[[mpos[n]]]
-	popsim(pl=pls,ni=ni,nt=nt,nj=nj, # was pl
+	popana(pl=pls,ni=nir,nt=nt,nj=nj,
 		nstart=nstart,zam=zamo*mam,zsd=zsdo*msd,
 		wam=wamo*mam,wsd=wsdo*msd,rho=0.82,
 		Tvalues=Tvalues,tau_p=10^2,tau_d=10^2,tau_s=10^2,
 		iterset=itersetl[[cpos[n]]],
-		savefile=paste0("s_",cnames_bycore[n]) # added "s_"
+		savefile=paste0("res_",cnames_bycore[n]) # res -> residents
 		)
 	})
 stopCluster(CL)
 })
 
-# Read back in ------------------------------------------------------------
+# Read resident simulations back in ---------------------------------------
 
 ### Small RAM read-in
 
@@ -232,40 +215,108 @@ stopCluster(CL)
 #   }
 # names(psl) <- cnames_bycore_small
 
+simcombine <- function(insiml){
+  
+  varl <- insiml[[1]]
+  nvar <- length(varl)
+  dimvar <- sapply(varl,dim)
+  ndimvar <- sapply(dimvar,length)
+  firstmpos <- match(1:nclim,mpos)
+  
+  # Combine sim matrices by sim type
+  outsiml <- vector("list", nvar)
+  names(outsiml) <- names(varl)
+  for(i in 1:nvar){
+    if(ndimvar[i]>0){
+      for(j in 1:nclim){
+        for(k in 1:cpc){
+          if(k==1) ast <- insiml[[firstmpos[j]]][[i]]
+          else ast <- abind(ast,insiml[[firstmpos[j]+(k-1)]][[i]],along=1)
+        }
+        if(j==1){
+          outsiml[[i]] <- array(ast,dim=c(dim(ast),1))
+        }
+        else{
+          outsiml[[i]] <- abind(outsiml[[i]],ast,along=ndimvar[i]+1)
+        }
+      }
+      if(nclim>1) dimnames(outsiml[[i]])[[ndimvar[i]+1]] <- cnames_unique
+    }
+  }
+  outsiml <- outsiml[ndimvar>0]
+  return(outsiml)
+}
+
 psl <- as.list(rep(NA,ncores))
 for(n in 1:ncores){
-  psl[[n]] <- readRDS(paste0("Sims/",cnames_bycore[n],"_07Apr2017.rds"))
-  #psl[[n]] <- readRDS(paste0("Sims/s_",cnames_bycore[n],"_24May2017.rds"))
-  }
+  psl[[n]] <- readRDS(paste0("Sims/res_",cnames_bycore[n],"_29Jul2017.rds"))
+}
 names(psl) <- cnames_bycore
 
-varl <- psl[[1]]
-nvar <- length(varl)
-dimvar <- sapply(varl,dim)
-ndimvar <- sapply(dimvar,length)
-firstmpos <- match(1:nclim,mpos)
+psla <- simcombine(psl)
 
-# Combine sim matrices by sim type
-psla <- vector("list", nvar)
-names(psla) <- names(varl)
-for(i in 1:nvar){
-  if(ndimvar[i]>0){
-    for(j in 1:nclim){
-      for(k in 1:cpc){
-        if(k==1) ast <- psl[[firstmpos[j]]][[i]]
-        else ast <- abind(ast,psl[[firstmpos[j]+(k-1)]][[i]],along=1)
-      }
-      if(j==1){
-        psla[[i]] <- array(ast,dim=c(dim(ast),1))
-      }
-      else{
-        psla[[i]] <- abind(psla[[i]],ast,along=ndimvar[i]+1)
-      }
-    }
-    dimnames(psla[[i]])[[ndimvar[i]+1]] <- cnames_unique
-  }
+# Invader simulations -----------------------------------------------------
+
+system.time({
+  CL = makeCluster(ncores)
+  clusterExport(cl=CL, c("popana","pls", 
+    "nii","nt","nj","nstart",
+    "zamo","zsdo","wamo","wsdo",
+    "mpos","maml","msdl","cpos",
+    "Tvalues","cnames_bycore",
+    "itersetli","itersetlr",
+    "psla","tmin"
+  )) 
+  parLapply(CL, 1:ncores, function(n){
+    mam <- maml[[mpos[n]]]
+    msd <- msdl[[mpos[n]]]
+    popana(pl=pls,ni=nii,nt=nt,nj=nj,
+      nstart=nstart,zam=zamo*mam,zsd=zsdo*msd,
+      wam=wamo*mam,wsd=wsdo*msd,rho=0.82,
+      Tvalues=Tvalues,tau_p=10^2,tau_d=10^2,tau_s=10^2,
+      iterset=itersetli[[cpos[n]]],
+      pl2=psla,
+      iterset2=itersetlr[[cpos[n]]],
+      climpos=mpos[n],
+      tmin=tmin,
+      savefile=paste0("inv_",cnames_bycore[n]) # inv -> invaders
+    )
+  })
+  stopCluster(CL)
+})
+
+# Read invader simulations back in ----------------------------------------
+
+psl2 <- as.list(rep(NA,ncores))
+for(n in 1:ncores){
+  psl2[[n]] <- readRDS(paste0("Sims/inv_",cnames_bycore[n],"_29Jul2017.rds"))
 }
-psla <- psla[ndimvar>0]
+names(psl2) <- cnames_bycore
+
+psla2 <- simcombine(psl2)
+
+# Time series graphs ------------------------------------------------------
+
+j <- 19
+require(fields)
+ex <- psla$ns[,nt,j,1] < 0.001  
+  # remove automatically extinct resident / invader
+matplot(t(log(psla$ns[!ex,,j,1])),type="l",lty=1,col="black")
+matplot(t(log(psla2$ns[rep(!ex,each=nsens),,j,1])),type="l",
+  lty=rep(1:nsens,each=nsens),
+  col=rep(tim.colors(nsens)[!ex],each=nsens),
+  add=T
+  )
+
+# Pairwise invasibility plots ---------------------------------------------
+
+pip <- matrix(nr=nsens,nc=nsens)
+pip[] <- log(psla2$ns[,nt,j,1]) - rep(log(psla$ns[,nt,j,1]),nsens)
+pip[ex,] <- NA
+pip[,ex] <- NA
+  # remove automatically extinct resident / invader
+image.plot(x=Gsens$alpha_G,y=Gsens$alpha_G,z=pip)
+  # resident on x, invader on y
 
 # Extract parameters used in simulations ----------------------------------
 

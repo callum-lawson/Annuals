@@ -41,6 +41,7 @@ popana <- function(pl,ni,nt,nj=22,nstart,
 	iterset=NULL,
   pl2=NULL,
   iterset2=NULL,
+  climpos=NULL,
   savefile=NULL,
   abs.tol=10^-5, # .Machine$double.eps^0.25
   intsd=10,
@@ -105,20 +106,26 @@ popana <- function(pl,ni,nt,nj=22,nstart,
 	
 	### SAMPLE ITERATIONS ###
 
-	if(is.null(iterset)==T){
+	if(is.null(iterset)){
 	  iter_go <- sample(1:length(go$alpha_G_mu),ni)
 	  iter_gs <- sample(1:length(gs$phi_g),ni)
 	  iter_pr <- sample(1:length(pr$sig_o),ni)
 	  iter_rs <- sample(1:length(rs$phi_r),ni) # change to phi_g later
 	  }
-	if(is.null(iterset)==F){
-	  iter_go <- iter_gs <- iter_pr <- iter_rs <- iterset
+	if(!is.null(iterset)){
+	  if(is.null(iterset2)){
+	    iter_go <- iter_gs <- iter_pr <- iter_rs <- iterset
 	  }
+	  if(!is.null(iterset2)){
+	    iter_go <- iter_gs <- iter_pr <- iter_rs <- iterset2
+	    iter_go1 <- iterset # for alpha_G and beta_Gz parameters
+	  }
+	}
 	  
 	### LOAD PARAMS ###
 
-	alpha_G <- go$alpha_G[iter_go,]
-	beta_Gz <- go$beta_Gz[iter_go,]
+	alpha_G <- go$alpha_G[iter_go1,]
+	beta_Gz <- go$beta_Gz[iter_go1,]
 	alpha_m <- go$alpha_m[iter_go,]
 	beta_m <- go$alpha_m[iter_go,]
 	
@@ -182,10 +189,10 @@ popana <- function(pl,ni,nt,nj=22,nstart,
 	}
 	
 	else{
-	  eps_y_p <- pl2$eps_y_p[iterset2,,]
-	  eps_y_r <- pl2$eps_y_r[iterset2,,]
-	  z <- pl2$z[iterset2,]
-	  w <- pl2$w[iterset2,]
+	  eps_y_p <- pl2$eps_y_p[iterset2,,,climpos]
+	  eps_y_r <- pl2$eps_y_r[iterset2,,,climpos]
+	  z <- pl2$z[iterset2,,climpos]
+	  w <- pl2$w[iterset2,,climpos]
 	}
 	
 	### CREATE DENSITY STORAGE OBJECTS ###
@@ -247,7 +254,7 @@ popana <- function(pl,ni,nt,nj=22,nstart,
 			      lgmu <- log(ng[i,t,j]) - (sig_s_g[i,j]^2 / 2)
 			    }
 			    else{
-			      lgmu <- log(pl2$ng[iterset2[i],t,j]) - (sig_s_g[i,j]^2 / 2)
+			      lgmu <- log(pl2$ng[iterset2[i],t,j,climpos]) - (sig_s_g[i,j]^2 / 2)
 			    }
   			    # arithmetic mean = ng[i,t,]
   			    # logarithmic sd = sig_s_g[i,,j]
@@ -341,8 +348,9 @@ popana <- function(pl,ni,nt,nj=22,nstart,
       G=G,So=So,Sn=Sn,
       ns=ns,ng=ng,no=no,nn=nn,nnb=nnb,
       eps_y_p=eps_y_p,eps_y_r=eps_y_r,
-      G2=pl2$G[iterset2,,], ng2=pl2$ng[iterset2,,],
-      eps_y_p2=pl2$eps_y_p[iterset2,,],eps_y_r2=pl2$eps_y_p[iterset2,,]
+      G2=pl2$G[iterset2,,,climpos], ng2=pl2$ng[iterset2,,,climpos],
+      eps_y_p2=pl2$eps_y_p[iterset2,,,climpos],
+      eps_y_r2=pl2$eps_y_p[iterset2,,,climpos]
     )
   }
 	
