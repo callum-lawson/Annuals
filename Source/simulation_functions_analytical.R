@@ -252,16 +252,18 @@ popana <- function(pl,ni,nt,nj=22,nstart,
 			  }
 			  
 			  else{
-			    if(is.null(pl2)){
-			      lgmu <- log(ng[i,t,j]) - (sig_s_g[i,j]^2 / 2)
-			    }
-			    else{
-			      lgmu <- log(pl2$ng[iterset2[i],t,j,climpos]) - (sig_s_g[i,j]^2 / 2)
-			    }
-  			    # arithmetic mean = ng[i,t,]
-  			    # logarithmic sd = sig_s_g[i,,j]
-  			    # mean of lognormal distribution = log(am) - sig^2 / 2
 			    
+  			  lgmu <- log(ng[i,t,j]) - (sig_s_g[i,j]^2 / 2)
+    			  # arithmetic mean = ng[i,t,]
+    			  # logarithmic sd = sig_s_g[i,,j]
+    			  # mean of lognormal distribution = log(am) - sig^2 / 2
+  			  
+  			  if(!is.null(pl2)){
+  			    lgdiff <- log(pl2$ng[iterset2[i],t,j,climpos]) - log(ng[i,t,j])
+  			  }
+  			    # log difference in resident vs invader density
+  			    # (spatial factors assumed to affect both in the same way)
+			  
 			    intlo <- lgmu - intsd * sig_s_g[i,j]
 			    inthi <- lgmu + intsd * sig_s_g[i,j]
   			    # setting range to 10 sds to improve convergence
@@ -275,7 +277,12 @@ popana <- function(pl,ni,nt,nj=22,nstart,
 			      nl <- length(g)
 			      x_t <- matrix(nr=nl,nc=4)
 			      x_t[,1:3] <- rep(xvec,each=nl) 
-			      x_t[,4] <- g - log(tau_d/10) 
+			      if(is.null(pl2)){
+			        x_t[,4] <- g - log(tau_d/10)
+			      }
+			      else{
+			        x_t[,4] <- g - log(tau_d/10) + lgdiff
+			      }
 			        # tau_d/10 density adjustment explained above
 			      pi_bar_t <- beta_p[i,j,] %*% t(x_t)
 			      eta_bar_t <- beta_r[i,j,] %*% t(x_t)
@@ -321,7 +328,13 @@ popana <- function(pl,ni,nt,nj=22,nstart,
 
 			### NEW SEED SURVIVAL ###
 
-			Sn[i,t,] <- BHS(nn[i,t,],m0[i,t,],m1[i,t,])
+  	  if(is.null(pl2)){
+  	    Sn[i,t,] <- BHS(nn[i,t,],m0[i,t,],m1[i,t,])
+  	    }
+			else{
+			  Sn[i,t,] <- BHS(pl2$nn[iterset2[i],t,j,climpos],m0[i,t,],m1[i,t,])
+			}
+			  
 			nnb[i,t,] <- Sn[i,t,]*nn[i,t,]
 		
 			### BURIED SEED DENSITY ###
@@ -350,7 +363,9 @@ popana <- function(pl,ni,nt,nj=22,nstart,
       G=G,So=So,Sn=Sn,
       ns=ns,ng=ng,no=no,nn=nn,nnb=nnb,
       eps_y_p=eps_y_p,eps_y_r=eps_y_r,
-      G2=pl2$G[iterset2,,,climpos], ng2=pl2$ng[iterset2,,,climpos],
+      G2=pl2$G[iterset2,,,climpos], 
+      ng2=pl2$ng[iterset2,,,climpos],
+      nn2=pl2$nn[iterset2,,,climpos],
       eps_y_p2=pl2$eps_y_p[iterset2,,,climpos],
       eps_y_r2=pl2$eps_y_p[iterset2,,,climpos]
     )

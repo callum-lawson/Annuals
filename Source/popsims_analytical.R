@@ -78,7 +78,7 @@ pls <- pl
 plasticity <- F
 
 if(plasticity==F){
-  nsens <- 10
+  nsens <- 5
   Gsens <- data.frame(
     # alpha_G=qlogis(seq(0.001,0.999,length.out=nsens)),
     alpha_G=seq(-3,3,length.out=nsens),
@@ -96,7 +96,7 @@ if(plasticity==T){
   Gsens$beta_Gz <- with(Gsens,godbeta_f(tau_sd))
 }
 
-rpi <- 10 # number of replicated simulations per invasion
+rpi <- 50 # number of replicated simulations per invasion
 pls$go$alpha_G[,] <- rep(Gsens$alpha_G,each=rpi)
 pls$go$beta_Gz[,] <- rep(Gsens$beta_Gz,each=rpi)
   # still full 10000 iterations - subsetting done below
@@ -132,8 +132,8 @@ pls$go$beta_Gz[,] <- rep(Gsens$beta_Gz,each=rpi)
 
 # maml <- as.list(c(1,1,mpam,1,mpam,mpam))
 # msdl <- as.list(c(0,1,1,mpsd,mpsd,0))
-maml <- as.list(1)
-msdl <- as.list(0)
+maml <- as.list(c(1,1))
+msdl <- as.list(c(0,1))
   # scaling mean log rainfall (zamo) only works because sign stays the same
 
 nclim <- length(maml)
@@ -327,7 +327,7 @@ for(m in 1:nclim){
   for(j in 1:nj){
     pip[,,j,m] <- tapply(
       log(psla2$ns[,nt,j,m]),
-      iseqres,
+      list(psla$G[iseqres,nt,j,m],psla2$G[,nt,j,m]),
       pinvf
       )
   }
@@ -337,10 +337,9 @@ for(m in 1:nclim){
 # pip[,ex] <- NA
   # remove automatically extinct resident / invader
 image.plot(x=Gsens$alpha_G,y=Gsens$alpha_G,z=pip[,,19,1])
+image.plot(x=Gsens$alpha_G,y=Gsens$alpha_G,z=pip[,,19,2])
   # resident on x, invader on y?
-
-
-
+image.plot(x=Gsens$alpha_G,y=Gsens$alpha_G,z=pip[,,16,2])
 
 
 
