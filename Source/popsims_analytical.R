@@ -96,7 +96,7 @@ if(plasticity==T){
   Gsens$beta_Gz <- with(Gsens,godbeta_f(tau_sd))
 }
 
-rpi <- 5 # number of replicated simulations per invasion
+rpi <- 10 # number of replicated simulations per invasion
 pls$go$alpha_G[,] <- rep(Gsens$alpha_G,each=rpi)
 pls$go$beta_Gz[,] <- rep(Gsens$beta_Gz,each=rpi)
   # still full 10000 iterations - subsetting done below
@@ -132,46 +132,42 @@ pls$go$beta_Gz[,] <- rep(Gsens$beta_Gz,each=rpi)
 
 # maml <- as.list(c(1,1,mpam,1,mpam,mpam))
 # msdl <- as.list(c(0,1,1,mpsd,mpsd,0))
-maml <- as.list(1,1)
-msdl <- as.list(0,1)
+maml <- as.list(1)
+msdl <- as.list(0)
   # scaling mean log rainfall (zamo) only works because sign stays the same
 
 nclim <- length(maml)
-cpc <- 10 # CORES per CLIMATE (assumed equal for resident and invader)
+cpc <- 50 # CORES per CLIMATE (assumed equal for resident and invader)
 ncores <- nclim*cpc
 mpos <- rep(1:nclim,each=cpc)
 
 nstart <- rep(1,nspecies)
-nir <- 1*rpi # iterations PER CORE for RESIDENT simulations
-nii <- 10*rpi # iterations per core for INVADER simulations
 nt <- 25
 nj <- 22
-  # nir must be >1
   # min invader iterations per core = rpi * nsens
-
-nirt <- nir*cpc # total number of resident iterations
-niit <- nii*cpc # total number of invader iterations
-
-if(nirt!=(rpi*nsens) | niit!=(rpi*nsens^2)) warning("check iterations")
-
 tmin <- 15
   # start time for invasion
 
-set.seed(1)
-# maxiter <- 10000 # max number of iterations in PARAMETERISATION
+nio <- rpi*nsens
+iseqone <- 1:nio
+iseqres <- rep(iseqone, each=nsens)
+iseqinv <- rep(seq(1,nio,rpi), times=nio)
+  # for invader, only G params are used, 
+  # so for itersetli just take first iter from pls for each rpi
+
 cpos <- rep(1:cpc,times=nclim)
-cipos <- rep(1:cpc,each=nir)
-itersetl <- split(1:nirt,cipos)
-itersetlr <- itersetli <- list()
-for(i in 1:cpc){
-  itersetlr[[i]] <- rep(itersetl[[i]], each=nsens)
-  itersetli[[i]] <- rep(seq(1,rpi*nsens,rpi), times=nir)
-}
+cipos <- rep(1:cpc,each=(rpi*nsens)/cpc)
+cirpos <- rep(1:cpc,each=(rpi*nsens^2)/cpc)
+
+itersetl <- split(iseqone,cipos)
+itersetlr <- split(iseqres,cirpos)
+itersetli <- split(iseqinv,cirpos)
   # requires that ni < maxiter
   # resident simulations split between cores
   # invader simulations replicated once for every resident in each core
-  # for invader, only G params are used, 
-  # so for itersetli just take first iter from pls for each rpi
+
+ni <- length(itersetl[[1]]) # iterations PER CORE for RESIDENT simulations
+nii <- length(itersetli[[1]]) # iterations per core for INVADER simulations
 
 simp <- function(l){
   lapply(l,function(x){
@@ -184,12 +180,15 @@ cnames_bycore <- paste0(rep(cnames_unique,each=cpc),"_s",rep(1:cpc,times=nclim))
 cnames_merged <- paste(cnames_unique,collapse="_")
   # same for both invaders and residents
 
+# maxiter <- 10000 # max number of iterations in PARAMETERISATION
+
 # Resident simulations ----------------------------------------------------
 
+set.seed(1)
 system.time({
 CL = makeCluster(ncores)
 clusterExport(cl=CL, c("popana","pls", 
-  "nir","nt","nj","nstart",
+  "ni","nt","nj","nstart",
   "zamo","zsdo","wamo","wsdo",
   "mpos","maml","msdl","cpos",
   "Tvalues","cnames_bycore",
@@ -198,7 +197,7 @@ clusterExport(cl=CL, c("popana","pls",
 parLapply(CL, 1:ncores, function(n){
 	mam <- maml[[mpos[n]]]
 	msd <- msdl[[mpos[n]]]
-	popana(pl=pls,ni=nir,nt=nt,nj=nj,
+	popana(pl=pls,ni=ni,nt=nt,nj=nj,
 		nstart=nstart,zam=zamo*mam,zsd=zsdo*msd,
 		wam=wamo*mam,wsd=wsdo*msd,rho=0.82,
 		Tvalues=Tvalues,tau_p=10^2,tau_d=10^2,tau_s=10^2,
@@ -318,13 +317,27 @@ matplot(t(log(psla2$ns[rep(!ex,each=nsens),,j,1])),type="l",
 
 # Pairwise invasibility plots ---------------------------------------------
 
-pip <- matrix(nr=nsens,nc=nsens)
-pip[] <- log(psla2$ns[,nt,j,1]) - rep(log(psla$ns[,nt,j,1]),nsens)
-pip[ex,] <- NA
-pip[,ex] <- NA
+pinvf <- function(x){
+  mean(x>0)
+}
+  # fraction to have grown by end of inteval
+  
+pip <- array(dim=c(nsens,nsens,nj,nclim))
+for(m in 1:nclim){
+  for(j in 1:nj){
+    pip[,,j,m] <- tapply(
+      log(psla2$ns[,nt,j,m]),
+      iseqres,
+      pinvf
+      )
+  }
+}
+
+# pip[ex,] <- NA
+# pip[,ex] <- NA
   # remove automatically extinct resident / invader
-image.plot(x=Gsens$alpha_G,y=Gsens$alpha_G,z=pip)
-  # resident on x, invader on y
+image.plot(x=Gsens$alpha_G,y=Gsens$alpha_G,z=pip[,,19,1])
+  # resident on x, invader on y?
 
 
 
