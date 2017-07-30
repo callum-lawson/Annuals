@@ -80,7 +80,8 @@ plasticity <- F
 if(plasticity==F){
   nsens <- 10
   Gsens <- data.frame(
-    alpha_G=qlogis(seq(0.001,0.999,length.out=nsens)),
+    # alpha_G=qlogis(seq(0.001,0.999,length.out=nsens)),
+    alpha_G=seq(-3,3,length.out=nsens),
     beta_Gz=rep(0,nsens)
   )
 }
@@ -95,8 +96,9 @@ if(plasticity==T){
   Gsens$beta_Gz <- with(Gsens,godbeta_f(tau_sd))
 }
 
-pls$go$alpha_G[] <- Gsens$alpha_G
-pls$go$beta_Gz[] <- Gsens$beta_Gz
+rpi <- 5 # number of replicated simulations per invasion
+pls$go$alpha_G[,] <- rep(Gsens$alpha_G,each=rpi)
+pls$go$beta_Gz[,] <- rep(Gsens$beta_Gz,each=rpi)
   # still full 10000 iterations - subsetting done below
 
 # nplot <- 4
@@ -130,42 +132,46 @@ pls$go$beta_Gz[] <- Gsens$beta_Gz
 
 # maml <- as.list(c(1,1,mpam,1,mpam,mpam))
 # msdl <- as.list(c(0,1,1,mpsd,mpsd,0))
-maml <- as.list(1)
-msdl <- as.list(0)
+maml <- as.list(1,1)
+msdl <- as.list(0,1)
   # scaling mean log rainfall (zamo) only works because sign stays the same
 
 nclim <- length(maml)
-cpc <- 5 # CORES per CLIMATE (assumed equal for resident and invader)
+cpc <- 10 # CORES per CLIMATE (assumed equal for resident and invader)
 ncores <- nclim*cpc
 mpos <- rep(1:nclim,each=cpc)
 
 nstart <- rep(1,nspecies)
-nir <- 2 # 250 # iterations PER CORE for RESIDENT simulations
-nii <- 20 # iterations per core for INVADER simulations
+nir <- 1*rpi # iterations PER CORE for RESIDENT simulations
+nii <- 10*rpi # iterations per core for INVADER simulations
 nt <- 25
 nj <- 22
   # nir must be >1
+  # min invader iterations per core = rpi * nsens
 
-nirt <- nir*cpc
-niit <- nii*cpc
-if(nirt!=nsens | niit!=nsens^2) warning("check iterations")
+nirt <- nir*cpc # total number of resident iterations
+niit <- nii*cpc # total number of invader iterations
 
-tmin <- 10
+if(nirt!=(rpi*nsens) | niit!=(rpi*nsens^2)) warning("check iterations")
+
+tmin <- 15
   # start time for invasion
 
 set.seed(1)
-maxiter <- 10 # 10000 # max number of iterations in PARAMETERISATION
+# maxiter <- 10000 # max number of iterations in PARAMETERISATION
 cpos <- rep(1:cpc,times=nclim)
 cipos <- rep(1:cpc,each=nir)
-itersetl <- split(1:(nir*cpc),cipos)
-itersetlr <- list()
+itersetl <- split(1:nirt,cipos)
+itersetlr <- itersetli <- list()
 for(i in 1:cpc){
   itersetlr[[i]] <- rep(itersetl[[i]], each=nsens)
+  itersetli[[i]] <- rep(seq(1,rpi*nsens,rpi), times=nir)
 }
   # requires that ni < maxiter
   # resident simulations split between cores
-itersetli <- rep(list(rep(1:nsens, times=nir)), cpc)
-  # invader simulations replicated once for every resident in each core  
+  # invader simulations replicated once for every resident in each core
+  # for invader, only G params are used, 
+  # so for itersetli just take first iter from pls for each rpi
 
 simp <- function(l){
   lapply(l,function(x){
@@ -249,7 +255,7 @@ simcombine <- function(insiml){
 
 psl <- as.list(rep(NA,ncores))
 for(n in 1:ncores){
-  psl[[n]] <- readRDS(paste0("Sims/res_",cnames_bycore[n],"_29Jul2017.rds"))
+  psl[[n]] <- readRDS(paste0("Sims/res_",cnames_bycore[n],"_30Jul2017.rds"))
 }
 names(psl) <- cnames_bycore
 
@@ -289,7 +295,7 @@ system.time({
 
 psl2 <- as.list(rep(NA,ncores))
 for(n in 1:ncores){
-  psl2[[n]] <- readRDS(paste0("Sims/inv_",cnames_bycore[n],"_29Jul2017.rds"))
+  psl2[[n]] <- readRDS(paste0("Sims/inv_",cnames_bycore[n],"_30Jul2017.rds"))
 }
 names(psl2) <- cnames_bycore
 
@@ -307,6 +313,8 @@ matplot(t(log(psla2$ns[rep(!ex,each=nsens),,j,1])),type="l",
   col=rep(tim.colors(nsens)[!ex],each=nsens),
   add=T
   )
+ # cols = RESIDENT population
+ # lines = different strategies
 
 # Pairwise invasibility plots ---------------------------------------------
 
@@ -317,6 +325,17 @@ pip[,ex] <- NA
   # remove automatically extinct resident / invader
 image.plot(x=Gsens$alpha_G,y=Gsens$alpha_G,z=pip)
   # resident on x, invader on y
+
+
+
+
+
+
+
+
+
+
+
 
 # Extract parameters used in simulations ----------------------------------
 

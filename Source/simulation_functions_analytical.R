@@ -115,17 +115,19 @@ popana <- function(pl,ni,nt,nj=22,nstart,
 	if(!is.null(iterset)){
 	  if(is.null(iterset2)){
 	    iter_go <- iter_gs <- iter_pr <- iter_rs <- iterset
+	    alpha_G <- go$alpha_G[iter_go,]
+	    beta_Gz <- go$beta_Gz[iter_go,]
 	  }
 	  if(!is.null(iterset2)){
 	    iter_go <- iter_gs <- iter_pr <- iter_rs <- iterset2
-	    iter_go1 <- iterset # for alpha_G and beta_Gz parameters
+	    iter_go1 <- iterset
+	    alpha_G <- go$alpha_G[iter_go1,]
+	    beta_Gz <- go$beta_Gz[iter_go1,]
 	  }
 	}
 	  
 	### LOAD PARAMS ###
 
-	alpha_G <- go$alpha_G[iter_go1,]
-	beta_Gz <- go$beta_Gz[iter_go1,]
 	alpha_m <- go$alpha_m[iter_go,]
 	beta_m <- go$alpha_m[iter_go,]
 	
