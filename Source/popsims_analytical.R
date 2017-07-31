@@ -97,7 +97,7 @@ for(i in 1:length(pl)){
 ### SIMULATION PARAMETERS
 
 if(plasticity==F){
-  nsens <- 25
+  nsens <- 100
   Gsens <- data.frame(
     # alpha_G=qlogis(seq(0.001,0.999,length.out=nsens)),
     alpha_G=seq(-5,5,length.out=nsens),
@@ -115,7 +115,7 @@ if(plasticity==T){
   Gsens$beta_Gz <- with(Gsens,godbeta_f(tau_sd))
 }
 
-rpi <- 100 # number of replicated simulations per invasion
+rpi <- 4 # number of replicated simulations per invasion
 pls$go$alpha_G[,] <- rep(Gsens$alpha_G,each=rpi)
 pls$go$beta_Gz[,] <- rep(Gsens$beta_Gz,each=rpi)
   # still full 10000 iterations - subsetting done below
@@ -161,10 +161,10 @@ ncores <- nclim*cpc
 mpos <- rep(1:nclim,each=cpc)
 
 nstart <- rep(1,nspecies)
-nt <- 25
+nt <- 100
 nj <- 22
   # min invader iterations per core = rpi * nsens
-tmin <- 15
+tmin <- 10
   # start time for invasion
 
 nio <- rpi*nsens
@@ -273,7 +273,7 @@ simcombine <- function(insiml){
 
 psl <- as.list(rep(NA,ncores))
 for(n in 1:ncores){
-  psl[[n]] <- readRDS(paste0("Sims/res_",cnames_bycore[n],"_30Jul2017.rds"))
+  psl[[n]] <- readRDS(paste0("Sims/res_",cnames_bycore[n],"_31Jul2017.rds"))
 }
 names(psl) <- cnames_bycore
 
@@ -283,26 +283,21 @@ psla <- simcombine(psl)
 
 system.time({
   CL = makeCluster(ncores)
-  clusterExport(cl=CL, c("popana","pls", 
-    "nii","nt","nj","nstart",
-    "zamo","zsdo","wamo","wsdo",
-    "mpos","maml","msdl","cpos",
-    "Tvalues","cnames_bycore",
+  clusterExport(cl=CL, c(
+    "popinv","mpos","cpos",
+    "pls", "psla",
     "itersetli","itersetlr",
-    "psla","tmin"
+    "nii","nt","nj","nstart",
+    "cnames_bycore",
+    "tmin"
   )) 
   parLapply(CL, 1:ncores, function(n){
-    mam <- maml[[mpos[n]]]
-    msd <- msdl[[mpos[n]]]
-    popana(pl=pls,ni=nii,nt=nt,nj=nj,
-      nstart=nstart,zam=zamo*mam,zsd=zsdo*msd,
-      wam=wamo*mam,wsd=wsdo*msd,rho=0.82,
-      Tvalues=Tvalues,tau_p=10^2,tau_d=10^2,tau_s=10^2,
-      iterset=itersetli[[cpos[n]]],
-      pl2=psla,
-      iterset2=itersetlr[[cpos[n]]],
+    popinv(pli=pls,plr=psla,
+      iterseti=itersetli[[cpos[n]]],
+      itersetr=itersetlr[[cpos[n]]],
+      ni=nii,nt=nt,nj=nj,      
+      tmin=tmin,nstart=nstart,
       climpos=mpos[n],
-      tmin=tmin,
       savefile=paste0("inv_",cnames_bycore[n]) # inv -> invaders
     )
   })
@@ -313,7 +308,7 @@ system.time({
 
 psl2 <- as.list(rep(NA,ncores))
 for(n in 1:ncores){
-  psl2[[n]] <- readRDS(paste0("Sims/inv_",cnames_bycore[n],"_30Jul2017.rds"))
+  psl2[[n]] <- readRDS(paste0("Sims/inv_",cnames_bycore[n],"_31Jul2017.rds"))
 }
 names(psl2) <- cnames_bycore
 
@@ -360,6 +355,7 @@ alphaGseq <- Gsens$alpha_G
 image.plot(x=alphaGseq,y=alphaGseq,z=pip[,,19,1])
 abline(0,1)
 image.plot(x=alphaGseq,y=alphaGseq,z=pip[,,19,2])
+image.plot(x=alphaGseq,y=alphaGseq,z=pip[,,19,3])
   # resident on x, invader on y
   # in "constant" environment, G>0.5 can invade regardless?
 image.plot(x=alphaGseq,y=alphaGseq,z=pip[,,15,1])
