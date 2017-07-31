@@ -77,11 +77,30 @@ tsrange <- c(-2,2)
 pls <- pl
 plasticity <- F
 
+### MEDIAN PARAMETERS
+
+for(i in 1:length(pl)){
+  for(j in 1:length(pl[[i]])){
+    ndim <- length(dim(pl[[i]][[j]])) 
+    if(ndim==1){
+      pls[[i]][[j]] <- rep(median(pl[[i]][[j]]),length(pl[[i]][[j]]))
+    }
+    if(ndim>1){
+      keepdim <- 2:ndim # remove first dim, which is always iter
+      eachrep <- dim(pl[[i]][[j]])[1] # select iterdim
+      pls[[i]][[j]][] <- rep(apply(pl[[i]][[j]],keepdim,median),each=eachrep)
+    }
+    # if is.null(ndim), do nothing
+  }
+}
+
+### SIMULATION PARAMETERS
+
 if(plasticity==F){
-  nsens <- 5
+  nsens <- 25
   Gsens <- data.frame(
     # alpha_G=qlogis(seq(0.001,0.999,length.out=nsens)),
-    alpha_G=seq(-3,3,length.out=nsens),
+    alpha_G=seq(-5,5,length.out=nsens),
     beta_Gz=rep(0,nsens)
   )
 }
@@ -96,7 +115,7 @@ if(plasticity==T){
   Gsens$beta_Gz <- with(Gsens,godbeta_f(tau_sd))
 }
 
-rpi <- 50 # number of replicated simulations per invasion
+rpi <- 100 # number of replicated simulations per invasion
 pls$go$alpha_G[,] <- rep(Gsens$alpha_G,each=rpi)
 pls$go$beta_Gz[,] <- rep(Gsens$beta_Gz,each=rpi)
   # still full 10000 iterations - subsetting done below
@@ -132,12 +151,12 @@ pls$go$beta_Gz[,] <- rep(Gsens$beta_Gz,each=rpi)
 
 # maml <- as.list(c(1,1,mpam,1,mpam,mpam))
 # msdl <- as.list(c(0,1,1,mpsd,mpsd,0))
-maml <- as.list(c(1,1))
-msdl <- as.list(c(0,1))
+maml <- as.list(c(1,1,mpam))
+msdl <- as.list(c(0,1,mpsd))
   # scaling mean log rainfall (zamo) only works because sign stays the same
 
 nclim <- length(maml)
-cpc <- 50 # CORES per CLIMATE (assumed equal for resident and invader)
+cpc <- 20 # CORES per CLIMATE (assumed equal for resident and invader)
 ncores <- nclim*cpc
 mpos <- rep(1:nclim,each=cpc)
 
@@ -337,9 +356,12 @@ for(m in 1:nclim){
 # pip[,ex] <- NA
   # remove automatically extinct resident / invader
 image.plot(x=Gsens$alpha_G,y=Gsens$alpha_G,z=pip[,,19,1])
+abline(0,1)
 image.plot(x=Gsens$alpha_G,y=Gsens$alpha_G,z=pip[,,19,2])
-  # resident on x, invader on y?
-image.plot(x=Gsens$alpha_G,y=Gsens$alpha_G,z=pip[,,16,2])
+  # resident on x, invader on y
+  # in "constant" environment, G>0.5 can invade regardless?
+image.plot(x=Gsens$alpha_G,y=Gsens$alpha_G,z=pip[,,15,1])
+image.plot(x=Gsens$alpha_G,y=Gsens$alpha_G,z=pip[,,15,2])
 
 
 
