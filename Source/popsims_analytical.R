@@ -355,15 +355,22 @@ for(m in 1:nclim){
 # pip[ex,] <- NA
 # pip[,ex] <- NA
   # remove automatically extinct resident / invader
-image.plot(x=Gsens$alpha_G,y=Gsens$alpha_G,z=pip[,,19,1])
+
+alphaGseq <- Gsens$alpha_G
+image.plot(x=alphaGseq,y=alphaGseq,z=pip[,,19,1])
 abline(0,1)
-image.plot(x=Gsens$alpha_G,y=Gsens$alpha_G,z=pip[,,19,2])
+image.plot(x=alphaGseq,y=alphaGseq,z=pip[,,19,2])
   # resident on x, invader on y
   # in "constant" environment, G>0.5 can invade regardless?
-image.plot(x=Gsens$alpha_G,y=Gsens$alpha_G,z=pip[,,15,1])
-image.plot(x=Gsens$alpha_G,y=Gsens$alpha_G,z=pip[,,15,2])
+image.plot(x=alphaGseq,y=alphaGseq,z=pip[,,15,1])
+image.plot(x=alphaGseq,y=alphaGseq,z=pip[,,15,2])
 
+# Explaining PIP patterns -------------------------------------------------
 
+psla$Y <- with(psla,nn/ng)
+psla$Ye <- with(psla,nnb/ng)
+hist(log(psla$Y[,nt,19,1]),breaks=100)
+hist(log(psla$Ye[psla$G[,nt,19,1]>0.5,nt,19,1]),breaks=1000)
 
 
 
