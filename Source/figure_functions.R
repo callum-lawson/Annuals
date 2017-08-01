@@ -519,7 +519,6 @@ pardensplot <- function(x,y,xname,yname,t=NULL,tran=25,...){
   
 }
 
-
 # Difference between climate scenarios ------------------------------------
 
 diffplot <- function(xarr,yarr,refcl,t=NULL,xname,yname,xdiff=F,tran=50,...){
@@ -574,6 +573,43 @@ diffplot <- function(xarr,yarr,refcl,t=NULL,xname,yname,xdiff=F,tran=50,...){
   
   dev.off()
 }
+
+
+# PIPs --------------------------------------------------------------------
+
+pipplot <- function(z,xname,yname,pointvals){
+
+  require(fields)
+  
+  pdf(paste0("Plots/pipplot_",format(Sys.Date(),"%d%b%Y"),".pdf"), 
+    width=plotwidth,height=plotheight)
+  
+  for(m in 1:nclim){
+    
+    plotsetup()
+    
+    for(j in 1:nspecies){
+      
+      image(x=alphaGseq,y=alphaGseq,z=pip[,,j,m],col=tim.colors(100))
+      points(pointvals[[1]][j],pointvals[[1]][j],pch="+",cex=1.5)
+      points(pointvals[[2]][j],pointvals[[2]][j],pch=16,cex=1.5)
+      
+      lettlab(j)
+      
+      if(j %in% 19:22) addxlab(xname) 
+      if(j %in% seq(1,23,4)) addylab(yname) 
+      
+    }
+    
+  # addledge(ltext=colledgetext,col=cols,lty=1)
+  # addledge(ltext=detledgetext)
+  
+  }
+  
+  dev.off()
+  
+}
+
 
 ### BEN BOLKER OVERDISPERSION
 

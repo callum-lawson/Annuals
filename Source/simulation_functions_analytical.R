@@ -332,52 +332,35 @@ popana <- function(pl,ni,nt,nj=22,nstart,
 
 popinv <- function(
   pli,plr,iterseti,itersetr,
-  ni,nt,nj=22,tmin=1,nstart,
+  ni,nt,nj=22,tmin=1,
   climpos,savefile=NULL
   ){
 
   cur_date <- format(Sys.Date(),"%d%b%Y")
   
-  ns <- ng <- no <- nn <- nnb <- array(dim=c(ni,nt,nj))
-  G <- m0 <- So <- array(dim=c(ni,nt,nj))
-  
-  ns[,tmin,] <- rep(nstart,each=ni)
-    # for each i, replicate vector of starting densities for all species
+  z <- plr$z[itersetr,,climpos]
+  w <- plr$w[itersetr,,climpos]
   
   alpha_G <- pli$go$alpha_G[iterseti,]
   beta_Gz <- pli$go$beta_Gz[iterseti,]  
   
-  eps_y_p <- plr$eps_y_p[itersetr,,,climpos]
-  eps_y_r <- plr$eps_y_r[itersetr,,,climpos]
-  z <- plr$z[itersetr,,climpos]
-  w <- plr$w[itersetr,,climpos]
-  Y <- plr$nn[itersetr,,,climpos] / plr$ng[itersetr,,,climpos]
-  Sn <- plr$Sn[itersetr,,,climpos]
-  So <- plr$So[itersetr,,,climpos]
-  
+  G <- array(dim=c(ni,nt,nj))
   for(i in 1:ni){
     G[i,,] <- plogis(
       matrix(rep(alpha_G[i,],nt),nr=nt,nc=nj,byrow=T)
       + outer(w[i,],beta_Gz[i,],"*")
       )  	  
   }
-    
-  for(t in tmin:nt){
-    ng[,t,] <- G[,t,] * ns[,t,]
-    no[,t,] <- So[,t,] * (ns[,t,]-ng[,t,])
-    nn[,t,] <- ng[,t,] * Y[,t,]
-    nnb[,t,] <- nn[,t,] * Sn[,t,]
-    if(t<nt) ns[,t+1,] <- nnb[,t,] + no[,t,]
-  }
-
-  outlist <- list(
-    ni=ni,nt=nt,nj=nj,
-    z=z,w=w,
-    G=G,So=So,Sn=Sn,
-    ns=ns,ng=ng,no=no,nn=nn,nnb=nnb
-    )
-  # all output files are for INVADER (resident already saved as pli)
   
+  Y <- plr$nn[itersetr,,,climpos] / plr$ng[itersetr,,,climpos]
+  Sn <- plr$Sn[itersetr,,,climpos]
+  So <- plr$So[itersetr,,,climpos]
+  
+  ri <- log(G*Y*Sn + (1-G)*So)
+  
+  outlist <- list(G=G,ri=ri)
+    # can calculate Y, Ye, and So from input (plr parameters)
+
   if(is.null(savefile)){
     return(outlist)
   }

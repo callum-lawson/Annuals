@@ -97,7 +97,7 @@ for(i in 1:length(pl)){
 ### SIMULATION PARAMETERS
 
 if(plasticity==F){
-  nsens <- 100
+  nsens <- 25
   Gsens <- data.frame(
     # alpha_G=qlogis(seq(0.001,0.999,length.out=nsens)),
     alpha_G=seq(-5,5,length.out=nsens),
@@ -115,7 +115,7 @@ if(plasticity==T){
   Gsens$beta_Gz <- with(Gsens,godbeta_f(tau_sd))
 }
 
-rpi <- 4 # number of replicated simulations per invasion
+rpi <- 40 # number of replicated simulations per invasion
 pls$go$alpha_G[,] <- rep(Gsens$alpha_G,each=rpi)
 pls$go$beta_Gz[,] <- rep(Gsens$beta_Gz,each=rpi)
   # still full 10000 iterations - subsetting done below
@@ -152,7 +152,7 @@ pls$go$beta_Gz[,] <- rep(Gsens$beta_Gz,each=rpi)
 # maml <- as.list(c(1,1,mpam,1,mpam,mpam))
 # msdl <- as.list(c(0,1,1,mpsd,mpsd,0))
 maml <- as.list(c(1,1,mpam))
-msdl <- as.list(c(0,1,mpsd))
+msdl <- as.list(c(0,1,1))
   # scaling mean log rainfall (zamo) only works because sign stays the same
 
 nclim <- length(maml)
@@ -161,7 +161,7 @@ ncores <- nclim*cpc
 mpos <- rep(1:nclim,each=cpc)
 
 nstart <- rep(1,nspecies)
-nt <- 100
+nt <- 30
 nj <- 22
   # min invader iterations per core = rpi * nsens
 tmin <- 10
@@ -243,7 +243,7 @@ simcombine <- function(insiml){
   
   varl <- insiml[[1]]
   nvar <- length(varl)
-  dimvar <- sapply(varl,dim)
+  dimvar <- lapply(varl,dim)
   ndimvar <- sapply(dimvar,length)
   firstmpos <- match(1:nclim,mpos)
   
@@ -273,13 +273,17 @@ simcombine <- function(insiml){
 
 psl <- as.list(rep(NA,ncores))
 for(n in 1:ncores){
-  psl[[n]] <- readRDS(paste0("Sims/res_",cnames_bycore[n],"_31Jul2017.rds"))
+  psl[[n]] <- readRDS(paste0("Sims/res_",cnames_bycore[n],"_01Aug2017.rds"))
 }
 names(psl) <- cnames_bycore
 
 psla <- simcombine(psl)
 
 # Invader simulations -----------------------------------------------------
+
+# Fast enough that no need to split this among cores any more?
+# Uncertainty: calculate optimum separately for each rep (long time series?), 
+# then show distribution of optimum?
 
 system.time({
   CL = makeCluster(ncores)
@@ -296,7 +300,7 @@ system.time({
       iterseti=itersetli[[cpos[n]]],
       itersetr=itersetlr[[cpos[n]]],
       ni=nii,nt=nt,nj=nj,      
-      tmin=tmin,nstart=nstart,
+      tmin=tmin,
       climpos=mpos[n],
       savefile=paste0("inv_",cnames_bycore[n]) # inv -> invaders
     )
@@ -308,7 +312,7 @@ system.time({
 
 psl2 <- as.list(rep(NA,ncores))
 for(n in 1:ncores){
-  psl2[[n]] <- readRDS(paste0("Sims/inv_",cnames_bycore[n],"_31Jul2017.rds"))
+  psl2[[n]] <- readRDS(paste0("Sims/inv_",cnames_bycore[n],"_01Aug2017.rds"))
 }
 names(psl2) <- cnames_bycore
 
@@ -331,16 +335,18 @@ matplot(t(log(psla2$ns[rep(!ex,each=nsens),,j,1])),type="l",
 
 # Pairwise invasibility plots ---------------------------------------------
 
+psla2$rbari <- with(psla2, apply(ri[,tmin:nt,,],c(1,3,4),mean))
+
 pinvf <- function(x){
   mean(x>0)
 }
-  # fraction to have grown by end of inteval
+  # fraction to have grown by end of interval
   
 pip <- array(dim=c(nsens,nsens,nj,nclim))
 for(m in 1:nclim){
   for(j in 1:nj){
     pip[,,j,m] <- tapply(
-      log(psla2$ns[,nt,j,m]),
+      psla2$rbari[,j,m],
       list(psla$G[iseqres,nt,j,m],psla2$G[,nt,j,m]),
       pinvf
       )
@@ -351,15 +357,21 @@ for(m in 1:nclim){
 # pip[,ex] <- NA
   # remove automatically extinct resident / invader
 
+Gmed <- with(msy,tapply(qlogis(germdhat/(olsdbar+germdhat)),species,median,na.rm=T))
+Gest <- apply(pl$go$alpha_G,2,median)
+pipplot(z=pip,xname=expression(G[r]),yname=expression(G[i]),pointvals=list(Gmed,Gest))
+
 alphaGseq <- Gsens$alpha_G
 image.plot(x=alphaGseq,y=alphaGseq,z=pip[,,19,1])
 abline(0,1)
 image.plot(x=alphaGseq,y=alphaGseq,z=pip[,,19,2])
 image.plot(x=alphaGseq,y=alphaGseq,z=pip[,,19,3])
   # resident on x, invader on y
-  # in "constant" environment, G>0.5 can invade regardless?
+  # patterns at high G for constant environment unclear because 
+  # take longer to displace?
 image.plot(x=alphaGseq,y=alphaGseq,z=pip[,,15,1])
 image.plot(x=alphaGseq,y=alphaGseq,z=pip[,,15,2])
+image.plot(x=alphaGseq,y=alphaGseq,z=pip[,,15,3])
 
 # Explaining PIP patterns -------------------------------------------------
 
