@@ -333,7 +333,8 @@ popana <- function(pl,ni,nt,nj=22,nstart,
 popinv <- function(
   pli,plr,iterseti,itersetr,
   ni,nt,nj=22,tmin=1,
-  climpos,savefile=NULL
+  climpos,full=T,
+  savefile=NULL
   ){
 
   cur_date <- format(Sys.Date(),"%d%b%Y")
@@ -358,7 +359,8 @@ popinv <- function(
   
   ri <- log(G*Y*Sn + (1-G)*So)
   
-  outlist <- list(G=G,ri=ri)
+  if(full==T) outlist <- list(G=G,ri=ri)
+  if(full==F) outlist <- list(rbari=apply(ri[,tmin:nt,],c(1,3),mean))
     # can calculate Y, Ye, and So from input (plr parameters)
 
   if(is.null(savefile)){

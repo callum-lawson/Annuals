@@ -577,7 +577,7 @@ diffplot <- function(xarr,yarr,refcl,t=NULL,xname,yname,xdiff=F,tran=50,...){
 
 # PIPs --------------------------------------------------------------------
 
-pipplot <- function(z,xname,yname,pointvals){
+pipplot <- function(z,xname,yname,pointvals=NULL,...){
 
   require(fields)
   
@@ -590,9 +590,11 @@ pipplot <- function(z,xname,yname,pointvals){
     
     for(j in 1:nspecies){
       
-      image(x=alphaGseq,y=alphaGseq,z=pip[,,j,m],col=tim.colors(100))
-      points(pointvals[[1]][j],pointvals[[1]][j],pch="+",cex=1.5)
-      points(pointvals[[2]][j],pointvals[[2]][j],pch=16,cex=1.5)
+      image(z=pip[,,j,m],col=tim.colors(100),...)
+      if(!is.null(pointvals)){
+        points(pointvals[[1]][j],pointvals[[1]][j],pch="+",cex=1.5)
+        points(pointvals[[2]][j],pointvals[[2]][j],pch=16,cex=1.5)
+      }
       
       lettlab(j)
       

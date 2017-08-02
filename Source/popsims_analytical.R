@@ -69,16 +69,9 @@ pl <- list(
 	rs = readRDS("Models/rs_pars_yearhet_squared_pc_trunc_05Mar2016.rds")
 	)
 
-### PARAMS FOR SENSITIVITY ANALYSES
-
-# transformed climate range approx. -1 -> 1
-tmrange <- c(-1,1)
-tsrange <- c(-2,2)
-pls <- pl
-plasticity <- F
-
 ### MEDIAN PARAMETERS
 
+pls <- pl
 for(i in 1:length(pl)){
   for(j in 1:length(pl[[i]])){
     ndim <- length(dim(pl[[i]][[j]])) 
@@ -94,10 +87,15 @@ for(i in 1:length(pl)){
   }
 }
 
-### SIMULATION PARAMETERS
+### PARAMS FOR SENSITIVITY ANALYSES
+
+# transformed climate range approx. -1 -> 1
+tmrange <- c(-1,1)
+tsrange <- c(-2,2)
+plasticity <- T
 
 if(plasticity==F){
-  nsens <- 25
+  nsens <- 100
   Gsens <- data.frame(
     # alpha_G=qlogis(seq(0.001,0.999,length.out=nsens)),
     alpha_G=seq(-5,5,length.out=nsens),
@@ -106,26 +104,48 @@ if(plasticity==F){
 }
 
 if(plasticity==T){
-  nsens <- 10 # total is square of this
-  Gsens <- expand.grid(
-    tau_mu = seq(tmrange[1],tmrange[2],length.out=nsens),
-    tau_sd = exp(seq(tsrange[1],tsrange[2],length.out=nsens))
-  )
+  neach <- 20
+  tau_scaled <- seq(tmrange[1],tmrange[2],length.out=neach)
+  tau_sd <- exp(seq(tsrange[1],tsrange[2],length.out=neach))
+  Gsens <- expand.grid(tau_scaled=tau_scaled,tau_sd=tau_sd)
+  Gsens$tau_mu <- with(Gsens, tau_scaled * tau_sd)
+  nsens <- nrow(Gsens) # = neach^2
   Gsens$alpha_G <- with(Gsens,godalpha_f(tau_mu,tau_sd))
   Gsens$beta_Gz <- with(Gsens,godbeta_f(tau_sd))
 }
 
-rpi <- 40 # number of replicated simulations per invasion
-pls$go$alpha_G[,] <- rep(Gsens$alpha_G,each=rpi)
-pls$go$beta_Gz[,] <- rep(Gsens$beta_Gz,each=rpi)
-  # still full 10000 iterations - subsetting done below
+# if(plasticity==T){
+#   neach <- 10
+#   tau_mu <- seq(-2,2,length.out=neach)
+#   beta_Gz <- seq(0.1,3,length.out=neach)
+#   Gsens <- expand.grid(tau_mu=tau_mu,beta_Gz=beta_Gz)
+#   Gsens$tau_sd <- with(Gsens,sqrt(pi^2/(3*beta_Gz^2)))
+#   Gsens$alpha_G <- with(Gsens,godalpha_f(tau_mu,tau_sd))
+#   nsens <- nrow(Gsens) # = neach^2
+# }
 
-# nplot <- 4
-# Gshow <- round(
-#   rep(seq(1,100,length.out=nplot),times=nplot)
-#   + rep(seq(0,nsens^2-nsens,length.out=nplot),each=nplot),
-#   0)
-# Gplot <- Gsens[Gshow,]
+# if(plasticity==T){
+#   neach <- 10
+#   alpha_G <- seq(-2,2,length.out=neach)
+#   tau_sd <- seq(0.1,3,length.out=neach)
+#   Gsens <- expand.grid(alpha_G=alpha_G,tau_sd=tau_sd)
+#   Gsens$beta_Gz <- with(Gsens,sqrt(pi^2/(3*tau_sd^2)))
+#   Gsens$tau_mu <- with(Gsens,-alpha_G/beta_Gz)
+#   nsens <- nrow(Gsens) # = neach^2
+# }
+
+rpi <- 25 # number of replicated simulations per invasion
+nio <- rpi*nsens
+pls$go$alpha_G <- pls$go$beta_Gz <- array(dim=c(nio,22))
+pls$go$alpha_G[1:nio,] <- rep(Gsens$alpha_G,each=rpi)
+pls$go$beta_Gz[1:nio,] <- rep(Gsens$beta_Gz,each=rpi)
+
+nplot <- 4
+Gshow <- round(
+  rep(seq(1,neach,length.out=nplot),times=nplot)
+  + rep(seq(0,neach^2-neach,length.out=nplot),each=nplot),
+  0)
+Gplot <- Gsens[Gshow,]
 
 # pdf(paste0("Plots/Germination_functions_", format(Sys.Date(),"%d%b%Y"),".pdf"),
 # 		width=7,height=7)
@@ -167,7 +187,6 @@ nj <- 22
 tmin <- 10
   # start time for invasion
 
-nio <- rpi*nsens
 iseqone <- 1:nio
 iseqres <- rep(iseqone, each=nsens)
 iseqinv <- rep(seq(1,nio,rpi), times=nio)
@@ -277,11 +296,11 @@ for(n in 1:ncores){
 }
 names(psl) <- cnames_bycore
 
+# psl[is.na(psl)] <- psl[1]
 psla <- simcombine(psl)
 
 # Invader simulations -----------------------------------------------------
 
-# Fast enough that no need to split this among cores any more?
 # Uncertainty: calculate optimum separately for each rep (long time series?), 
 # then show distribution of optimum?
 
@@ -302,6 +321,7 @@ system.time({
       ni=nii,nt=nt,nj=nj,      
       tmin=tmin,
       climpos=mpos[n],
+      full=F,
       savefile=paste0("inv_",cnames_bycore[n]) # inv -> invaders
     )
   })
@@ -312,7 +332,7 @@ system.time({
 
 psl2 <- as.list(rep(NA,ncores))
 for(n in 1:ncores){
-  psl2[[n]] <- readRDS(paste0("Sims/inv_",cnames_bycore[n],"_01Aug2017.rds"))
+  psl2[[n]] <- readRDS(paste0("Sims/inv_",cnames_bycore[n],"_02Aug2017.rds"))
 }
 names(psl2) <- cnames_bycore
 
@@ -333,7 +353,8 @@ matplot(t(log(psla2$ns[rep(!ex,each=nsens),,j,1])),type="l",
  # cols = RESIDENT population
  # lines = different strategies
 
-# Pairwise invasibility plots ---------------------------------------------
+
+# PIPs --------------------------------------------------------------------
 
 psla2$rbari <- with(psla2, apply(ri[,tmin:nt,,],c(1,3,4),mean))
 
@@ -359,7 +380,10 @@ for(m in 1:nclim){
 
 Gmed <- with(msy,tapply(qlogis(germdhat/(olsdbar+germdhat)),species,median,na.rm=T))
 Gest <- apply(pl$go$alpha_G,2,median)
-pipplot(z=pip,xname=expression(G[r]),yname=expression(G[i]),pointvals=list(Gmed,Gest))
+pipplot(z=pip,xname=expression(G[r]),yname=expression(G[i]),
+  pointvals=list(Gmed,Gest),
+  x=alphaGseq,y=alphaGseq
+  )
 
 alphaGseq <- Gsens$alpha_G
 image.plot(x=alphaGseq,y=alphaGseq,z=pip[,,19,1])
@@ -379,6 +403,30 @@ psla$Y <- with(psla,nn/ng)
 psla$Ye <- with(psla,nnb/ng)
 hist(log(psla$Y[,nt,19,1]),breaks=100)
 hist(log(psla$Ye[psla$G[,nt,19,1]>0.5,nt,19,1]),breaks=1000)
+
+# PIPs - multiple variables -----------------------------------------------
+
+tau_scaled_res <- rep(Gsens$tau_scaled,each=rpi)[iseqres]
+tau_scaled_inv <- rep(Gsens$tau_scaled,each=rpi)[iseqinv]
+tau_sd_res <- rep(Gsens$tau_sd,each=rpi)[iseqres]
+tau_sd_inv <- rep(Gsens$tau_sd,each=rpi)[iseqinv]
+
+intr <- rep(1:nsens,each=rpi)[iseqres]
+inti <- rep(1:nsens,each=rpi)[iseqinv]
+
+pip <- array(dim=c(nsens,nsens,nj,nclim))
+for(m in 1:nclim){
+  for(j in 1:nj){
+    pip[,,j,m] <- tapply(
+      psla2$rbari[,j,m],
+      list(intr,inti),
+      pinvf
+    )
+  }
+}
+
+pipplot(z=pip,xname=expression(G[r]),yname=expression(G[i]))
+
 
 
 
@@ -551,8 +599,7 @@ detledgetext <- c(
   paste0("nstart=",nstart[1]),
   paste0("ni=",ni),
   paste0("nt=",nt),
-  paste0("nj=",nj),
-  paste0("nk=",nk)
+  paste0("nj=",nj)
 )
 
 seriesplot(q_ns,"ns",yname=expression(ln(N[s])))
@@ -626,10 +673,7 @@ hist(qlogis(psla$G[i,,19,2]),breaks=1000)
 # Optimal parameters within species ---------------------------------------
 
 ### Germination
-parplot(goi$alpha_G,log(psla$ns),expression(alpha[G]),expression(ln(N[s15])),t=15)
-parplot(goi$beta_Gz,log(psla$ns),expression(beta[G]),expression(ln(N[s15])),t=15)
-
-parplot(gois$alpha_G,log(psla$ns),expression(alpha[G]),expression(ln(N[s15])),t=15,type="n")
+parplot(gois$alpha_G,log(psla$ns),expression(alpha[G]),expression(ln(N[s30])),t=30,type="n")
 parplot(gois$beta_Gz,log(psla$ns),expression(beta[G]),expression(ln(N[s15])),t=15,type="n")
 
 parplot(plogis(gois$alpha_G),log(psla$ns_p),expression(G),expression(ln(N[s50])),t=50,type="n",ylim=c(6,12))
