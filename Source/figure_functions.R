@@ -579,7 +579,7 @@ diffplot <- function(xarr,yarr,refcl,t=NULL,xname,yname,xdiff=F,tran=50,...){
 
 pipplot <- function(z,xname,yname,pointvals=NULL,...){
 
-  require(fields)
+  require(fields) # for tim.colors
   
   pdf(paste0("Plots/pipplot_",format(Sys.Date(),"%d%b%Y"),".pdf"), 
     width=plotwidth,height=plotheight)

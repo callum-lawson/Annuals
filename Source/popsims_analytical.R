@@ -1,6 +1,4 @@
-########################################################
-# Simulations of population dynamics for infinite area #
-########################################################
+### Simulations of population dynamics for infinite area ###
 
 library(plyr)
 library(reshape2)
@@ -91,7 +89,7 @@ for(i in 1:length(pl)){
 
 # transformed climate range approx. -1 -> 1
 tmrange <- c(-1,1)
-tsrange <- c(-2,2)
+tsrange <- c(-3,1)
 plasticity <- T
 
 if(plasticity==F){
@@ -105,14 +103,24 @@ if(plasticity==F){
 
 if(plasticity==T){
   neach <- 20
-  tau_scaled <- seq(tmrange[1],tmrange[2],length.out=neach)
-  tau_sd <- exp(seq(tsrange[1],tsrange[2],length.out=neach))
-  Gsens <- expand.grid(tau_scaled=tau_scaled,tau_sd=tau_sd)
-  Gsens$tau_mu <- with(Gsens, tau_scaled * tau_sd)
+  tau_mu <- seq(tmrange[1],tmrange[2],length.out=neach)
+  tau_sd <- 2^seq(tsrange[1],tsrange[2],length.out=neach)
+  Gsens <- expand.grid(tau_mu=tau_mu,tau_sd=tau_sd)
   nsens <- nrow(Gsens) # = neach^2
   Gsens$alpha_G <- with(Gsens,godalpha_f(tau_mu,tau_sd))
   Gsens$beta_Gz <- with(Gsens,godbeta_f(tau_sd))
 }
+
+# if(plasticity==T){
+#   neach <- 20
+#   tau_scaled <- seq(tmrange[1],tmrange[2],length.out=neach)
+#   tau_sd <- exp(seq(tsrange[1],tsrange[2],length.out=neach))
+#   Gsens <- expand.grid(tau_scaled=tau_scaled,tau_sd=tau_sd)
+#   Gsens$tau_mu <- with(Gsens, tau_scaled * tau_sd)
+#   nsens <- nrow(Gsens) # = neach^2
+#   Gsens$alpha_G <- with(Gsens,godalpha_f(tau_mu,tau_sd))
+#   Gsens$beta_Gz <- with(Gsens,godbeta_f(tau_sd))
+# }
 
 # if(plasticity==T){
 #   neach <- 10
@@ -140,13 +148,13 @@ pls$go$alpha_G <- pls$go$beta_Gz <- array(dim=c(nio,22))
 pls$go$alpha_G[1:nio,] <- rep(Gsens$alpha_G,each=rpi)
 pls$go$beta_Gz[1:nio,] <- rep(Gsens$beta_Gz,each=rpi)
 
-nplot <- 4
-Gshow <- round(
-  rep(seq(1,neach,length.out=nplot),times=nplot)
-  + rep(seq(0,neach^2-neach,length.out=nplot),each=nplot),
-  0)
-Gplot <- Gsens[Gshow,]
-
+# nplot <- 4
+# Gshow <- round(
+#   rep(seq(1,neach,length.out=nplot),times=nplot)
+#   + rep(seq(0,neach^2-neach,length.out=nplot),each=nplot),
+#   0)
+# Gplot <- Gsens[Gshow,]
+# 
 # pdf(paste0("Plots/Germination_functions_", format(Sys.Date(),"%d%b%Y"),".pdf"),
 # 		width=7,height=7)
 # par(mfrow=c(nplot,nplot),mar=c(3,3,1,1),las=1,ann=F,bty="l")
@@ -171,17 +179,17 @@ Gplot <- Gsens[Gshow,]
 
 # maml <- as.list(c(1,1,mpam,1,mpam,mpam))
 # msdl <- as.list(c(0,1,1,mpsd,mpsd,0))
-maml <- as.list(c(1,1,mpam))
-msdl <- as.list(c(0,1,1))
+maml <- as.list(c(1,mpam))
+msdl <- as.list(c(1,1))
   # scaling mean log rainfall (zamo) only works because sign stays the same
 
 nclim <- length(maml)
-cpc <- 20 # CORES per CLIMATE (assumed equal for resident and invader)
+cpc <- 40 # CORES per CLIMATE (assumed equal for resident and invader)
 ncores <- nclim*cpc
 mpos <- rep(1:nclim,each=cpc)
 
 nstart <- rep(1,nspecies)
-nt <- 30
+nt <- 100
 nj <- 22
   # min invader iterations per core = rpi * nsens
 tmin <- 10
@@ -245,6 +253,7 @@ parLapply(CL, 1:ncores, function(n){
 	})
 stopCluster(CL)
 })
+  # 5.1 hours
 
 # Read resident simulations back in ---------------------------------------
 
@@ -292,7 +301,7 @@ simcombine <- function(insiml){
 
 psl <- as.list(rep(NA,ncores))
 for(n in 1:ncores){
-  psl[[n]] <- readRDS(paste0("Sims/res_",cnames_bycore[n],"_01Aug2017.rds"))
+  psl[[n]] <- readRDS(paste0("Sims/res_",cnames_bycore[n],"_04Aug2017.rds"))
 }
 names(psl) <- cnames_bycore
 
@@ -327,12 +336,13 @@ system.time({
   })
   stopCluster(CL)
 })
+  # 18 mins
 
 # Read invader simulations back in ----------------------------------------
 
 psl2 <- as.list(rep(NA,ncores))
 for(n in 1:ncores){
-  psl2[[n]] <- readRDS(paste0("Sims/inv_",cnames_bycore[n],"_02Aug2017.rds"))
+  psl2[[n]] <- readRDS(paste0("Sims/inv_",cnames_bycore[n],"_04Aug2017.rds"))
 }
 names(psl2) <- cnames_bycore
 
@@ -406,8 +416,8 @@ hist(log(psla$Ye[psla$G[,nt,19,1]>0.5,nt,19,1]),breaks=1000)
 
 # PIPs - multiple variables -----------------------------------------------
 
-tau_scaled_res <- rep(Gsens$tau_scaled,each=rpi)[iseqres]
-tau_scaled_inv <- rep(Gsens$tau_scaled,each=rpi)[iseqinv]
+tau_mu_res <- rep(Gsens$tau_mu,each=rpi)[iseqres]
+tau_mu_inv <- rep(Gsens$tau_mu,each=rpi)[iseqinv]
 tau_sd_res <- rep(Gsens$tau_sd,each=rpi)[iseqres]
 tau_sd_inv <- rep(Gsens$tau_sd,each=rpi)[iseqinv]
 
@@ -427,12 +437,43 @@ for(m in 1:nclim){
 
 pipplot(z=pip,xname=expression(G[r]),yname=expression(G[i]))
 
+pipmin <- apply(pip,2:4,min)
+pipopt <- apply(pipmin,2:3,function(x) which(x==max(x)))  
+  # taking only first optimum!
 
+j <- 19
+m <- 2
+with(pls$go, 
+  curve(plogis(alpha_G[1,j] * beta_Gz[1,j]*x),n=10^4,xlim=c(-1,1))
+)
 
+curopt <- unlist(pipopt[j,m])
+for(i in 1:length(curopt)){
+  with(Gsens[unlist(curopt[i]),],
+    curve(plogis(alpha_G * beta_Gz*x),col="red",add=T)
+    )
+}
 
+# Optimal species parameters ----------------------------------------------
 
+tmin <- 10
+pop <- array(dim=c(neach,neach,nj,nclim))
 
+for(m in 1:nclim){
+  for(j in 1:nj){
+    pop[,,j,m] <- tapply(
+      psla$ns[,tmin:nt,j,m],
+      as.list(Gsens[rep(rep(1:nsens,each=rpi),times=nt-tmin+1),c("tau_mu","tau_sd")]),
+      median
+    )
+  }
+}
 
+j <- 15
+image.plot(x=tau_mu,y=log(tau_sd),z=pop[,,j,m],col=tim.colors(rpi))
+  # small differences in tau_mu only matter when lots of years to distinguish them
+
+# OLD STUFF #
 
 # Extract parameters used in simulations ----------------------------------
 
