@@ -335,7 +335,7 @@ popinv <- function(
   z,w,alpha_G,beta_Gz,
   Y,Sn,So,
   ni,nt,nj=22,tmin=1,
-  climpos,full=T,
+  full=T,
   savefile=NULL
   ){
 

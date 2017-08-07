@@ -325,6 +325,7 @@ system.time({
     "tmin"
   )) 
   parLapply(CL, 1:ncores, function(n){
+    climpos=mpos[n]
     iterseti <- itersetli[[cpos[n]]]
     itersetr <- itersetlr[[cpos[n]]]
     popinv(  
@@ -337,7 +338,6 @@ system.time({
       So=psla$So[itersetr,,,climpos],
       ni=nii,nt=nt,nj=nj,      
       tmin=tmin,
-      climpos=mpos[n],
       full=F,
       savefile=paste0("inv_",cnames_bycore[n]) # inv -> invaders
     )
