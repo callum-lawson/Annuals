@@ -184,7 +184,7 @@ msdl <- as.list(c(1,1))
   # scaling mean log rainfall (zamo) only works because sign stays the same
 
 nclim <- length(maml)
-cpc <- 10 # CORES per CLIMATE (assumed equal for resident and invader)
+cpc <- 40 # CORES per CLIMATE (assumed equal for resident and invader)
 ncores <- nclim*cpc
 mpos <- rep(1:nclim,each=cpc)
 
@@ -314,43 +314,50 @@ psla$Y <- with(psla, nn/ng)
 
 # Clunky input because saves on total RAM used
 
-system.time({
-  CL = makeCluster(ncores)
-  clusterExport(cl=CL, c(
-    "popinv","mpos","cpos",
-    "pls", "psla",
-    "itersetli","itersetlr",
-    "nii","nt","nj","nstart",
-    "cnames_bycore",
-    "tmin"
-  )) 
-  parLapply(CL, 1:ncores, function(n){
-    climpos=mpos[n]
-    iterseti <- itersetli[[cpos[n]]]
-    itersetr <- itersetlr[[cpos[n]]]
-    popinv(  
-      z=psla$z[itersetr,,climpos],
-      w=psla$w[itersetr,,climpos],
-      alpha_G=pls$go$alpha_G[iterseti,], # change list names if needed
-      beta_Gz=pls$go$beta_Gz[iterseti,], 
-      Y=psla$Y[itersetr,,,climpos],
-      Sn=psla$Sn[itersetr,,,climpos],
-      So=psla$So[itersetr,,,climpos],
-      ni=nii,nt=nt,nj=nj,      
-      tmin=tmin,
-      full=F,
-      savefile=paste0("inv_",cnames_bycore[n]) # inv -> invaders
-    )
+nchunk <- 10
+lchunk <- ncores/nchunk
+corechunk <- split(1:ncores,rep(1:nchunk,each=lchunk))
+for(c in 1:nchunk){ # 1:length(corechunk)
+  curchunk <- corechunk[[c]]
+  system.time({
+    CL = makeCluster(ncores)
+    clusterExport(cl=CL, c(
+      "popinv","mpos","cpos",
+      "pls", "psla",
+      "itersetli","itersetlr",
+      "nii","nt","nj","nstart",
+      "cnames_bycore",
+      "tmin",
+      "curchunk"
+    )) 
+    parLapply(CL, curchunk, function(n){ # doing piece-by-piece to save RAM
+      climpos <- mpos[n]
+      iterseti <- itersetli[[cpos[n]]]
+      itersetr <- itersetlr[[cpos[n]]]
+      popinv(  
+        z=psla$z[itersetr,,climpos],
+        w=psla$w[itersetr,,climpos],
+        alpha_G=pls$go$alpha_G[iterseti,], # change list names if needed
+        beta_Gz=pls$go$beta_Gz[iterseti,], 
+        Y=psla$Y[itersetr,,,climpos],
+        Sn=psla$Sn[itersetr,,,climpos],
+        So=psla$So[itersetr,,,climpos],
+        ni=nii,nt=nt,nj=nj,      
+        tmin=tmin,
+        full=F,
+        savefile=paste0("inv_",cnames_bycore[n]) # inv -> invaders
+      )
+    })
+    stopCluster(CL)
   })
-  stopCluster(CL)
-})
   # 18 mins
-
+}
+  
 # Read invader simulations back in ----------------------------------------
 
 psl2 <- as.list(rep(NA,ncores))
 for(n in 1:ncores){
-  psl2[[n]] <- readRDS(paste0("Sims/inv_",cnames_bycore[n],"_04Aug2017.rds"))
+  psl2[[n]] <- readRDS(paste0("Sims/inv_",cnames_bycore[n],"_07Aug2017.rds"))
 }
 names(psl2) <- cnames_bycore
 
