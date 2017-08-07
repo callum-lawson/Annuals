@@ -331,19 +331,15 @@ popana <- function(pl,ni,nt,nj=22,nstart,
 }
 
 popinv <- function(
-  pli,plr,iterseti,itersetr,
+  # pli,plr,iterseti,itersetr,
+  z,w,alpha_G,beta_Gz,
+  Y,Sn,So,
   ni,nt,nj=22,tmin=1,
   climpos,full=T,
   savefile=NULL
   ){
 
   cur_date <- format(Sys.Date(),"%d%b%Y")
-  
-  z <- plr$z[itersetr,,climpos]
-  w <- plr$w[itersetr,,climpos]
-  
-  alpha_G <- pli$go$alpha_G[iterseti,]
-  beta_Gz <- pli$go$beta_Gz[iterseti,]  
   
   G <- array(dim=c(ni,nt,nj))
   for(i in 1:ni){
@@ -352,11 +348,7 @@ popinv <- function(
       + outer(w[i,],beta_Gz[i,],"*")
       )  	  
   }
-  
-  Y <- plr$nn[itersetr,,,climpos] / plr$ng[itersetr,,,climpos]
-  Sn <- plr$Sn[itersetr,,,climpos]
-  So <- plr$So[itersetr,,,climpos]
-  
+
   ri <- log(G*Y*Sn + (1-G)*So)
   
   if(full==T) outlist <- list(G=G,ri=ri)

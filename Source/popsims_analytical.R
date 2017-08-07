@@ -184,7 +184,7 @@ msdl <- as.list(c(1,1))
   # scaling mean log rainfall (zamo) only works because sign stays the same
 
 nclim <- length(maml)
-cpc <- 40 # CORES per CLIMATE (assumed equal for resident and invader)
+cpc <- 10 # CORES per CLIMATE (assumed equal for resident and invader)
 ncores <- nclim*cpc
 mpos <- rep(1:nclim,each=cpc)
 
@@ -254,6 +254,7 @@ parLapply(CL, 1:ncores, function(n){
 stopCluster(CL)
 })
   # 5.1 hours
+  # 9.5 hours (80 cores)
 
 # Read resident simulations back in ---------------------------------------
 
@@ -301,17 +302,17 @@ simcombine <- function(insiml){
 
 psl <- as.list(rep(NA,ncores))
 for(n in 1:ncores){
-  psl[[n]] <- readRDS(paste0("Sims/res_",cnames_bycore[n],"_04Aug2017.rds"))
+  psl[[n]] <- readRDS(paste0("Sims/res_",cnames_bycore[n],"_06Aug2017.rds"))
 }
 names(psl) <- cnames_bycore
 
 # psl[is.na(psl)] <- psl[1]
 psla <- simcombine(psl)
+psla$Y <- with(psla, nn/ng)
 
 # Invader simulations -----------------------------------------------------
 
-# Uncertainty: calculate optimum separately for each rep (long time series?), 
-# then show distribution of optimum?
+# Clunky input because saves on total RAM used
 
 system.time({
   CL = makeCluster(ncores)
@@ -324,9 +325,16 @@ system.time({
     "tmin"
   )) 
   parLapply(CL, 1:ncores, function(n){
-    popinv(pli=pls,plr=psla,
-      iterseti=itersetli[[cpos[n]]],
-      itersetr=itersetlr[[cpos[n]]],
+    iterseti <- itersetli[[cpos[n]]]
+    itersetr <- itersetlr[[cpos[n]]]
+    popinv(  
+      z=psla$z[itersetr,,climpos],
+      w=psla$w[itersetr,,climpos],
+      alpha_G=pls$go$alpha_G[iterseti,], # change list names if needed
+      beta_Gz=pls$go$beta_Gz[iterseti,], 
+      Y=psla$Y[itersetr,,,climpos],
+      Sn=psla$Sn[itersetr,,,climpos],
+      So=psla$So[itersetr,,,climpos],
       ni=nii,nt=nt,nj=nj,      
       tmin=tmin,
       climpos=mpos[n],
@@ -444,18 +452,19 @@ pipopt <- apply(pipmin,2:3,function(x) which(x==max(x)))
 j <- 19
 m <- 2
 with(pls$go, 
-  curve(plogis(alpha_G[1,j] * beta_Gz[1,j]*x),n=10^4,xlim=c(-1,1))
+  curve(plogis(alpha_G[1,j] + beta_Gz[1,j]*x),n=10^4,xlim=c(-1,1))
 )
 
 curopt <- unlist(pipopt[j,m])
 for(i in 1:length(curopt)){
   with(Gsens[unlist(curopt[i]),],
-    curve(plogis(alpha_G * beta_Gz*x),col="red",add=T)
+    curve(plogis(alpha_G + beta_Gz*x),col="red",add=T)
     )
 }
 
 # Optimal species parameters ----------------------------------------------
 
+require(fields)
 tmin <- 10
 pop <- array(dim=c(neach,neach,nj,nclim))
 
@@ -469,8 +478,20 @@ for(m in 1:nclim){
   }
 }
 
-j <- 15
-image.plot(x=tau_mu,y=log(tau_sd),z=pop[,,j,m],col=tim.colors(rpi))
+j <- 19
+image.plot(x=tau_mu,y=log(tau_sd),z=pop[,,j,1],col=tim.colors(rpi))
+image.plot(x=tau_mu,y=log(tau_sd),z=pop[,,j,2],col=tim.colors(rpi))
+
+best1 <- which(pop[,,j,1]==max(pop[,,j,1]))
+best2 <- which(pop[,,j,2]==max(pop[,,j,2]))
+
+with(Gsens, 
+  curve(plogis(alpha_G[best1] + beta_Gz[best1]*x),n=10^4,
+    xlim=c(-2,2),ylim=c(0,1))
+)
+with(Gsens, 
+  curve(plogis(alpha_G[best2] + beta_Gz[best2]*x),n=10^4,col="red",add=T)
+)
   # small differences in tau_mu only matter when lots of years to distinguish them
 
 # OLD STUFF #
