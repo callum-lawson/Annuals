@@ -189,7 +189,7 @@ ncores <- nclim*cpc
 mpos <- rep(1:nclim,each=cpc)
 
 nstart <- rep(1,nspecies)
-nt <- 100
+nt <- 250
 nj <- 22
   # min invader iterations per core = rpi * nsens
 tmin <- 10

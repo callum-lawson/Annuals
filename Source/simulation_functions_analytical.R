@@ -180,7 +180,7 @@ popana <- function(pl,ni,nt,nj=22,nstart,
 	
 	### CREATE DENSITY STORAGE OBJECTS ###
 
-	ns <- ng <- no <- nn <- nnb <- array(NA,c(ni,nt,nj))
+	ns <- ng <- nn <- array(NA,c(ni,nt,nj))
 		# summed counts - permanently saved
 	G <- m0 <- m1 <- So <- Sn <- array(NA,c(ni,nt,nj))
 		# derived params - permanently saved
@@ -212,11 +212,6 @@ popana <- function(pl,ni,nt,nj=22,nstart,
 			### GERMINATION ###
 		
 			ng[i,t,] <- G[i,t,] * ns[i,t,]
-
-			### OLD SEED SURVIVAL ###
-
-			no[i,t,] <- So[i,t,] * (ns[i,t,]-ng[i,t,])
-				# no defined at START of year, so same for initial year too
 
 			### REPRODUCTION ###
 
@@ -298,14 +293,10 @@ popana <- function(pl,ni,nt,nj=22,nstart,
 			  } # close j loop
 
 			Sn[i,t,] <- BHS(nn[i,t,],m0[i,t,],m1[i,t,])
-			
-			### NEW SEED SURVIVAL ###
-
-			nnb[i,t,] <- Sn[i,t,]*nn[i,t,]
 		
 			### BURIED SEED DENSITY ###
 
-			if(t<nt) ns[i,t+1,] <- nnb[i,t,] + no[i,t,]
+			if(t<nt) ns[i,t+1,] <- So[i,t,]*(ns[i,t,]-ng[i,t,]) + Sn[i,t,]*nn[i,t,]
 
 			} # t loop
 
@@ -316,8 +307,8 @@ popana <- function(pl,ni,nt,nj=22,nstart,
 	  ni=ni,nt=nt,nj=nj,
 	  z=z,w=w,
 	  G=G,So=So,Sn=Sn,
-	  ns=ns,ng=ng,no=no,nn=nn,nnb=nnb,
-	  eps_y_p=eps_y_p,eps_y_r=eps_y_r
+	  ns=ns,ng=ng,nn=nn # nnb=nnb, no=no,
+	  # eps_y_p=eps_y_p,eps_y_r=eps_y_r
 	  )
 
 	if(is.null(savefile)){
