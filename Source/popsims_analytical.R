@@ -317,7 +317,7 @@ psla$Y <- with(psla, nn/ng)
 nchunk <- 10
 lchunk <- ncores/nchunk
 corechunk <- split(1:ncores,rep(1:nchunk,each=lchunk))
-for(c in 1:nchunk){ # 1:length(corechunk)
+for(c in 3:nchunk){ # 1:length(corechunk)
   curchunk <- corechunk[[c]]
   system.time({
     CL = makeCluster(ncores)
@@ -431,6 +431,10 @@ hist(log(psla$Ye[psla$G[,nt,19,1]>0.5,nt,19,1]),breaks=1000)
 
 # PIPs - multiple variables -----------------------------------------------
 
+pinvf <- function(x){
+  mean(x>0)
+}
+
 tau_mu_res <- rep(Gsens$tau_mu,each=rpi)[iseqres]
 tau_mu_inv <- rep(Gsens$tau_mu,each=rpi)[iseqinv]
 tau_sd_res <- rep(Gsens$tau_sd,each=rpi)[iseqres]
@@ -452,54 +456,60 @@ for(m in 1:nclim){
 
 pipplot(z=pip,xname=expression(G[r]),yname=expression(G[i]))
 
-pipmin <- apply(pip,2:4,min)
+pipmin <- apply(pip,2:4,min,na.rm=T)
 pipopt <- apply(pipmin,2:3,function(x) which(x==max(x)))  
   # taking only first optimum!
-
-j <- 19
-m <- 2
-with(pls$go, 
-  curve(plogis(alpha_G[1,j] + beta_Gz[1,j]*x),n=10^4,xlim=c(-1,1))
-)
-
-curopt <- unlist(pipopt[j,m])
-for(i in 1:length(curopt)){
-  with(Gsens[unlist(curopt[i]),],
-    curve(plogis(alpha_G + beta_Gz*x),col="red",add=T)
-    )
-}
 
 # Optimal species parameters ----------------------------------------------
 
 require(fields)
-tmin <- 10
-pop <- array(dim=c(neach,neach,nj,nclim))
+tmin <- 15
 
+popmed <- apply(log(psla$ns[,tmin:nt,,]),c(1,3,4),median)
+pop <- array(dim=c(neach,neach,nj,nclim))
 for(m in 1:nclim){
   for(j in 1:nj){
     pop[,,j,m] <- tapply(
-      psla$ns[,tmin:nt,j,m],
-      as.list(Gsens[rep(rep(1:nsens,each=rpi),times=nt-tmin+1),c("tau_mu","tau_sd")]),
+      popmed[,j,m],
+      as.list(Gsens[rep(1:nsens,each=rpi),c("tau_mu","tau_sd")]),
       median
     )
   }
 }
 
-j <- 19
-image.plot(x=tau_mu,y=log(tau_sd),z=pop[,,j,1],col=tim.colors(rpi))
-image.plot(x=tau_mu,y=log(tau_sd),z=pop[,,j,2],col=tim.colors(rpi))
+goodpop <- pop
+goodpop[goodpop < -1] <- NA
+image.plot(x=tau_mu,y=log(tau_sd),z=goodpop[,,j,1])
+image.plot(x=tau_mu,y=log(tau_sd),z=goodpop[,,j,2])
 
-best1 <- which(pop[,,j,1]==max(pop[,,j,1]))
-best2 <- which(pop[,,j,2]==max(pop[,,j,2]))
+popopt <- apply(pop,3:4,function(x) which(x==max(x)))  
 
-with(Gsens, 
-  curve(plogis(alpha_G[best1] + beta_Gz[best1]*x),n=10^4,
-    xlim=c(-2,2),ylim=c(0,1))
-)
-with(Gsens, 
-  curve(plogis(alpha_G[best2] + beta_Gz[best2]*x),n=10^4,col="red",add=T)
-)
+# Compare individual and species optima -----------------------------------
+
+j <- 4
+
+for(m in 1:nclim){
+  
+  curpipopt <- unlist(pipopt[j,m])
+  curpopopt <- unlist(popopt[j,m])
+  
+  for(i in 1:length(curpipopt)){
+    with(Gsens[unlist(curpipopt[i]),],{
+      if(m==1) curve(plogis(alpha_G + beta_Gz*x),col=m,xlim=c(-2,0),ylim=c(0,1))
+      if(m!=1) curve(plogis(alpha_G + beta_Gz*x),col=m,add=T)
+    })
+  }
+  
+  for(i in 1:length(curpopopt)){
+    with(Gsens, 
+      curve(plogis(alpha_G[curpopopt[i]] + beta_Gz[curpopopt[i]]*x),n=10^4,add=T,lty=2,col=m)
+      )
+  }
+  
+}
   # small differences in tau_mu only matter when lots of years to distinguish them
+
+
 
 # OLD STUFF #
 
