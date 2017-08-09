@@ -88,7 +88,7 @@ for(i in 1:length(pl)){
 ### PARAMS FOR SENSITIVITY ANALYSES
 
 # transformed climate range approx. -1 -> 1
-tmrange <- c(-1,1)
+tmrange <- c(-1.5,0.5)
 tsrange <- c(-3,1)
 plasticity <- T
 
@@ -102,7 +102,7 @@ if(plasticity==F){
 }
 
 if(plasticity==T){
-  neach <- 20
+  neach <- 10
   tau_mu <- seq(tmrange[1],tmrange[2],length.out=neach)
   tau_sd <- 2^seq(tsrange[1],tsrange[2],length.out=neach)
   Gsens <- expand.grid(tau_mu=tau_mu,tau_sd=tau_sd)
@@ -142,7 +142,7 @@ if(plasticity==T){
 #   nsens <- nrow(Gsens) # = neach^2
 # }
 
-rpi <- 25 # number of replicated simulations per invasion
+rpi <- 50 # number of replicated simulations per invasion
 nio <- rpi*nsens
 pls$go$alpha_G <- pls$go$beta_Gz <- array(dim=c(nio,22))
 pls$go$alpha_G[1:nio,] <- rep(Gsens$alpha_G,each=rpi)
@@ -184,15 +184,15 @@ msdl <- as.list(c(1,1))
   # scaling mean log rainfall (zamo) only works because sign stays the same
 
 nclim <- length(maml)
-cpc <- 40 # CORES per CLIMATE (assumed equal for resident and invader)
+cpc <- 25 # CORES per CLIMATE (assumed equal for resident and invader)
 ncores <- nclim*cpc
 mpos <- rep(1:nclim,each=cpc)
 
 nstart <- rep(1,nspecies)
-nt <- 250
+nt <- 100
 nj <- 22
   # min invader iterations per core = rpi * nsens
-tmin <- 10
+tmin <- 15
   # start time for invasion
 
 iseqone <- 1:nio
@@ -255,6 +255,7 @@ stopCluster(CL)
 })
   # 5.1 hours
   # 9.5 hours (80 cores)
+  # 6.5 hours (25 cores)
 
 # Read resident simulations back in ---------------------------------------
 
@@ -302,7 +303,7 @@ simcombine <- function(insiml){
 
 psl <- as.list(rep(NA,ncores))
 for(n in 1:ncores){
-  psl[[n]] <- readRDS(paste0("Sims/res_",cnames_bycore[n],"_06Aug2017.rds"))
+  psl[[n]] <- readRDS(paste0("Sims/res_",cnames_bycore[n],"_08Aug2017.rds"))
 }
 names(psl) <- cnames_bycore
 
@@ -317,7 +318,7 @@ psla$Y <- with(psla, nn/ng)
 nchunk <- 10
 lchunk <- ncores/nchunk
 corechunk <- split(1:ncores,rep(1:nchunk,each=lchunk))
-for(c in 3:nchunk){ # 1:length(corechunk)
+for(c in 1:nchunk){ # 1:length(corechunk)
   curchunk <- corechunk[[c]]
   system.time({
     CL = makeCluster(ncores)
@@ -357,7 +358,7 @@ for(c in 3:nchunk){ # 1:length(corechunk)
 
 psl2 <- as.list(rep(NA,ncores))
 for(n in 1:ncores){
-  psl2[[n]] <- readRDS(paste0("Sims/inv_",cnames_bycore[n],"_07Aug2017.rds"))
+  psl2[[n]] <- readRDS(paste0("Sims/inv_",cnames_bycore[n],"_09Aug2017.rds"))
 }
 names(psl2) <- cnames_bycore
 
@@ -880,13 +881,13 @@ log(apply(goi$taun,2,median)*10*nk)
 
 # Individual runs ---------------------------------------------------------
 
-with(psla,matplot(t(log(ns[1:5,,17,1])),type="l",lty=1))
+with(psla,matplot(t(log(ns[1:5,,19,1])),type="l",lty=1))
   # not overcompensating DD because doesn't switch direction every year
   # always some variation because of random year terms in reproduction
-with(psla,matplot(t(log(Y[1:5,,17,1])),type="l",lty=1))
+with(psla,matplot(t(log(Y[1:5,,19,1])),type="l",lty=1))
 abline(h=0,lty=3)
   # basically never falls below replacement rate
-with(psla,matplot(t(log(Y[1:5,,17,5])),type="l",lty=1))
+with(psla,matplot(t(log(Y[1:5,,19,5])),type="l",lty=1))
 abline(h=0,lty=3)
   # often below replacement rate
 
