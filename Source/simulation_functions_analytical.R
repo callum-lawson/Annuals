@@ -343,20 +343,15 @@ fnn <- function(x,
   sig_a_p,sig_s_r,phi
   ){
   
-  lg <- x[1,] # log(N[g]) for a given plot
-  lp <- x[2,] # logit(Pr(Y>1)) for a given g
-  lr <- x[3,] # log(Y|Y>1) for a given g
+  lg <- x[1] # log(N[g]) for a given plot
+  lp <- x[2] # logit(Pr(Y>1)) for a given g
+  lr <- x[3] # log(Y|Y>1) for a given g
   
   dg <- dnorm(lg,mean=lgmu,sd=sig_s_g)
-  
-  ngl = ncol(x)
-  x_t <- matrix(nr=ngl,nc=4)
-  x_t[,1:3] <- rep(xvec,each=ngl) 
-  x_t[,4] <- lg - log(tau_d/10)
   # tau_d/10 density adjustment explained above
   
-  pi_bar_t <- beta_p %*% t(x_t)
-  eta_bar_t <- beta_r %*% t(x_t)
+  pi_bar_t <- beta_p %*% c(xvec, lg - log(tau_d/10))
+  eta_bar_t <- beta_r %*% c(xvec, lg - log(tau_d/10))
   # each density (lng) has own associated world of sites
   # but spatial aspects of pr(Y>0) and pr(Y|Y>0) considered independent,
   # so can be simply added together
@@ -385,7 +380,7 @@ fnn <- function(x,
   # expected log density of new seeds for each possible germinant density
   # log-transforming to try and improve numerical stability
   
-  matrix(exp(log(dg) + lnY_t),nr=1,nc=ngl)
+  exp(log(dg) + lnY_t)
   # expected overall mean density of seeds
 } 
 
@@ -404,7 +399,7 @@ popana2D <- function(pl,ni,nt,nj=22,nstart,
   if(ni*nt*nj > 10^9 | ni*nt*nj > 10^9) stop("matrices are too large")
   
   require(MASS) # for negative binomial distribution
-  require(cubature) # for 2D integration
+  require(R2Cuba) # for 2D integration
   
   cur_date <- format(Sys.Date(),"%d%b%Y")
   
@@ -584,15 +579,15 @@ popana2D <- function(pl,ni,nt,nj=22,nstart,
           
           # fnn(x<-matrix(c(glo,plo,rlo,ghi,phi,rhi),nc=2,nr=3))
           
-          nn[i,t,j] <- pcubature(f=fnn,
+          nn[i,t,j] <- cuhre(ndim=3,ncomp=1,integrand=fnn,
             lgmu=lgmu,sig_s_g=sig_s_g[i,j],
             xvec=xvec,beta_p=beta_p[i,j,],beta_r=beta_r[i,j,],
             eps_y_p=eps_y_p[i,t,j],eps_y_r=eps_y_r[i,t,j],
             sig_a_p=sig_a_p[i],sig_s_r=sig_s_r[i],phi=phi[i],
-            lowerLimit = c(glo, prlo, rslo),
-            upperLimit = c(ghi, prhi, rshi),
-            vectorInterface = TRUE,
-            tol=rel.tol)$integral
+            lower = c(glo, prlo, rslo),
+            upper = c(ghi, prhi, rshi),
+            rel.tol=rel.tol,
+            flags=list(verbose=0))$value
           # finite limits required to stop integration from crashing
           # We strongly advise vectorization; see vignette
           
