@@ -4,7 +4,7 @@
 
 # check <- rtrunc(n=10^6,spec="nbinom",
 #        mu=exp(rnorm(10^6,eta_bar_t[l,j]+eps_y_r[i,t,j],sig_s_r[i])),
-#        size=rep(phi[i],10^6),
+#        size=rep(phi_r[i],10^6),
 #        a=0)
 # 
 # ni <- 2
@@ -336,34 +336,43 @@ system.time({
 
 }
 
-fnn <- function(x,
+fnn2D <- function(x,y,z,
   lgmu,sig_s_g,
   xvec,beta_p,beta_r,
   eps_y_p,eps_y_r,
-  sig_a_p,sig_s_r,phi
+  sig_a_p,sig_s_r,phi_r
   ){
   
-  lg <- x[1] # log(N[g]) for a given plot
-  lp <- x[2] # logit(Pr(Y>1)) for a given g
-  lr <- x[3] # log(Y|Y>1) for a given g
+  # x = log(N[g]) for a given plot
+  # y = logit(Pr(Y>1)) for a given g
+  # z = log(Y|Y>1) for a given g
   
-  dg <- dnorm(lg,mean=lgmu,sd=sig_s_g)
+  dg <- dnorm(x,mean=lgmu,sd=sig_s_g)
   # tau_d/10 density adjustment explained above
   
-  pi_bar_t <- beta_p %*% c(xvec, lg - log(tau_d/10))
-  eta_bar_t <- beta_r %*% c(xvec, lg - log(tau_d/10))
+  # ngl = ncol(x)
+  # x_t <- matrix(nr=ngl,nc=4)
+  # x_t[,1:3] <- rep(xvec,each=ngl) 
+  # x_t[,4] <- lg - log(tau_d/10)
+  # # tau_d/10 density adjustment explained above
+  # 
+  # pi_bar_t <- beta_p %*% t(x_t)
+  # eta_bar_t <- beta_r %*% t(x_t)
+  
+  pi_bar_t <- beta_p %*% c(xvec, x - log(tau_d/10))
+  eta_bar_t <- beta_r %*% c(xvec, x - log(tau_d/10))
   # each density (lng) has own associated world of sites
   # but spatial aspects of pr(Y>0) and pr(Y|Y>0) considered independent,
   # so can be simply added together
   # can't average across years in this way because non-independent
   
-  pr_t <- plogis(lp) * dnorm(lp, 
+  pr_t <- plogis(y) * dnorm(y, 
     mean = pi_bar_t + eps_y_p, 
     sd = sig_a_p
     )
   # code borrowed from logitnorm package
   
-  rs_t <- nbtmean(mu=exp(lr),phi) * dnorm(lr, 
+  rs_t <- nbtmean(mu=exp(z),phi_r) * dnorm(z, 
     mean = eta_bar_t + eps_y_r, 
     sd = sig_s_r
     )
@@ -371,12 +380,12 @@ fnn <- function(x,
   # - each of these values produces a mean from a trunc negbin dist
   # - then integrate to calculate the mean of these means
   # - can be done because:
-  # sum(negbin(lognormal(mu,sig),phi)) 
-  # = sum( negbin(exp(mu+sig),phi) + negbin(exp(mu,-sig),phi) )
+  # sum(negbin(lognormal(mu,sig),phi_r)) 
+  # = sum( negbin(exp(mu+sig),phi_r) + negbin(exp(mu,-sig),phi_r) )
   # Ref: Econometric Analysis of Count Data - Rainer Winkelmann 
   # (checked by simulation that still works with zero-truncation)
   
-  lnY_t <- lg + log(pr_t) + log(rs_t)
+  lnY_t <- x + log(pr_t) + log(rs_t)
   # expected log density of new seeds for each possible germinant density
   # log-transforming to try and improve numerical stability
   
@@ -399,7 +408,7 @@ popana2D <- function(pl,ni,nt,nj=22,nstart,
   if(ni*nt*nj > 10^9 | ni*nt*nj > 10^9) stop("matrices are too large")
   
   require(MASS) # for negative binomial distribution
-  require(R2Cuba) # for 2D integration
+  require(pracma) # for 2D integration
   
   cur_date <- format(Sys.Date(),"%d%b%Y")
   
@@ -462,7 +471,7 @@ popana2D <- function(pl,ni,nt,nj=22,nstart,
   beta_r <- rs$beta_r[iter_rs,,]
   sig_y_r <- rs$sig_y_r[iter_rs,]
   sig_s_r <- rs$sig_s_r[iter_rs]  # doesn't vary by species
-  phi <- rs$phi[iter_rs]          # doesn't vary by species
+  phi_r <- rs$phi[iter_rs]        # doesn't vary by species
   
   ### RESCALE VARIANCE TERMS ###
   # relative to first species (boin)
@@ -563,8 +572,8 @@ popana2D <- function(pl,ni,nt,nj=22,nstart,
           glo <- lgmu - intsd * sig_s_g[i,j]
           ghi <- lgmu + intsd * sig_s_g[i,j]
           
-          pimu <- beta_p[i,j,] %*% c(xvec,lgmu  - log(tau_d/10))
-          etamu <- beta_r[i,j,] %*% c(xvec,lgmu - log(tau_d/10))
+          pimu <- sum(beta_p[i,j,] * c(xvec, lgmu-log(tau_d/10)))
+          etamu <- sum(beta_r[i,j,] * c(xvec, lgmu-log(tau_d/10)))
             # allows min and max to switch when have positive DD
           
           prlo <- pimu - intsd * sig_a_p[i]
@@ -577,17 +586,21 @@ popana2D <- function(pl,ni,nt,nj=22,nstart,
           # (outside this range, ng=0 -> nn=0)  
           # reproduction terms get first sd in g, then sd in themselves
           
-          # fnn(x<-matrix(c(glo,plo,rlo,ghi,phi,rhi),nc=2,nr=3))
+          # fnn(x<-matrix(c(glo,plo,rlo,ghi,phi_r,rhi),nc=2,nr=3))
           
-          nn[i,t,j] <- cuhre(ndim=3,ncomp=1,integrand=fnn,
+          nn[i,t,j] <- integral3(fun=fnn2D,
             lgmu=lgmu,sig_s_g=sig_s_g[i,j],
             xvec=xvec,beta_p=beta_p[i,j,],beta_r=beta_r[i,j,],
             eps_y_p=eps_y_p[i,t,j],eps_y_r=eps_y_r[i,t,j],
-            sig_a_p=sig_a_p[i],sig_s_r=sig_s_r[i],phi=phi[i],
-            lower = c(glo, prlo, rslo),
-            upper = c(ghi, prhi, rshi),
-            rel.tol=rel.tol,
-            flags=list(verbose=0))$value
+            sig_a_p=sig_a_p[i],sig_s_r=sig_s_r[i],phi_r=phi_r[i],
+            xmin = glo, 
+            xmax = prlo,
+            ymin = rslo,
+            ymax = ghi,
+            zmin = prhi,
+            zmax = rshi,
+            reltol = 10^-5
+            )
           # finite limits required to stop integration from crashing
           # We strongly advise vectorization; see vignette
           
