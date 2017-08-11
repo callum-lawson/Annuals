@@ -200,7 +200,7 @@ popana <- function(pl,ni,nt,nj=22,nstart,
 		# for each i, replicate vector of starting densities for all species
 
 	### BEGIN CALCULATIONS ###
-
+system.time({
 	for(i in 1:ni){
 
 	  m0[i,,] <- exp(rep(alpha_m[i,],each=nt))
@@ -325,7 +325,7 @@ popana <- function(pl,ni,nt,nj=22,nstart,
 	  ns=ns,ng=ng,nn=nn # nnb=nnb, no=no,
 	  # eps_y_p=eps_y_p,eps_y_r=eps_y_r
 	  )
-
+})
 	if(is.null(savefile)){
 		return(outlist)
 	}
@@ -340,8 +340,7 @@ fnn <- function(x,
   lgmu,sig_s_g,
   xvec,beta_p,beta_r,
   eps_y_p,eps_y_r,
-  sig_a_p,sig_s_r,phi,
-  intsd
+  sig_a_p,sig_s_r,phi
   ){
   
   lg <- x[1,] # log(N[g]) for a given plot
@@ -388,7 +387,6 @@ fnn <- function(x,
   
   matrix(exp(log(dg) + lnY_t),nr=1,nc=ngl)
   # expected overall mean density of seeds
-  
 } 
 
 popana2D <- function(pl,ni,nt,nj=22,nstart,
@@ -521,7 +519,7 @@ popana2D <- function(pl,ni,nt,nj=22,nstart,
   # for each i, replicate vector of starting densities for all species
   
   ### BEGIN CALCULATIONS ###
-  
+  system.time({
   for(i in 1:ni){
     
     m0[i,,] <- exp(rep(alpha_m[i,],each=nt))
@@ -570,16 +568,15 @@ popana2D <- function(pl,ni,nt,nj=22,nstart,
           glo <- lgmu - intsd * sig_s_g[i,j]
           ghi <- lgmu + intsd * sig_s_g[i,j]
           
-          xlohi <- matrix(c(rep(xvec,each=2),c(glo,ghi)-log(tau_d/10)),nr=2,nc=4)
-          pilohi <- beta_p[i,j,] %*% t(xlohi)
-          etalohi <- beta_r[i,j,] %*% t(xlohi)
+          pimu <- beta_p[i,j,] %*% c(xvec,lgmu  - log(tau_d/10))
+          etamu <- beta_r[i,j,] %*% c(xvec,lgmu - log(tau_d/10))
             # allows min and max to switch when have positive DD
           
-          prlo <- min(pilohi) - intsd * sig_a_p[i]
-          prhi <- max(pilohi) + intsd * sig_a_p[i]
+          prlo <- pimu - intsd * sig_a_p[i]
+          prhi <- pimu + intsd * sig_a_p[i]
           
-          rslo <- min(etalohi) - intsd * sig_s_r[i]
-          rshi <- max(etalohi) + intsd * sig_s_r[i]
+          rslo <- etamu - intsd * sig_s_r[i]
+          rshi <- etamu + intsd * sig_s_r[i]
           
           # setting range to +/-intsd to improve convergence
           # (outside this range, ng=0 -> nn=0)  
@@ -587,7 +584,7 @@ popana2D <- function(pl,ni,nt,nj=22,nstart,
           
           # fnn(x<-matrix(c(glo,plo,rlo,ghi,phi,rhi),nc=2,nr=3))
           
-          nn[i,t,j] <- hcubature(f=fnn,
+          nn[i,t,j] <- pcubature(f=fnn,
             lgmu=lgmu,sig_s_g=sig_s_g[i,j],
             xvec=xvec,beta_p=beta_p[i,j,],beta_r=beta_r[i,j,],
             eps_y_p=eps_y_p[i,t,j],eps_y_r=eps_y_r[i,t,j],
@@ -595,8 +592,7 @@ popana2D <- function(pl,ni,nt,nj=22,nstart,
             lowerLimit = c(glo, prlo, rslo),
             upperLimit = c(ghi, prhi, rshi),
             vectorInterface = TRUE,
-            tol=rel.tol,
-            intsd=intsd)$integral
+            tol=rel.tol)$integral
           # finite limits required to stop integration from crashing
           # We strongly advise vectorization; see vignette
           
@@ -614,14 +610,13 @@ popana2D <- function(pl,ni,nt,nj=22,nstart,
     
   } # i loop
   
-  outlist <- list(
+  outlist2 <- list(
     zam=zam,zsd=zsd,
     ni=ni,nt=nt,nj=nj,
     z=z,w=w,
     G=G,So=So,Sn=Sn,
-    ns=ns,ng=ng,nn=nn # nnb=nnb, no=no,
-    # eps_y_p=eps_y_p,eps_y_r=eps_y_r
-  )
+    ns=ns,ng=ng,nn=nn
+  )})
   
   if(is.null(savefile)){
     return(outlist)
