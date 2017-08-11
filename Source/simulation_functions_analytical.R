@@ -336,46 +336,65 @@ system.time({
 
 }
 
-fnn2D <- function(x,y,z,
-  lgmu,sig_s_g,
-  xvec,beta_p,beta_r,
+pr_f <- function(lp,lpmu,lpsd){
+  plogis(lp) * dnorm(lp,lpmu,lpsd)
+}
+
+rs_f <- function(lr,lrmu,lrsd,phi_r){
+  nbtmean(mu=exp(lr),phi_r) * dnorm(lr,lrmu,lrsd)
+}
+
+pr_int <- Vectorize(function(lpmu,lpsd){
+  integrate(pr_f,
+    lpmu=lpmu,lpsd=lpsd,
+    lower=-Inf,
+    upper=Inf,
+    rel.tol=rel.tol)$value
+})
+
+rs_int <- Vectorize(function(lrmu,lrsd,phi_r){
+  integrate(rs_f,
+    lrmu=lrmu,lrsd=lrsd,phi_r=phi_r,
+    lower=lrmu-intsd*lrsd,
+    upper=lrmu+intsd*lrsd,
+    rel.tol=rel.tol)$value
+})
+
+nn_f <- function(lg,lgmu,lgsd,
+  xvec,
+  beta_p1,beta_r1,
+  beta_p2,beta_r2,
+  beta_p3,beta_r3,
+  beta_p4,beta_r4,
   eps_y_p,eps_y_r,
   sig_a_p,sig_s_r,phi_r
   ){
   
-  # x = log(N[g]) for a given plot
-  # y = logit(Pr(Y>1)) for a given g
-  # z = log(Y|Y>1) for a given g
+  # lg = log(N[g]) for a given plot
   
-  dg <- dnorm(x,mean=lgmu,sd=sig_s_g)
+  dg <- dnorm(lg,mean=lgmu,sd=lgsd)
+  # tau_d/10 density adjustment explained above
+
+  nlg = length(lg)
+  x_t <- matrix(nr=nlg,nc=4)
+  x_t[,1:3] <- rep(xvec,each=nlg) 
+  x_t[,4] <- lg - log(tau_d/10)
   # tau_d/10 density adjustment explained above
   
-  # ngl = ncol(x)
-  # x_t <- matrix(nr=ngl,nc=4)
-  # x_t[,1:3] <- rep(xvec,each=ngl) 
-  # x_t[,4] <- lg - log(tau_d/10)
-  # # tau_d/10 density adjustment explained above
-  # 
-  # pi_bar_t <- beta_p %*% t(x_t)
-  # eta_bar_t <- beta_r %*% t(x_t)
+  beta_p <- cbind(beta_p1,beta_p2,beta_p3,beta_p4)
+  beta_r <- cbind(beta_r1,beta_r2,beta_r3,beta_r4)
   
-  pi_bar_t <- beta_p %*% c(xvec, x - log(tau_d/10))
-  eta_bar_t <- beta_r %*% c(xvec, x - log(tau_d/10))
+  pi_bar_t <- beta_p %*% t(x_t)
+  eta_bar_t <- beta_r %*% t(x_t)
+
   # each density (lng) has own associated world of sites
   # but spatial aspects of pr(Y>0) and pr(Y|Y>0) considered independent,
   # so can be simply added together
   # can't average across years in this way because non-independent
   
-  pr_t <- plogis(y) * dnorm(y, 
-    mean = pi_bar_t + eps_y_p, 
-    sd = sig_a_p
-    )
-  # code borrowed from logitnorm package
+  pr_t <- pr_int(lpmu=pi_bar_t + eps_y_p, lpsd=sig_a_p)
+  rs_t <- rs_int(lrmu=eta_bar_t + eps_y_r, lrsd=sig_s_r, phi_r=phi_r)
   
-  rs_t <- nbtmean(mu=exp(z),phi_r) * dnorm(z, 
-    mean = eta_bar_t + eps_y_r, 
-    sd = sig_s_r
-    )
   # - calculate probability of each value from lognormal dist
   # - each of these values produces a mean from a trunc negbin dist
   # - then integrate to calculate the mean of these means
@@ -385,13 +404,91 @@ fnn2D <- function(x,y,z,
   # Ref: Econometric Analysis of Count Data - Rainer Winkelmann 
   # (checked by simulation that still works with zero-truncation)
   
-  lnY_t <- x + log(pr_t) + log(rs_t)
+  lnY_t <- lg + log(pr_t) + log(rs_t)
   # expected log density of new seeds for each possible germinant density
   # log-transforming to try and improve numerical stability
   
   exp(log(dg) + lnY_t)
   # expected overall mean density of seeds
 } 
+
+pr_f(lp=c(1,1),lpmu=c(1,1),lpsd=c(1,2))
+pr_f(lp=c(1,1),lpmu=c(1),lpsd=c(1))
+
+pr_int(lpmu=1,lpsd=1)
+pr_int(lpmu=c(1,1),lpsd=c(1,2))
+
+integrate(pr_f,
+  lpmu=2,lpsd=1,
+  lower=-Inf,
+  upper=Inf,
+  rel.tol=rel.tol)$value
+
+nn_int <- Vectorize(function(lgmu,lgsd,
+  beta_p1,beta_r1,
+  beta_p2,beta_r2,
+  beta_p3,beta_r3,
+  beta_p4,beta_r4,
+  eps_y_p,eps_y_r,
+  sig_a_p,sig_s_r,phi_r,...){
+  integrate(nn_f,
+    lgmu=lgmu,lgsd=lgsd,
+    lower=lgmu-intsd*lgsd,
+    upper=lgmu+intsd*lgsd,
+    rel.tol=rel.tol,
+    xvec=xvec,
+    beta_p1=beta_p1,beta_r1=beta_r1,
+    beta_p2=beta_p2,beta_r2=beta_r2,
+    beta_p3=beta_p3,beta_r3=beta_r3,
+    beta_p4=beta_p4,beta_r4=beta_r4,
+    eps_y_p=eps_y_p,eps_y_r=eps_y_r,
+    sig_a_p=sig_a_p,sig_s_r=sig_s_r,phi_r=phi_r)$value
+})
+
+# nn_int <- Vectorize(function(lgmu,lgsd,...){
+#   integrate(nn_f,
+#     lgmu=lgmu,lgsd=lgsd,
+#     lower=lgmu-intsd*lgsd,
+#     upper=lgmu+intsd*lgsd,
+#     rel.tol=rel.tol,
+#     ...)$value
+# })
+
+system.time({
+for(a in 1:100){
+nn_int(lgmu=lgmu,lgsd=sig_s_g[i,],
+  xvec=xvec,
+  beta_p1=beta_p[,1],beta_r1=beta_r[,1],
+  beta_p2=beta_p[,2],beta_r2=beta_r[,2],
+  beta_p3=beta_p[,3],beta_r3=beta_r[,3],
+  beta_p4=beta_p[,4],beta_r4=beta_r[,4],
+  eps_y_p=eps_y_p,eps_y_r=eps_y_r,
+  sig_a_p=rep(sig_a_p,22),sig_s_r=rep(sig_s_r,22),phi_r=rep(phi_r,22)
+)
+}
+})
+  
+nn_f(lg=1,lgmu=lgmu,lgsd=lgsd,
+  xvec=xvec,
+  beta_p1=beta_p[,1],beta_r1=beta_r[,1],
+  beta_p2=beta_p[,2],beta_r2=beta_r[,2],
+  beta_p3=beta_p[,3],beta_r3=beta_r[,3],
+  beta_p4=beta_p[,4],beta_r4=beta_r[,4],
+  eps_y_p=eps_y_p,eps_y_r=eps_y_r,
+  sig_a_p=rep(sig_a_p,22),sig_s_r=rep(sig_s_r,22),phi_r=rep(phi_r,22))
+
+integrate(nn_f,
+  lgmu=lgmu[1],lgsd=lgsd[1],
+  lower=lgmu[1]-intsd*lgsd[1],
+  upper=lgmu[1]+intsd*lgsd[1],
+  rel.tol=rel.tol,xvec=xvec,
+  beta_p1=beta_p[1,1],beta_r1=beta_r[1,1],
+  beta_p2=beta_p[1,2],beta_r2=beta_r[1,2],
+  beta_p3=beta_p[1,3],beta_r3=beta_r[1,3],
+  beta_p4=beta_p[1,4],beta_r4=beta_r[1,4],
+  eps_y_p=eps_y_p[1],eps_y_r=eps_y_r[1],
+  sig_a_p=sig_a_p[1],sig_s_r=sig_s_r[1],phi_r=phi_r[1]
+)
 
 popana2D <- function(pl,ni,nt,nj=22,nstart,
   zam,zsd,wam,wsd,rho=0.82,
@@ -400,7 +497,6 @@ popana2D <- function(pl,ni,nt,nj=22,nstart,
   savefile=NULL,
   rel.tol=10^-5, # .Machine$double.eps^0.25
   intsd=10,
-  ngmin=10^-50 # still necessary?
   ){
   # ni = runs; nt = years; nj = species; nk = 0.1 m^2 sites 
   # nk must be >1
@@ -408,8 +504,7 @@ popana2D <- function(pl,ni,nt,nj=22,nstart,
   if(ni*nt*nj > 10^9 | ni*nt*nj > 10^9) stop("matrices are too large")
   
   require(MASS) # for negative binomial distribution
-  require(pracma) # for 2D integration
-  
+
   cur_date <- format(Sys.Date(),"%d%b%Y")
   
   T1 <- with(Tvalues,duration[period=="T1"])
@@ -553,59 +648,26 @@ popana2D <- function(pl,ni,nt,nj=22,nstart,
       xvec <- c(1,z[i,t],z[i,t]^2)
       # climate data into model matrix
       
+      lgmu <- log(ng[i,t,]) - (sig_s_g[i,]^2 / 2)
+      # arithmetic mean = ng[i,t,]
+      # logarithmic sd = sig_s_g[i,,j]
+      # mean of lognormal distribution = log(am) - sig^2 / 2
+      
       for(j in 1:nj){
+        
+        nn[i,t,j] <- nn_int(lgmu=lgmu[j],lgsd=sig_s_g[i,j],
+          xvec=xvec,beta_p=beta_p[i,j,],beta_r=beta_r[i,j,],
+          eps_y_p=eps_y_p[i,t,j],eps_y_r=eps_y_r[i,t,j],
+          sig_a_p=sig_a_p[i],sig_s_r=sig_s_r[i],phi_r=phi_r[i]
+        )
         
         # running all this within a loop because integration has to be run 
         # one-at-a-time
-        
-        if(ng[i,t,j] < ngmin){
-          nn[i,t,j] <- 0
-        }
-        
-        if(ng[i,t,j] >= ngmin){
           
-          lgmu <- log(ng[i,t,j]) - (sig_s_g[i,j]^2 / 2)
-          # arithmetic mean = ng[i,t,]
-          # logarithmic sd = sig_s_g[i,,j]
-          # mean of lognormal distribution = log(am) - sig^2 / 2
+        # setting range to +/-intsd to improve convergence
+        # (outside this range, ng=0 -> nn=0)  
+        # reproduction terms get first sd in g, then sd in themselves
           
-          glo <- lgmu - intsd * sig_s_g[i,j]
-          ghi <- lgmu + intsd * sig_s_g[i,j]
-          
-          pimu <- sum(beta_p[i,j,] * c(xvec, lgmu-log(tau_d/10)))
-          etamu <- sum(beta_r[i,j,] * c(xvec, lgmu-log(tau_d/10)))
-            # allows min and max to switch when have positive DD
-          
-          prlo <- pimu - intsd * sig_a_p[i]
-          prhi <- pimu + intsd * sig_a_p[i]
-          
-          rslo <- etamu - intsd * sig_s_r[i]
-          rshi <- etamu + intsd * sig_s_r[i]
-          
-          # setting range to +/-intsd to improve convergence
-          # (outside this range, ng=0 -> nn=0)  
-          # reproduction terms get first sd in g, then sd in themselves
-          
-          # fnn(x<-matrix(c(glo,plo,rlo,ghi,phi_r,rhi),nc=2,nr=3))
-          
-          nn[i,t,j] <- integral3(fun=fnn2D,
-            lgmu=lgmu,sig_s_g=sig_s_g[i,j],
-            xvec=xvec,beta_p=beta_p[i,j,],beta_r=beta_r[i,j,],
-            eps_y_p=eps_y_p[i,t,j],eps_y_r=eps_y_r[i,t,j],
-            sig_a_p=sig_a_p[i],sig_s_r=sig_s_r[i],phi_r=phi_r[i],
-            xmin = glo, 
-            xmax = prlo,
-            ymin = rslo,
-            ymax = ghi,
-            zmin = prhi,
-            zmax = rshi,
-            reltol = 10^-5
-            )
-          # finite limits required to stop integration from crashing
-          # We strongly advise vectorization; see vignette
-          
-        } # if function
-        
       } # j loop
       
       Sn[i,t,] <- BHS(nn[i,t,],m0[i,t,],m1[i,t,])
