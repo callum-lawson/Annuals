@@ -336,109 +336,110 @@
 # 
 # }
 
-pr_f <- function(lp,lpmu,lpsd){
-  plogis(lp) * dnorm(lp,lpmu,lpsd)
-}
-
-rs_f <- function(lr,lrmu,lrsd,phi_r){
-  nbtmean(mu=exp(lr),phi_r) * dnorm(lr,lrmu,lrsd)
-}
-
-pr_int <- Vectorize(function(lpmu,lpsd){
-  integrate(pr_f,
-    lpmu=lpmu,lpsd=lpsd,
-    lower=-Inf,
-    upper=Inf,
-    rel.tol=rel.tol)$value
-})
-
-rs_int <- Vectorize(function(lrmu,lrsd,phi_r){
-  integrate(rs_f,
-    lrmu=lrmu,lrsd=lrsd,phi_r=phi_r,
-    lower=lrmu-intsd*lrsd,
-    upper=lrmu+intsd*lrsd,
-    rel.tol=rel.tol)$value
-})
-
-nn_f <- function(lg,lgmu,lgsd,zt,
-  beta_p1,beta_r1,
-  beta_p2,beta_r2,
-  beta_p3,beta_r3,
-  beta_p4,beta_r4,
-  eps_y_p,eps_y_r,
-  sig_a_p,sig_s_r,phi_r
-  ){
-  
-  # lg = log(N[g]) for a given plot
-  
-  dg <- dnorm(lg,mean=lgmu,sd=lgsd)
-  # tau_d/10 density adjustment explained above
-
-  xvec <- c(1,zt,zt^2)
-  # climate data into model matrix
-  
-  nlg = length(lg)
-  x_t <- matrix(nr=nlg,nc=4)
-  x_t[,1:3] <- rep(xvec,each=nlg) 
-  x_t[,4] <- lg - log(tau_d/10)
-  # tau_d/10 density adjustment explained above
-  
-  beta_p <- cbind(beta_p1,beta_p2,beta_p3,beta_p4)
-  beta_r <- cbind(beta_r1,beta_r2,beta_r3,beta_r4)
-  
-  pi_bar_t <- beta_p %*% t(x_t)
-  eta_bar_t <- beta_r %*% t(x_t)
-  # each density (lng) has own associated world of sites
-  # but spatial aspects of pr(Y>0) and pr(Y|Y>0) considered independent,
-  # so can be simply added together
-  # can't average across years in this way because non-independent
-  
-  pr_t <- pr_int(lpmu=pi_bar_t + eps_y_p, lpsd=sig_a_p)
-  rs_t <- rs_int(lrmu=eta_bar_t + eps_y_r, lrsd=sig_s_r, phi_r=phi_r)
-  # - calculate probability of each value from lognormal dist
-  # - each of these values produces a mean from a trunc negbin dist
-  # - then integrate to calculate the mean of these means
-  # - can be done because:
-  # sum(negbin(lognormal(mu,sig),phi_r)) 
-  # = sum( negbin(exp(mu+sig),phi_r) + negbin(exp(mu,-sig),phi_r) )
-  # Ref: Econometric Analysis of Count Data - Rainer Winkelmann 
-  # (checked by simulation that still works with zero-truncation)
-  
-  lnY_t <- lg + log(pr_t) + log(rs_t)
-  # expected log density of new seeds for each possible germinant density
-  # log-transforming to try and improve numerical stability
-  
-  exp(log(dg) + lnY_t)
-  # expected overall mean density of seeds
-} 
-
-nn_int <- Vectorize(function(lgmu,lgsd,zt,
-  beta_p1,beta_r1,beta_p2,beta_r2,
-  beta_p3,beta_r3,beta_p4,beta_r4,
-  eps_y_p,eps_y_r,sig_a_p,sig_s_r,phi_r){
-  integrate(nn_f,
-    lgmu=lgmu,lgsd=lgsd,zt=zt,
-    beta_p1=beta_p1,beta_r1=beta_r1,
-    beta_p2=beta_p2,beta_r2=beta_r2,
-    beta_p3=beta_p3,beta_r3=beta_r3,
-    beta_p4=beta_p4,beta_r4=beta_r4,
-    eps_y_p=eps_y_p,eps_y_r=eps_y_r,
-    sig_a_p=sig_a_p,sig_s_r=sig_s_r,phi_r=phi_r,
-    lower=lgmu-intsd*lgsd,
-    upper=lgmu+intsd*lgsd,
-    rel.tol=rel.tol)$value
-})
-
 popana <- function(pl,ni,nt,nj=22,nstart,
   zam,zsd,wam,wsd,rho=0.82,
   Tvalues,tau_p=10^2,tau_d=10^2,tau_s=10^2,
   iterset=NULL,
   savefile=NULL,
   rel.tol=10^-5, # .Machine$double.eps^0.25
-  intsd=10,
+  intsd=5
   ){
   # ni = runs; nt = years; nj = species; nk = 0.1 m^2 sites 
   # nk must be >1
+  
+  
+  pr_f <- function(lp,lpmu,lpsd){
+    plogis(lp) * dnorm(lp,lpmu,lpsd)
+  }
+  
+  rs_f <- function(lr,lrmu,lrsd,phi_r){
+    nbtmean(mu=exp(lr),phi_r) * dnorm(lr,lrmu,lrsd)
+  }
+  
+  pr_int <- Vectorize(function(lpmu,lpsd){
+    integrate(pr_f,
+      lpmu=lpmu,lpsd=lpsd,
+      lower=-Inf,
+      upper=Inf,
+      rel.tol=rel.tol)$value
+  })
+  
+  rs_int <- Vectorize(function(lrmu,lrsd,phi_r){
+    integrate(rs_f,
+      lrmu=lrmu,lrsd=lrsd,phi_r=phi_r,
+      lower=lrmu-intsd*lrsd,
+      upper=lrmu+intsd*lrsd,
+      rel.tol=rel.tol)$value
+  })
+  
+  nn_f <- function(lg,lgmu,lgsd,zt,
+    beta_p1,beta_r1,
+    beta_p2,beta_r2,
+    beta_p3,beta_r3,
+    beta_p4,beta_r4,
+    eps_y_p,eps_y_r,
+    sig_a_p,sig_s_r,phi_r
+  ){
+    
+    # lg = log(N[g]) for a given plot
+    
+    dg <- dnorm(lg,mean=lgmu,sd=lgsd)
+    # tau_d/10 density adjustment explained above
+    
+    xvec <- c(1,zt,zt^2)
+    # climate data into model matrix
+    
+    nlg = length(lg)
+    x_t <- matrix(nr=nlg,nc=4)
+    x_t[,1:3] <- rep(xvec,each=nlg) 
+    x_t[,4] <- lg - log(tau_d/10)
+    # tau_d/10 density adjustment explained above
+    
+    beta_p <- cbind(beta_p1,beta_p2,beta_p3,beta_p4)
+    beta_r <- cbind(beta_r1,beta_r2,beta_r3,beta_r4)
+    
+    pi_bar_t <- beta_p %*% t(x_t)
+    eta_bar_t <- beta_r %*% t(x_t)
+    # each density (lng) has own associated world of sites
+    # but spatial aspects of pr(Y>0) and pr(Y|Y>0) considered independent,
+    # so can be simply added together
+    # can't average across years in this way because non-independent
+    
+    pr_t <- pr_int(lpmu=pi_bar_t + eps_y_p, lpsd=sig_a_p)
+    rs_t <- rs_int(lrmu=eta_bar_t + eps_y_r, lrsd=sig_s_r, phi_r=phi_r)
+    # - calculate probability of each value from lognormal dist
+    # - each of these values produces a mean from a trunc negbin dist
+    # - then integrate to calculate the mean of these means
+    # - can be done because:
+    # sum(negbin(lognormal(mu,sig),phi_r)) 
+    # = sum( negbin(exp(mu+sig),phi_r) + negbin(exp(mu,-sig),phi_r) )
+    # Ref: Econometric Analysis of Count Data - Rainer Winkelmann 
+    # (checked by simulation that still works with zero-truncation)
+    
+    lnY_t <- lg + log(pr_t) + log(rs_t)
+    # expected log density of new seeds for each possible germinant density
+    # log-transforming to try and improve numerical stability
+    
+    exp(log(dg) + lnY_t)
+    # expected overall mean density of seeds
+  } 
+  
+  nn_int <- Vectorize(function(lgmu,lgsd,zt,
+    beta_p1,beta_r1,beta_p2,beta_r2,
+    beta_p3,beta_r3,beta_p4,beta_r4,
+    eps_y_p,eps_y_r,sig_a_p,sig_s_r,phi_r){
+    integrate(nn_f,
+      lgmu=lgmu,lgsd=lgsd,zt=zt,
+      beta_p1=beta_p1,beta_r1=beta_r1,
+      beta_p2=beta_p2,beta_r2=beta_r2,
+      beta_p3=beta_p3,beta_r3=beta_r3,
+      beta_p4=beta_p4,beta_r4=beta_r4,
+      eps_y_p=eps_y_p,eps_y_r=eps_y_r,
+      sig_a_p=sig_a_p,sig_s_r=sig_s_r,phi_r=phi_r,
+      lower=lgmu-intsd*lgsd,
+      upper=lgmu+intsd*lgsd,
+      rel.tol=rel.tol)$value
+  })
   
   if(ni*nt*nj > 10^9 | ni*nt*nj > 10^9) stop("matrices are too large")
   
@@ -615,12 +616,14 @@ popana <- function(pl,ni,nt,nj=22,nstart,
       
   } # t loop
 
+  Y <- nn/ng
+  
   outlist <- list(
     zam=zam,zsd=zsd,
     ni=ni,nt=nt,nj=nj,
     z=z,w=w,
-    G=G,So=So,Sn=Sn,
-    ns=ns,ng=ng,nn=nn
+    G=G,So=So,Sn=Sn,Y=Y,
+    ns=ns
   )
   
   if(is.null(savefile)){
@@ -665,7 +668,6 @@ popinv <- function(
     saveRDS(outlist,paste0("Sims/",savefile,"_",cur_date,".rds"))
   }
 }
-  
   # assumes that both temporal and spatial terms are same for both strategies
   # e.g. invader has x times lower density than resident in every plot
   

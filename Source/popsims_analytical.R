@@ -142,7 +142,7 @@ if(plasticity==T){
 #   nsens <- nrow(Gsens) # = neach^2
 # }
 
-rpi <- 50 # number of replicated simulations per invasion
+rpi <- 100 # number of replicated simulations per invasion
 nio <- rpi*nsens
 pls$go$alpha_G <- pls$go$beta_Gz <- array(dim=c(nio,22))
 pls$go$alpha_G[1:nio,] <- rep(Gsens$alpha_G,each=rpi)
@@ -180,7 +180,7 @@ pls$go$beta_Gz[1:nio,] <- rep(Gsens$beta_Gz,each=rpi)
 # maml <- as.list(c(1,1,mpam,1,mpam,mpam))
 # msdl <- as.list(c(0,1,1,mpsd,mpsd,0))
 maml <- as.list(c(1,mpam))
-msdl <- as.list(c(1,1))
+msdl <- as.list(c(1,mpsd))
   # scaling mean log rainfall (zamo) only works because sign stays the same
 
 nclim <- length(maml)
@@ -189,7 +189,7 @@ ncores <- nclim*cpc
 mpos <- rep(1:nclim,each=cpc)
 
 nstart <- rep(1,nspecies)
-nt <- 100
+nt <- 250
 nj <- 22
   # min invader iterations per core = rpi * nsens
 tmin <- 15
@@ -255,7 +255,7 @@ stopCluster(CL)
 })
   # 5.1 hours
   # 9.5 hours (80 cores)
-  # 6.5 hours (25 cores)
+  # 6.5 hours (50 cores)
 
 # Read resident simulations back in ---------------------------------------
 
