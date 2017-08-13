@@ -148,7 +148,7 @@
 # 	beta_r <- rs$beta_r[iter_rs,,]
 # 	sig_y_r <- rs$sig_y_r[iter_rs,]
 # 	sig_s_r <- rs$sig_s_r[iter_rs]  # doesn't vary by species
-# 	phi <- rs$phi[iter_rs]          # doesn't vary by species
+# 	phi_r <- rs$phi_r[iter_rs]          # doesn't vary by species
 # 
 # 	### RESCALE VARIANCE TERMS ###
 # 	  # relative to first species (boin)
@@ -200,7 +200,7 @@
 # 		# for each i, replicate vector of starting densities for all species
 # 
 # 	### BEGIN CALCULATIONS ###
-# 	
+# 
 # 	for(i in 1:ni){
 # 
 # 	  m0[i,,] <- exp(rep(alpha_m[i,],each=nt))
@@ -285,7 +285,7 @@
 # 			        rs_t[l] <- nbtlnmean(
 # 			          eta = eta_t,
 # 			          sigma = sigma_t,
-# 			          phi = phi[i],
+# 			          phi = phi_r[i],
 # 			          lower = eta_t - intsd * sigma_t,
 # 			          upper = eta_t + intsd * sigma_t,
 # 			          rel.tol=rel.tol,
@@ -301,7 +301,7 @@
 # 			        # expected overall mean density of seeds
 # 			      }
 # 
-# 			    nn[i,t,j] <- integrate(fnn, intlo, inthi, 
+# 			    nn[i,t,j] <- integrate(fnn, intlo, inthi,
 # 			      rel.tol=rel.tol,abs.tol=abs.tol)$value
 # 
 # 			    }
@@ -325,7 +325,7 @@
 # 	  ns=ns,ng=ng,nn=nn # nnb=nnb, no=no,
 # 	  # eps_y_p=eps_y_p,eps_y_r=eps_y_r
 # 	  )
-# 	
+# 
 # 	if(is.null(savefile)){
 # 		return(outlist)
 # 	}
@@ -333,7 +333,6 @@
 # 	if(!is.null(savefile)){
 # 		saveRDS(outlist,paste0("Sims/",savefile,"_",cur_date,".rds"))
 # 	}
-# 
 # }
 
 popana <- function(pl,ni,nt,nj=22,nstart,
@@ -342,11 +341,12 @@ popana <- function(pl,ni,nt,nj=22,nstart,
   iterset=NULL,
   savefile=NULL,
   rel.tol=10^-5, # .Machine$double.eps^0.25
-  intsd=5
+  abs.tol=0, 
+  intsd=10,
+  ngmin=10^-50 
   ){
   # ni = runs; nt = years; nj = species; nk = 0.1 m^2 sites 
   # nk must be >1
-  
   
   pr_f <- function(lp,lpmu,lpsd){
     plogis(lp) * dnorm(lp,lpmu,lpsd)
@@ -361,7 +361,8 @@ popana <- function(pl,ni,nt,nj=22,nstart,
       lpmu=lpmu,lpsd=lpsd,
       lower=-Inf,
       upper=Inf,
-      rel.tol=rel.tol)$value
+      rel.tol=rel.tol,
+      abs.tol=abs.tol)$value
   })
   
   rs_int <- Vectorize(function(lrmu,lrsd,phi_r){
@@ -369,7 +370,8 @@ popana <- function(pl,ni,nt,nj=22,nstart,
       lrmu=lrmu,lrsd=lrsd,phi_r=phi_r,
       lower=lrmu-intsd*lrsd,
       upper=lrmu+intsd*lrsd,
-      rel.tol=rel.tol)$value
+      rel.tol=rel.tol,
+      abs.tol=abs.tol)$value
   })
   
   nn_f <- function(lg,lgmu,lgsd,zt,
@@ -438,7 +440,8 @@ popana <- function(pl,ni,nt,nj=22,nstart,
       sig_a_p=sig_a_p,sig_s_r=sig_s_r,phi_r=phi_r,
       lower=lgmu-intsd*lgsd,
       upper=lgmu+intsd*lgsd,
-      rel.tol=rel.tol)$value
+      rel.tol=rel.tol,
+      abs.tol=abs.tol)$value
   })
   
   if(ni*nt*nj > 10^9 | ni*nt*nj > 10^9) stop("matrices are too large")
@@ -595,7 +598,9 @@ popana <- function(pl,ni,nt,nj=22,nstart,
     # logarithmic sd = sig_s_g[i,,j]
     # mean of lognormal distribution = log(am) - sig^2 / 2
       
-    nn[,t,] <- nn_int(lgmu=lgmu,lgsd=sig_s_g,zt=z[,t],
+    nn[,t,][ng[,t,]<ngmin] <- 0
+    
+    nn[,t,][ng[,t,]>=ngmin] <- nn_int(lgmu=lgmu,lgsd=sig_s_g,zt=z[,t],
       beta_p1,beta_r1,beta_p2,beta_r2,
       beta_p3,beta_r3,beta_p4,beta_r4,
       as.vector(eps_y_p[,t,]),as.vector(eps_y_r[,t,]),
