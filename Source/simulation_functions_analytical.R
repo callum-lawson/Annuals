@@ -53,7 +53,8 @@ popana <- function(pl,ni,nt,nj=22,nstart,
   savefile=NULL,
   rel.tol=10^-5,
   abs.tol=0, # .Machine$double.eps^0.25,
-  intsd=10
+  intsd=10,
+  nsmin=10^-50
   ){
   # ni = runs; nt = years; nj = species; nk = 0.1 m^2 sites
   # nk must be >1
@@ -213,18 +214,23 @@ popana <- function(pl,ni,nt,nj=22,nstart,
     pi_bar_t <- rowSums(beta_p * x_t)
     mu_bar_t <- rowSums(beta_r * x_t)
     
-    pr_t <- logitnormint(
-      mu = pi_bar_t + as.vector(eps_y_p[,t,]),
-      sigma = sig_o_p
+    al <- ns[,t,] > nsmin # alive
+    pr_t <- rep(0,ni*nj) # no reproduction if dead
+    pr_t[al] <- logitnormint(
+      mu = (pi_bar_t + as.vector(eps_y_p[,t,]))[al],
+      sigma = sig_o_p[al]
       )
     
-    rs_t <- nbtmean(mu_bar_t,phi_r)
+    rs_t <- nbtmean(exp(mu_bar_t),phi_r)
       
-    nn[,t,] <- ng[,t,] * pr_t  * rs_t # but can we just multiply these?
+    nn[,t,] <- ng[,t,] * pr_t * rs_t
       
     Sn[,t,] <- BHS(nn[,t,],m0[,t,],m1[,t,])
       
-    if(t<nt) ns[,t+1,] <- So[,t,]*(ns[,t,]-ng[,t,]) + Sn[,t,]*nn[,t,]
+    if(t<nt){
+      ns[,t+1,][al] <- (ns[,t,]*(1-G[,t,])*So[,t,] + Sn[,t,]*nn[,t,])[al]
+      ns[,t+1,][!al] <- 0
+    }
       
   } # t loop
   
