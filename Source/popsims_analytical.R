@@ -228,6 +228,26 @@ cnames_merged <- paste(cnames_unique,collapse="_")
 
 # maxiter <- 10000 # max number of iterations in PARAMETERISATION
 
+
+# Simulate normalised climate and year effects ----------------------------
+
+set.seed(1)
+zn <- wn <- array(NA,c(rpi,nt))
+zwn_mu <- rep(0,2)
+zwn_sig <- matrix(c(1,rep(0.82,2),1),nr=2,nc=2) # correlation = 0.82
+zwn <- mvrnorm(n=ni*nt, mu=zwn_mu, Sigma=zwn_sig)
+
+zwyo <- data.frame(
+  zn = zwn[,1],
+  wn = zwn[,2],
+  eps_y_pn = rnorm(ni*nt,0,1),
+  eps_y_rn = rnorm(ni*nt,0,1)
+)
+  
+# CALCULATE GERMINATION BEFOREHAND
+# REDUCE S0 TO NI*NJ VALUES
+# CYCLE ITERATIONS WHEN >1000
+
 # Resident simulations ----------------------------------------------------
 
 set.seed(1)
@@ -235,7 +255,7 @@ system.time({
 CL = makeCluster(ncores)
 clusterExport(cl=CL, c("popana","pls", 
   "ni","nt","nj","nstart",
-  "zamo","zsdo","wamo","wsdo",
+  "zwyo","zamo","zsdo","wamo","wsdo",
   "mpos","maml","msdl","cpos",
   "Tvalues","cnames_bycore",
   "itersetl"
@@ -245,7 +265,7 @@ parLapply(CL, 1:ncores, function(n){
 	msd <- msdl[[mpos[n]]]
 	popana(pl=pls,ni=ni,nt=nt,nj=nj,
 		nstart=nstart,zam=zamo*mam,zsd=zsdo*msd,
-		wam=wamo*mam,wsd=wsdo*msd,rho=0.82,
+		zwy=zwy,wam=wamo*mam,wsd=wsdo*msd,
 		Tvalues=Tvalues,tau_p=10^2,tau_d=10^2,tau_s=10^2,
 		iterset=itersetl[[cpos[n]]],
 		savefile=paste0("res_",cnames_bycore[n]) # res -> residents

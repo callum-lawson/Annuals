@@ -47,7 +47,7 @@
 # abline(0,1,col="red")
 
 popana <- function(pl,ni,nt,nj=22,nstart,
-  zam,zsd,wam,wsd,rho=0.82,
+  zwy,zam,zsd,wam,wsd,
   Tvalues,tau_p=10^2,tau_d=10^2,tau_s=10^2,
   iterset=NULL,
   savefile=NULL,
@@ -101,86 +101,43 @@ popana <- function(pl,ni,nt,nj=22,nstart,
   }
   # mean for hurdle model
   
-  ### SAMPLE ITERATIONS ###
-  
-  if(is.null(iterset)){
-    iter_go <- sample(1:length(go$alpha_G_mu),ni)
-    iter_gs <- sample(1:length(gs$phi_g),ni)
-    iter_pr <- sample(1:length(pr$sig_o),ni)
-    iter_rs <- sample(1:length(rs$phi_r),ni) # change to phi_g later
-  }
-  if(!is.null(iterset)){
-    iter_go <- iter_gs <- iter_pr <- iter_rs <- iterset
-    alpha_G <- go$alpha_G[iter_go,]
-    beta_Gz <- go$beta_Gz[iter_go,]
-  }
-  
-  ### LOAD PARAMS ###
-  
-  alpha_G <- go$alpha_G[iter_go,]
-  beta_Gz <- go$beta_Gz[iter_go,]
-  alpha_m <- go$alpha_m[iter_go,]
-  beta_m <- go$alpha_m[iter_go,]
+  ### DEFINE PARAMETERS ###
+    
+  iter_go <- iter_pr <- iter_rs <- iterset
+  alpha_G <- go$alpha_G[iterset,]
+  beta_Gz <- go$beta_Gz[iterset,]
+
+  alpha_G <- go$alpha_G[iterset,]
+  beta_Gz <- go$beta_Gz[iterset,]
+  alpha_m <- go$alpha_m[iterset,]
+  beta_m <- go$alpha_m[iterset,]
   
   beta_p <- beta_r <- matrix(nr=ni*nj,nc=4) 
-  beta_p[] <- as.vector(pr$beta_p[iter_pr,,]) # iterations vary faster than species
-  sig_y_p <- pr$sig_y_p[iter_pr,]
-  sig_o_p <- rep(pr$sig_o_p[iter_pr],times=nj)  # doesn't vary by species
+  beta_p[] <- as.vector(pr$beta_p[iterset,,]) # iterations vary faster than species
+  sig_o_p <- rep(pr$sig_o_p[iterset],times=nj)  # doesn't vary by species
   
-  beta_r[] <- as.vector(rs$beta_r[iter_rs,,])
-  sig_y_r <- rs$sig_y_r[iter_rs,]
-  phi_r <- rep(rs$phi_r[iter_rs],times=nj)     # doesn't vary by species
+  beta_r[] <- as.vector(rs$beta_r[iterset,,])
+  phi_r <- rep(rs$phi_r[iterset],times=nj)     # doesn't vary by species
   
-  ### RESCALE VARIANCE TERMS ###
-  # relative to first species (boin)
+  zwy <- zwy[iterset,]
   
-  sig_y_p1 <- sig_y_p[,1]
-  sig_y_r1 <- sig_y_r[,1]
-  # sds for boin
-  scale_y_p <- as.vector(sig_y_p / sig_y_p1)
-  scale_y_r <- as.vector(sig_y_r / sig_y_r1)
-  # for each iter and species, i*j vector of sd scales relative to boin
-  # (i varies faster than j)
+  ### RANDOM YEAR EFFECTS ###
   
-  ### SIMULATE YEAR / SITE EFFECTS ###
-  
-  # SIMULATE AS VECTORS
-  # same-scale eps values for all species
-  # i.e. simulating for boin and will re-scale later
-  eps_y_p1 <- rnorm(ni*nt,0,rep(sig_y_p1,times=nt))
-  eps_y_r1 <- rnorm(ni*nt,0,rep(sig_y_r1,times=nt))
-  
-  # CONVERT TO SPECIES-SPECIFIC VALUES AS ARRAYS
   eps_y_p <- eps_y_r <- array(NA,c(ni,nt,nj))
-  eps_y_p[] <- rep(eps_y_p1,times=nj) * rep(scale_y_p,each=nt)
-  eps_y_r[] <- rep(eps_y_r1,times=nj) * rep(scale_y_r,each=nt)
-  # relying on automatic (reverse) filling order:
-  # rows vary fastest, then cols, then gridno
+  eps_y_p[] <- rep(zwyo$eps_y_pn,times=nj) * rep(pr$sig_y_p[iterset,],each=nt)
+  eps_y_r[] <- rep(zwyo$eps_y_rn,times=nj) * rep(rs$sig_y_r[iterset,],each=nt)
   
-  ### SIMULATE RAINFALL	###
+  ### RAINFALL	###
   
-  z <- w <- array(NA,c(ni,nt))
-  
-  zw_mu <- c(zam,wam)
-  zw_sig <- matrix(c(zsd^2,rep(rho*zsd*wsd,2),wsd^2),nr=2,nc=2)
-  
-  zw <- mvrnorm(n=ni*nt, mu=zw_mu, Sigma=zw_sig)
-  
-  z[] <- zw[,1] - log(tau_p)
-  # transformed log winter rainfall
-  w[] <- zw[,2] - log(tau_p)
-  # transformed log germination rainfall
-  
-  ### CREATE DENSITY STORAGE OBJECTS ###
+  z <- matrix(zwyo$zn*zsd + zam - log(tau_p),nr=ni,nc=nt)
+  w <- matrix(zwyo$wn*wsd + wam - log(tau_p),nr=ni,nc=nt)
+
+  ### POPULATION DYNAMICS ###
   
   ns <- ng <- nn <- array(NA,c(ni,nt,nj))
-  # summed counts - permanently saved
   G <- m0 <- m1 <- So <- Sn <- array(NA,c(ni,nt,nj))
-  # derived params - permanently saved
   ns[,1,] <- rep(nstart,each=ni)
   # for each i, replicate vector of starting densities for all species
-  
-  ### BEGIN CALCULATIONS ###
   
   for(i in 1:ni){
     
@@ -239,7 +196,6 @@ popana <- function(pl,ni,nt,nj=22,nstart,
   outlist <- list(
     zam=zam,zsd=zsd,
     ni=ni,nt=nt,nj=nj,
-    z=z,w=w,
     G=G,So=So,Sn=Sn,Y=Y,
     ns=ns
   )
