@@ -253,9 +253,7 @@ parLapply(CL, 1:ncores, function(n){
 	})
 stopCluster(CL)
 })
-  # 5.1 hours
-  # 9.5 hours (80 cores)
-  # 6.5 hours (50 cores)
+  # 15 mins (10 cores)
 
 # Read resident simulations back in ---------------------------------------
 
@@ -303,13 +301,12 @@ simcombine <- function(insiml){
 
 psl <- as.list(rep(NA,ncores))
 for(n in 1:ncores){
-  psl[[n]] <- readRDS(paste0("Sims/res_",cnames_bycore[n],"_12Aug2017.rds"))
+  psl[[n]] <- readRDS(paste0("Sims/res_",cnames_bycore[n],"_23Aug2017.rds"))
 }
 names(psl) <- cnames_bycore
 
 # psl[is.na(psl)] <- psl[1]
 psla <- simcombine(psl)
-psla$Y <- with(psla, nn/ng)
 
 # Invader simulations -----------------------------------------------------
 
@@ -358,7 +355,7 @@ for(c in 1:nchunk){ # 1:length(corechunk)
 
 psl2 <- as.list(rep(NA,ncores))
 for(n in 1:ncores){
-  psl2[[n]] <- readRDS(paste0("Sims/inv_",cnames_bycore[n],"_09Aug2017.rds"))
+  psl2[[n]] <- readRDS(paste0("Sims/inv_",cnames_bycore[n],"_23Aug2017.rds"))
 }
 names(psl2) <- cnames_bycore
 
@@ -487,7 +484,7 @@ popopt <- apply(pop,3:4,function(x) which(x==max(x)))
 
 # Compare individual and species optima -----------------------------------
 
-j <- 4
+j <- 13
 
 for(m in 1:nclim){
   
