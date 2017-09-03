@@ -36,7 +36,7 @@ tau_p <- 100	# adjustment for rainfall
 ### CLIMATE
 
 # DATA
-pp <- read.csv("Output/prcp_projection_summaries_07Apr2017.csv",header=T)
+pp <- read.csv("Output/prcp_projection_summaries_03Sep2017.csv",header=T)
 mpam <- with(pp, median[measure=="mpam" & scenario==60 & yearcat==100])
 mpsd <- with(pp, median[measure=="mpsd" & scenario==60 & yearcat==100])
   # using projected season precipitation for germination season precipitation change
@@ -264,8 +264,8 @@ parLapply(CL, 1:ncores, function(n){
 	mam <- maml[[mpos[n]]]
 	msd <- msdl[[mpos[n]]]
 	popana(pl=pls,ni=ni,nt=nt,nj=nj,
-		nstart=nstart,zam=zamo*mam,zsd=zsdo*msd,
-		zwy=zwyo,wam=wamo*mam,wsd=wsdo*msd,
+		nstart=nstart,zam=zamo+mam*zsdo,zsd=zsdo*msd,
+		zwy=zwyo,wam=wamo+wam*wsdo,wsd=wsdo*msd,
 		Tvalues=Tvalues,tau_p=10^2,tau_d=10^2,tau_s=10^2,
 		iterset=itersetl[[cpos[n]]],
 		savefile=paste0("res_",cnames_bycore[n]) # res -> residents
