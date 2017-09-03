@@ -228,9 +228,9 @@ cnames_merged <- paste(cnames_unique,collapse="_")
 
 # maxiter <- 10000 # max number of iterations in PARAMETERISATION
 
-
 # Simulate normalised climate and year effects ----------------------------
 
+require(MASS)
 set.seed(1)
 zn <- wn <- array(NA,c(rpi,nt))
 zwn_mu <- rep(0,2)
@@ -265,7 +265,7 @@ parLapply(CL, 1:ncores, function(n){
 	msd <- msdl[[mpos[n]]]
 	popana(pl=pls,ni=ni,nt=nt,nj=nj,
 		nstart=nstart,zam=zamo*mam,zsd=zsdo*msd,
-		zwy=zwy,wam=wamo*mam,wsd=wsdo*msd,
+		zwy=zwyo,wam=wamo*mam,wsd=wsdo*msd,
 		Tvalues=Tvalues,tau_p=10^2,tau_d=10^2,tau_s=10^2,
 		iterset=itersetl[[cpos[n]]],
 		savefile=paste0("res_",cnames_bycore[n]) # res -> residents

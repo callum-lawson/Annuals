@@ -61,8 +61,6 @@ popana <- function(pl,ni,nt,nj=22,nstart,
   
   if(ni*nt*nj > 10^9 | ni*nt*nj > 10^9) stop("matrices are too large")
   
-  require(MASS)
-  
   cur_date <- format(Sys.Date(),"%d%b%Y")
   
   T1 <- with(Tvalues,duration[period=="T1"])
@@ -124,13 +122,13 @@ popana <- function(pl,ni,nt,nj=22,nstart,
   ### RANDOM YEAR EFFECTS ###
   
   eps_y_p <- eps_y_r <- array(NA,c(ni,nt,nj))
-  eps_y_p[] <- rep(zwyo$eps_y_pn,times=nj) * rep(pr$sig_y_p[iterset,],each=nt)
-  eps_y_r[] <- rep(zwyo$eps_y_rn,times=nj) * rep(rs$sig_y_r[iterset,],each=nt)
+  eps_y_p[] <- rep(zwy$eps_y_pn,times=nj) * rep(pr$sig_y_p[iterset,],each=nt)
+  eps_y_r[] <- rep(zwy$eps_y_rn,times=nj) * rep(rs$sig_y_r[iterset,],each=nt)
   
   ### RAINFALL	###
   
-  z <- matrix(zwyo$zn*zsd + zam - log(tau_p),nr=ni,nc=nt)
-  w <- matrix(zwyo$wn*wsd + wam - log(tau_p),nr=ni,nc=nt)
+  z <- matrix(zwy$zn*zsd + zam - log(tau_p),nr=ni,nc=nt)
+  w <- matrix(zwy$wn*wsd + wam - log(tau_p),nr=ni,nc=nt)
 
   ### POPULATION DYNAMICS ###
   
@@ -810,14 +808,16 @@ popana <- function(pl,ni,nt,nj=22,nstart,
 
 popinv <- function(
   # pli,plr,iterseti,itersetr,
-  z,w,alpha_G,beta_Gz,
+  zwy,alpha_G,beta_Gz,
   Y,Sn,So,
   ni,nt,nj=22,tmin=1,
-  full=T,
   savefile=NULL
   ){
 
   cur_date <- format(Sys.Date(),"%d%b%Y")
+  
+  z <- matrix(zwy$zn*zsd + zam - log(tau_p),nr=ni,nc=nt)
+  w <- matrix(zwy$wn*wsd + wam - log(tau_p),nr=ni,nc=nt)
   
   G <- array(dim=c(ni,nt,nj))
   for(i in 1:ni){
@@ -829,8 +829,7 @@ popinv <- function(
 
   ri <- log(G*Y*Sn + (1-G)*So)
   
-  if(full==T) outlist <- list(G=G,ri=ri)
-  if(full==F) outlist <- list(rbari=apply(ri[,tmin:nt,],c(1,3),mean))
+  outlist <- list(rbari=apply(ri[,tmin:nt,],c(1,3),mean))
     # can calculate Y, Ye, and So from input (plr parameters)
 
   if(is.null(savefile)){
