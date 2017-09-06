@@ -41,19 +41,22 @@ ressim <- function(alpha_G,beta_G){
     pr_t <- logitnormint(mu=pi_bar_t+eps_y_p[t],sigma=sig_o_p)
     rs_t <- nbtmean(exp(mu_bar_t),phi_r)
     nn[t] <- ng[t] * pr_t * rs_t
-    Ye[t] <- nn[t] * BHS(nn[t],m0,m1)
-    ns[t+1] <- (ns[t]*(1-G[t])*So + nn[t])
+    Ye[t] <- nn[t] * BHS(nn[t],m0,m1) / ng[t]
+    ns[t+1] <- ns[t] * ( (1-G[t])*So + G[t]*Ye[t] )
     t <- t + 1
   }
-  return(Ye)
+  return(data.frame(G=G,Ye=Ye))
 }
   
-invade <- function(alpha_G_res,beta_G_res,alpha_G_inv,beta_G_inv){
-  if(!NA %in% Ye){ # t = final value at which loop stopped  
+invade <- function(alpha_G_inv,beta_G_inv,rd){
+  if(!NA %in% rd$Ye){ # t = final value at which loop stopped  
     Ginv <- plogis(alpha_G_inv,beta_G_inv*zw[,2])
-    invaded <- mean(log(Ginv*Ye + (1-Ginv)*So)[nb:nt]) > 0
+    delta_r <- with(rd, 
+      log( (1-Ginv)*So + Ginv*Ye ) - log( (1-G)*So + G*Ye )
+      )[(nb+1):nt] 
+    invaded <- mean(delta_r) > 0
   }
-  if(NA %in% Ye){   
+  if(NA %in% rd$Ye){   
     invaded <- TRUE # if old resident goes extinct, invader establishes immediately
   }
   return(invaded)
@@ -65,7 +68,7 @@ evolve <- function(
   beta_p,beta_r,
   sig_y_p,sig_y_r,
   sig_o_p,phi_r,
-  alpha_m,beta_m,
+  m0,m1,
   alpha_G0,beta_G0,
   sig_alpha_G,sig_beta_G,
   nstart=1,
@@ -107,16 +110,16 @@ evolve <- function(
 
   for(i in 1:nr){
     if(i==1){
-      Ye <- ressim(alpha_G0, beta_G0) # simulate starting resident dynamics
+      rd <- ressim(alpha_G0, beta_G0) # simulate starting resident dynamics
     }
     alpha_G_inv <- es$alpha_G[i] + rnorm(1,0,sig_alpha_G)
     beta_G_inv <- es$beta_G[i] + rnorm(1,0,sig_beta_G)
-    invaded <- invade(es$alpha_G[i],es$beta_G[i],alpha_G_inv,beta_G_inv)
+    invaded <- invade(alpha_G_inv,beta_G_inv,rd)
     if(i < nr){
       if(invaded==TRUE){
         es$alpha_G[i+1] <- alpha_G_inv
         es$beta_G[i+1] <- beta_G_inv
-        Ye <- ressim(alpha_G_inv,beta_G_inv) # simulate new resident dynamics
+        rd <- ressim(alpha_G_inv,beta_G_inv) # simulate new resident dynamics
       } 
       if(invaded==FALSE){
         es$alpha_G[i+1] <- es$alpha_G[i]
@@ -136,14 +139,38 @@ evolve <- function(
   }
 }
 
-ni;nr;nt;nb;
+outlist <- evolve(
+  ni,nr,nt,nb,
+  zam,wam,zsd,wsd,rho=0.82,
+  beta_p,beta_r,
+  sig_y_p,sig_y_r,
+  sig_o_p,phi_r,
+  m0,m1,
+  alpha_G0,beta_G0,
+  sig_alpha_G,sig_beta_G,
+  nstart=1,
+  iterset=NULL,
+  savefile=NULL,
+  rel.tol=10^-5,
+  abs.tol=0, # .Machine$double.eps^0.25,
+  intsd=10,
+  nsmin=10^-50
+)
+
+plot(beta_G~alpha_G,data=outlist$es,type="b",col="red")
+with(outlist$es, text(alpha_G[1],beta_G[1],labels="start",pos=3) )
+with(outlist$es, text(alpha_G[nr],beta_G[nr],labels="end",pos=3) )
+
+with(outlist$es[nr,],curve(plogis(alpha_G + beta_G*x),xlim=c(-2*zsd,2*zsd)))
+
+ni;nr=1000;nt=280;nb;20
 zam=zamo+mam*zsdo;zsd=zsdo*msd;
 wam=wamo+mam*wsdo;wsd=wsdo*msd;
 rho=0.82;
-beta_p=pl$pr$beta_p[1,1,];beta_r=pl$rs$beta_r[1,1,];
-sig_y_p=pl$pr$sig_y_p[1,1];sig_y_r=pl$rs$sig_y_r[1,1];
+beta_p=pl$pr$beta_p[1,19,];beta_r=pl$rs$beta_r[1,19,];
+sig_y_p=pl$pr$sig_y_p[1,19];sig_y_r=pl$rs$sig_y_r[1,19];
 sig_o_p=pl$pr$sig_o_p[1];phi_r=pl$rs$phi_r[1];
-m0=exp(pl$go$alpha_m[1,1]);m1=exp(pl$go$beta_m[1,1]);
+m0=exp(pl$go$alpha_m[1,19]);m1=exp(pl$go$beta_m[1,19]);
 alpha_G0=0;beta_G0=0;
 sig_alpha_G=0.1;sig_beta_G=0.1;
 nstart=1;
