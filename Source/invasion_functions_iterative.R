@@ -27,41 +27,54 @@ nbtmean <- function(mu,phi){
   mu / ( 1 - (phi/(mu+phi))^phi )
 }
 # mean for hurdle model
-  
-ressim <- function(alpha_G,beta_G){
-  ns <- ng <- nn <- Ye <- rep(NA,nt)
-  G <- plogis(alpha_G + beta_G*zw[,2])
-  ns[1] <- nstart
-  t <- 1
-  while(ns[t] > nsmin & t <= nt){
-    ng[t] <- G[t] * ns[t]
-    x_t <- c(x_z[t,],log(ng[t])-log(tau_d/10))
-    pi_bar_t <- sum(beta_p * x_t)
-    mu_bar_t <- sum(beta_r * x_t)
-    pr_t <- logitnormint(mu=pi_bar_t+eps_y_p[t],sigma=sig_o_p)
-    rs_t <- nbtmean(exp(mu_bar_t),phi_r)
-    nn[t] <- ng[t] * pr_t * rs_t
-    Ye[t] <- nn[t] * BHS(nn[t],m0,m1) / ng[t]
-    ns[t+1] <- ns[t] * ( (1-G[t])*So + G[t]*Ye[t] )
-    t <- t + 1
-  }
-  return(data.frame(G=G,Ye=Ye))
+
+Gcalc <- function(z,a,b){
+  plogis(a+b*z)
+}
+
+### Cubature
+funin <- function(x,z,am,bm,as,bs,ab_r){
+  matrix(apply(x, 2, function(y){
+    require(mvtnorm)
+    x1 <- y[1]; x2 <- y[2]
+    ab_m <- c(am,bm)
+    ab_s <- matrix(c(as^2,rep(ab_r*as*bs,2),bs^2),nr=2,nc=2)
+    dmvnorm(x=cbind(x1,x2), mean=ab_m, sigma=ab_s, log=F) * Gcalc(z,x1,x2)
+  }),
+  ncol = ncol(x))
+}
+
+mixG <- Vectorize(function(z){
+  require(cubature)
+  adaptIntegrate(funin, lowerLimit=c(-5,-5), upperLimit=c(5,5),
+                 z=z,am=am,bm=bm,as=as,bs=bs,ab_r=ab_r,
+                 vectorInterface=TRUE,
+                 absError = 0.001)$integral
+})
+
+curve(mixG(x),xlim=c(-5,5),ylim=c(0,1))
+
+### Manual
+
+funman <- function(w,am,bm,as,bs,ab_r,nint=10,intsd=2){
+  require(mvtnorm)
+  xa <- seq(am-intsd*as,am+intsd*as,length.out=nint)
+  xb <- seq(bm-intsd*bs,bm+intsd*bs,length.out=nint)
+  ab <- expand.grid(xa=xa,xb=xb)
+  ab_m <- c(am,bm)
+  ab_s <- matrix(c(as^2,rep(ab_r*as*bs,2),bs^2),nr=2,nc=2)
+  pg <- dmvnorm(ab, mean=ab_m, sigma=ab_s, log=F) 
+  sum(pg * Gcalc(w,ab$xa,ab$xb))/sum(pg)
 }
   
-invade <- function(alpha_G_inv,beta_G_inv,rd){
-  if(!NA %in% rd$Ye){ # t = final value at which loop stopped  
-    Ginv <- plogis(alpha_G_inv,beta_G_inv*zw[,2])
-    delta_r <- with(rd, 
-      log( (1-Ginv)*So + Ginv*Ye ) - log( (1-G)*So + G*Ye )
-      )[(nb+1):nt] 
-    invaded <- mean(delta_r) > 0
-  }
-  if(NA %in% rd$Ye){   
-    invaded <- TRUE # if old resident goes extinct, invader establishes immediately
-  }
-  return(invaded)
-}
-	
+funvec <- Vectorize(funman,vectorize.args="w")
+
+ab_r <- 0
+am <- 1; bm <- 0
+as <- 2; bs <- 2
+
+curve(funvec(w=x,am=am,bm=bm,as=as,bs=bs,ab_r=ab_r),xlim=c(-5,5),ylim=c(0,1))
+
 evolve <- function(
   ni,nr,nt,nb,
   zam,wam,zsd,wsd,rho=0.82,
@@ -109,6 +122,41 @@ evolve <- function(
   es[1,] <- c(alpha_G0,beta_G0)
 
   for(i in 1:nr){
+    
+    ressim <- function(alpha_G_res,beta_G_res){
+      ns <- ng <- nn <- Ye <- rep(NA,nt)
+      G <- plogis(alpha_G_res + beta_G_res*zw[,2])
+      ns[1] <- nstart
+      t <- 1
+      while(ns[t] > nsmin & t <= nt){
+        ng[t] <- G[t] * ns[t]
+        x_t <- c(x_z[t,],log(ng[t])-log(tau_d/10))
+        pi_bar_t <- sum(beta_p * x_t) + eps_y_p[t]
+        mu_bar_t <- sum(beta_r * x_t) + eps_y_r[t]
+        pr_t <- logitnormint(mu=pi_bar_t,sigma=sig_o_p)
+        rs_t <- nbtmean(exp(mu_bar_t),phi_r)
+        nn[t] <- ng[t] * pr_t * rs_t
+        Ye[t] <- nn[t] * BHS(nn[t],m0,m1) / ng[t]
+        ns[t+1] <- ns[t] * ( (1-G[t])*So + G[t]*Ye[t] )
+        t <- t + 1
+      }
+      return(data.frame(G=G,Ye=Ye))
+    }
+    
+    invade <- function(alpha_G_inv,beta_G_inv,rd){
+      if(!NA %in% rd$Ye){ # t = final value at which loop stopped  
+        Ginv <- plogis(alpha_G_inv,beta_G_inv*zw[,2])
+        delta_r <- with(rd, 
+                        log( (1-Ginv)*So + Ginv*Ye ) - log( (1-G)*So + G*Ye )
+        )[(nb+1):nt] 
+        invaded <- mean(delta_r) > 0
+      }
+      if(NA %in% rd$Ye){   
+        invaded <- TRUE # if old resident goes extinct, invader establishes immediately
+      }
+      return(invaded)
+    }
+    
     if(i==1){
       rd <- ressim(alpha_G0, beta_G0) # simulate starting resident dynamics
     }
@@ -140,14 +188,14 @@ evolve <- function(
 }
 
 outlist <- evolve(
-  ni,nr,nt,nb,
+  ni,nr=5000,nt,nb,
   zam,wam,zsd,wsd,rho=0.82,
   beta_p,beta_r,
   sig_y_p,sig_y_r,
   sig_o_p,phi_r,
   m0,m1,
-  alpha_G0,beta_G0,
-  sig_alpha_G,sig_beta_G,
+  alpha_G0,beta_G0=1,
+  sig_alpha_G,sig_beta_G=1,
   nstart=1,
   iterset=NULL,
   savefile=NULL,
@@ -163,7 +211,13 @@ with(outlist$es, text(alpha_G[nr],beta_G[nr],labels="end",pos=3) )
 
 with(outlist$es[nr,],curve(plogis(alpha_G + beta_G*x),xlim=c(-2*zsd,2*zsd)))
 
-ni;nr=1000;nt=280;nb;20
+rd <- ressim(1,5) # simulate starting resident dynamics
+plot(log(rd$Ye)~zw[,2])
+lines(supsmu(zw[,2],log(rd$Ye)),col="red")
+abline(h=0,col="blue",lty=3)
+abline(v=0,col="blue",lty=3)
+
+ni;nr=1000;nt=320;nb;20
 zam=zamo+mam*zsdo;zsd=zsdo*msd;
 wam=wamo+mam*wsdo;wsd=wsdo*msd;
 rho=0.82;
