@@ -56,24 +56,24 @@ curve(mixG(x),xlim=c(-5,5),ylim=c(0,1))
 
 ### Manual
 
-funman <- function(w,am,bm,as,bs,ab_r,nint=10,intsd=2){
+coaG_w <- function(w,am,bm,as,bs,abr,nint=10,intsd=2){
   require(mvtnorm)
   xa <- seq(am-intsd*as,am+intsd*as,length.out=nint)
   xb <- seq(bm-intsd*bs,bm+intsd*bs,length.out=nint)
   ab <- expand.grid(xa=xa,xb=xb)
-  ab_m <- c(am,bm)
-  ab_s <- matrix(c(as^2,rep(ab_r*as*bs,2),bs^2),nr=2,nc=2)
-  pg <- dmvnorm(ab, mean=ab_m, sigma=ab_s, log=F) 
+  abm <- c(am,bm)
+  abs <- matrix(c(as^2,rep(abr*as*bs,2),bs^2),nr=2,nc=2)
+  pg <- dmvnorm(ab, mean=abm, sigma=abs, log=F) 
   sum(pg * Gcalc(w,ab$xa,ab$xb))/sum(pg)
 }
   
-funvec <- Vectorize(funman,vectorize.args="w")
+coaG <- Vectorize(coaG_w,vectorize.args="w")
 
-ab_r <- 0
+abr <- 0.1
 am <- 1; bm <- 0
 as <- 2; bs <- 2
 
-curve(funvec(w=x,am=am,bm=bm,as=as,bs=bs,ab_r=ab_r),xlim=c(-5,5),ylim=c(0,1))
+curve(coaG(w=x,am=am,bm=bm,as=as,bs=bs,abr=abr),xlim=c(-5,5),ylim=c(0,1))
 
 evolve <- function(
   ni,nr,nt,nb,
@@ -82,8 +82,10 @@ evolve <- function(
   sig_y_p,sig_y_r,
   sig_o_p,phi_r,
   m0,m1,
-  alpha_G0,beta_G0,
-  sig_alpha_G,sig_beta_G,
+  am0,bm0,
+  as0,bs0,
+  abr0,
+  smut_m=0.5,smut_s=0.1,smut_r=0.1,
   nstart=1,
   iterset=NULL,
   savefile=NULL,
@@ -118,18 +120,23 @@ evolve <- function(
   x_z[,2] <- zw[,1]
   x_z[,3] <- zw[,1]^2 
   
-  es <- data.frame(alpha_G=rep(NA,times=nr),beta_G=rep(NA,times=nr))
-  es[1,] <- c(alpha_G0,beta_G0)
+  es <- data.frame(am=rep(NA,times=nr),
+                   bm=rep(NA,times=nr),
+                   as=rep(NA,times=nr),
+                   bs=rep(NA,times=nr),
+                   abr=rep(NA,times=nr)
+                   )
+  es[1,] <- c(am0,bm0,as0,bs0,abr0)
 
   for(i in 1:nr){
     
-    ressim <- function(alpha_G_res,beta_G_res){
+    ressim <- function(am,bm,as,bs,abr){
       ns <- ng <- nn <- Ye <- rep(NA,nt)
-      G <- plogis(alpha_G_res + beta_G_res*zw[,2])
+      Gres <- coaG(zw[,2],am,bm,as,bs,abr)
       ns[1] <- nstart
       t <- 1
       while(ns[t] > nsmin & t <= nt){
-        ng[t] <- G[t] * ns[t]
+        ng[t] <- Gres[t] * ns[t]
         x_t <- c(x_z[t,],log(ng[t])-log(tau_d/10))
         pi_bar_t <- sum(beta_p * x_t) + eps_y_p[t]
         mu_bar_t <- sum(beta_r * x_t) + eps_y_r[t]
@@ -137,44 +144,51 @@ evolve <- function(
         rs_t <- nbtmean(exp(mu_bar_t),phi_r)
         nn[t] <- ng[t] * pr_t * rs_t
         Ye[t] <- nn[t] * BHS(nn[t],m0,m1) / ng[t]
-        ns[t+1] <- ns[t] * ( (1-G[t])*So + G[t]*Ye[t] )
+        ns[t+1] <- ns[t] * ( (1-Gres[t])*So + Gres[t]*Ye[t] )
         t <- t + 1
       }
-      return(data.frame(G=G,Ye=Ye))
+      return(data.frame(Gres=Gres,Ye=Ye))
     }
     
-    invade <- function(alpha_G_inv,beta_G_inv,rd){
+    invade <- function(am,bm,as,bs,abr,rd){
       if(!NA %in% rd$Ye){ # t = final value at which loop stopped  
-        Ginv <- plogis(alpha_G_inv,beta_G_inv*zw[,2])
+        Ginv <- coaG(zw[,2],am,bm,as,bs,abr)
         delta_r <- with(rd, 
-                        log( (1-Ginv)*So + Ginv*Ye ) - log( (1-G)*So + G*Ye )
-        )[(nb+1):nt] 
+                        log( (1-Ginv)*So + Ginv*Ye ) - log( (1-Gres)*So + Gres*Ye )
+                        )[(nb+1):nt] 
         invaded <- mean(delta_r) > 0
       }
       if(NA %in% rd$Ye){   
-        invaded <- TRUE # if old resident goes extinct, invader establishes immediately
+        invaded <- TRUE 
+          # if old resident goes extinct, invader establishes immediately
       }
       return(invaded)
     }
     
     if(i==1){
-      rd <- ressim(alpha_G0, beta_G0) # simulate starting resident dynamics
+      rd <- with(es[i,], ressim(am,bm,as,bs,abr) )
+                 # simulate starting resident dynamics
     }
-    alpha_G_inv <- es$alpha_G[i] + rnorm(1,0,sig_alpha_G)
-    beta_G_inv <- es$beta_G[i] + rnorm(1,0,sig_beta_G)
-    invaded <- invade(alpha_G_inv,beta_G_inv,rd)
+    ami <- es$am[i] + rnorm(1,0,smut_m)
+    bmi <- es$bm[i] + rnorm(1,0,smut_m)
+    asi <- es$as[i] * exp(rnorm(1,0,smut_s))
+    bsi <- es$bs[i] * exp(rnorm(1,0,smut_s))
+    abri <- plogis( (qlogis((es$abr[i]+1)/2) + rnorm(1,0,smut_r))*2 - 1 )
+    if(abri==-1) abri <- -0.99
+    if(abri==+1) abri <- +0.99
+      # correlation must lie in [-1,1]
+      # transform [0,1] to [-1,1]
+    invaded <- invade(ami,bmi,asi,bsi,abri,rd)
     if(i < nr){
       if(invaded==TRUE){
-        es$alpha_G[i+1] <- alpha_G_inv
-        es$beta_G[i+1] <- beta_G_inv
-        rd <- ressim(alpha_G_inv,beta_G_inv) # simulate new resident dynamics
+        es[i+1,] <- c(ami,bmi,asi,bsi,abri)
+        rd <- ressim(ami,bmi,asi,bsi,abri) # simulate new resident dynamics
       } 
       if(invaded==FALSE){
-        es$alpha_G[i+1] <- es$alpha_G[i]
-        es$beta_G[i+1] <- es$beta_G[i]
+        es[i+1,] <- es[i,]
       } 
     }
-  }
+  } # close i loop
   
   outlist <- list(zw=zw,es=es)  
   
@@ -188,14 +202,16 @@ evolve <- function(
 }
 
 outlist <- evolve(
-  ni,nr=5000,nt,nb,
+  ni,nr=500,nt,nb,
   zam,wam,zsd,wsd,rho=0.82,
   beta_p,beta_r,
   sig_y_p,sig_y_r,
   sig_o_p,phi_r,
   m0,m1,
-  alpha_G0,beta_G0=1,
-  sig_alpha_G,sig_beta_G=1,
+  am0,bm0,
+  as0,bs0,
+  abr0,
+  smut_m=0.5,smut_s=0.1,smut_r=0.1,
   nstart=1,
   iterset=NULL,
   savefile=NULL,
@@ -204,6 +220,14 @@ outlist <- evolve(
   intsd=10,
   nsmin=10^-50
 )
+
+plot(outlist$es$am)
+plot(outlist$es$bm)
+plot(outlist$es$as)
+plot(outlist$es$bs)
+plot(outlist$es$amr)
+
+with(es[nr,],curve(coaG(w=x,am=am,bm=bm,as=as,bs=bs,abr=abr),xlim=c(-5,5),ylim=c(0,1)))
 
 plot(beta_G~alpha_G,data=outlist$es,type="b",col="red")
 with(outlist$es, text(alpha_G[1],beta_G[1],labels="start",pos=3) )
