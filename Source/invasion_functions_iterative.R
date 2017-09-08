@@ -14,13 +14,12 @@ logitnorm <- function(x,mu,sigma){
 }
 # code borrowed from logitnorm package
   
-logitnormint <- Vectorize(function(mu,sigma){
+logitnormint <- Vectorize(function(mu,sigma,intsd=10,...){
   integrate(logitnorm,
             mu=mu,sigma=sigma,
             lower=mu-intsd*sigma,
             upper=mu+intsd*sigma,
-            rel.tol=rel.tol,
-            abs.tol=abs.tol)$value
+            ...)$value
 })
   
 nbtmean <- function(mu,phi){
@@ -28,33 +27,9 @@ nbtmean <- function(mu,phi){
 }
 # mean for hurdle model
 
-Gcalc <- function(z,a,b){
-  plogis(a+b*z)
+fixG <- function(w,a,b){
+  plogis(a+b*w)
 }
-
-### Cubature
-funin <- function(x,z,am,bm,as,bs,ab_r){
-  matrix(apply(x, 2, function(y){
-    require(mvtnorm)
-    x1 <- y[1]; x2 <- y[2]
-    ab_m <- c(am,bm)
-    ab_s <- matrix(c(as^2,rep(ab_r*as*bs,2),bs^2),nr=2,nc=2)
-    dmvnorm(x=cbind(x1,x2), mean=ab_m, sigma=ab_s, log=F) * Gcalc(z,x1,x2)
-  }),
-  ncol = ncol(x))
-}
-
-mixG <- Vectorize(function(z){
-  require(cubature)
-  adaptIntegrate(funin, lowerLimit=c(-5,-5), upperLimit=c(5,5),
-                 z=z,am=am,bm=bm,as=as,bs=bs,ab_r=ab_r,
-                 vectorInterface=TRUE,
-                 absError = 0.001)$integral
-})
-
-curve(mixG(x),xlim=c(-5,5),ylim=c(0,1))
-
-### Manual
 
 coaG_w <- function(w,am,bm,as,bs,abr,nint=10,intsd=2){
   require(mvtnorm)
@@ -64,19 +39,55 @@ coaG_w <- function(w,am,bm,as,bs,abr,nint=10,intsd=2){
   abm <- c(am,bm)
   abs <- matrix(c(as^2,rep(abr*as*bs,2),bs^2),nr=2,nc=2)
   pg <- dmvnorm(ab, mean=abm, sigma=abs, log=F) 
-  sum(pg * Gcalc(w,ab$xa,ab$xb))/sum(pg)
+  sum(pg * fixG(w,ab$xa,ab$xb))/sum(pg)
 }
   
 coaG <- Vectorize(coaG_w,vectorize.args="w")
+# coaG(w=zw[,2],am,bm,as,bs,abr,nint=10,intsd=2)
 
-abr <- 0.1
-am <- 1; bm <- 0
-as <- 2; bs <- 2
+ressim <- function(w,x_z,am,bm,as,bs,abr,
+                   beta_p,beta_r,
+                   eps_y_p,eps_y_r,
+                   sig_o_p,phi_r,
+                   So,m0,m1,
+                   nt,nsmin
+                   ){
+  ns <- ng <- nn <- Ye <- rep(NA,nt)
+  Gres <- coaG(w,am,bm,as,bs,abr)
+  #Gres <- fixG(w,am,bm)
+  ns[1] <- nstart
+  t <- 1
+  while(ns[t] > nsmin & t <= nt){
+    ng[t] <- Gres[t] * ns[t]
+    x_t <- c(x_z[t,],log(ng[t])-log(tau_d/10))
+    pi_bar_t <- sum(beta_p * x_t) + eps_y_p[t]
+    mu_bar_t <- sum(beta_r * x_t) + eps_y_r[t]
+    pr_t <- logitnormint(mu=pi_bar_t,sigma=sig_o_p)
+    rs_t <- nbtmean(exp(mu_bar_t),phi_r)
+    nn[t] <- ng[t] * pr_t * rs_t
+    Ye[t] <- nn[t] * BHS(nn[t],m0,m1) / ng[t]
+    if(t<nt) ns[t+1] <- ns[t] * ( (1-Gres[t])*So + Gres[t]*Ye[t] )
+    t <- t + 1
+  }
+  return(data.frame(Gres=Gres,Ye=Ye))
+}
 
-curve(coaG(w=x,am=am,bm=bm,as=as,bs=bs,abr=abr),xlim=c(-5,5),ylim=c(0,1))
+invade <- function(w,ami,bmi,asi,bsi,abri,Gres,Ye,So,nt,nb){
+  if(!NA %in% Ye){ # t = final value at which loop stopped 
+    Ginv <- coaG(w,ami,bmi,asi,bsi,abri)
+    #Ginv <- fixG(w,ami,bmi)
+    delta_r <- log((1-Ginv)*So + Ginv*Ye) - log((1-Gres)*So + Gres*Ye)
+    invaded <- mean(delta_r[(nb+1):nt]) > 0
+  }
+  if(NA %in% Ye){   
+    invaded <- TRUE 
+    # if resident goes extinct, invader establishes immediately
+  }
+  return(invaded)
+}
 
 evolve <- function(
-  ni,nr,nt,nb,
+  nr,nt,nb,
   zam,wam,zsd,wsd,rho=0.82,
   beta_p,beta_r,
   sig_y_p,sig_y_r,
@@ -86,26 +97,12 @@ evolve <- function(
   as0,bs0,
   abr0,
   smut_m=0.5,smut_s=0.1,smut_r=0.1,
-  nstart=1,
-  iterset=NULL,
   savefile=NULL,
-  rel.tol=10^-5,
-  abs.tol=0, # .Machine$double.eps^0.25,
-  intsd=10,
   nsmin=10^-50
   ){
   
   require(MASS)
   cur_date <- format(Sys.Date(),"%d%b%Y")
-  
-  T1 <- with(Tvalues,duration[period=="T1"])
-  T2 <- with(Tvalues,duration[period=="T2"])
-  T3 <- with(Tvalues,duration[period=="T3"])
-  # T in years
-  
-  tau_s <- 100  # adujstment for seeds
-  tau_d <- 100	# adjustment for density
-  tau_p <- 100	# adjustment for rainfall
   
   zw_mu <- c(zam,wam) - log(tau_p)
   zw_sig <- matrix(c(zsd^2,rep(rho*zsd*wsd,2),wsd^2),nr=2,nc=2)
@@ -129,60 +126,34 @@ evolve <- function(
   es[1,] <- c(am0,bm0,as0,bs0,abr0)
 
   for(i in 1:nr){
-    
-    ressim <- function(am,bm,as,bs,abr){
-      ns <- ng <- nn <- Ye <- rep(NA,nt)
-      Gres <- coaG(zw[,2],am,bm,as,bs,abr)
-      ns[1] <- nstart
-      t <- 1
-      while(ns[t] > nsmin & t <= nt){
-        ng[t] <- Gres[t] * ns[t]
-        x_t <- c(x_z[t,],log(ng[t])-log(tau_d/10))
-        pi_bar_t <- sum(beta_p * x_t) + eps_y_p[t]
-        mu_bar_t <- sum(beta_r * x_t) + eps_y_r[t]
-        pr_t <- logitnormint(mu=pi_bar_t,sigma=sig_o_p)
-        rs_t <- nbtmean(exp(mu_bar_t),phi_r)
-        nn[t] <- ng[t] * pr_t * rs_t
-        Ye[t] <- nn[t] * BHS(nn[t],m0,m1) / ng[t]
-        ns[t+1] <- ns[t] * ( (1-Gres[t])*So + Gres[t]*Ye[t] )
-        t <- t + 1
-      }
-      return(data.frame(Gres=Gres,Ye=Ye))
-    }
-    
-    invade <- function(am,bm,as,bs,abr,rd){
-      if(!NA %in% rd$Ye){ # t = final value at which loop stopped  
-        Ginv <- coaG(zw[,2],am,bm,as,bs,abr)
-        delta_r <- with(rd, 
-                        log( (1-Ginv)*So + Ginv*Ye ) - log( (1-Gres)*So + Gres*Ye )
-                        )[(nb+1):nt] 
-        invaded <- mean(delta_r) > 0
-      }
-      if(NA %in% rd$Ye){   
-        invaded <- TRUE 
-          # if old resident goes extinct, invader establishes immediately
-      }
-      return(invaded)
-    }
-    
     if(i==1){
-      rd <- with(es[i,], ressim(am,bm,as,bs,abr) )
-                 # simulate starting resident dynamics
+      rd <- with(es[i,], ressim(zw[,2],x_z,am,bm,as,bs,abr,
+                                beta_p,beta_r,
+                                eps_y_p,eps_y_r,
+                                sig_o_p,phi_r,
+                                So,m0,m1,
+                                nt,nsmin
+                                ) )
+        # simulate starting resident dynamics
     }
     ami <- es$am[i] + rnorm(1,0,smut_m)
     bmi <- es$bm[i] + rnorm(1,0,smut_m)
     asi <- es$as[i] * exp(rnorm(1,0,smut_s))
     bsi <- es$bs[i] * exp(rnorm(1,0,smut_s))
-    abri <- plogis( (qlogis((es$abr[i]+1)/2) + rnorm(1,0,smut_r))*2 - 1 )
+    abri <- plogis( (qlogis((es$abr[i]+1)/2) + rnorm(1,0,smut_r)) )*2 - 1 
+      # transform [0,1] to correlation range of [-1,1]
     if(abri==-1) abri <- -0.99
     if(abri==+1) abri <- +0.99
-      # correlation must lie in [-1,1]
-      # transform [0,1] to [-1,1]
-    invaded <- invade(ami,bmi,asi,bsi,abri,rd)
+    invaded <- invade(zw[,2],ami,bmi,asi,bsi,abri,rd$Gres,rd$Ye,So,nt,nb)
     if(i < nr){
       if(invaded==TRUE){
         es[i+1,] <- c(ami,bmi,asi,bsi,abri)
-        rd <- ressim(ami,bmi,asi,bsi,abri) # simulate new resident dynamics
+        rd <- ressim(zw[,2],x_z,ami,bmi,asi,bsi,abri,
+                     beta_p,beta_r,
+                     eps_y_p,eps_y_r,
+                     sig_o_p,phi_r,
+                     So,m0,m1,
+                     nt,nsmin) # simulate new resident dynamics
       } 
       if(invaded==FALSE){
         es[i+1,] <- es[i,]
@@ -202,38 +173,61 @@ evolve <- function(
 }
 
 outlist <- evolve(
-  ni,nr=500,nt,nb,
-  zam,wam,zsd,wsd,rho=0.82,
-  beta_p,beta_r,
-  sig_y_p,sig_y_r,
-  sig_o_p,phi_r,
-  m0,m1,
-  am0,bm0,
-  as0,bs0,
-  abr0,
-  smut_m=0.5,smut_s=0.1,smut_r=0.1,
-  nstart=1,
-  iterset=NULL,
+  nr=2000,nt=550,nb=50,
+  zam=zamo+mam*zsdo,wam=wamo+mam*wsdo,
+  zsd=zsdo*msd,wsd=wsdo*msd,rho=0.82,
+  beta_p=pl$pr$beta_p[1,19,],beta_r=pl$rs$beta_r[1,19,],
+  sig_y_p=pl$pr$sig_y_p[1,19],sig_y_r=pl$rs$sig_y_r[1,19],
+  sig_o_p=pl$pr$sig_o_p[1],phi_r=pl$rs$phi_r[1],
+  m0=exp(pl$go$alpha_m[1,19]),m1=exp(pl$go$beta_m[1,19]),
+  am0=1,bm0=1,
+  as0=1,bs0=1,
+  abr0=0.1,
+  smut_m=1,smut_s=0.1,smut_r=0.1,
   savefile=NULL,
-  rel.tol=10^-5,
-  abs.tol=0, # .Machine$double.eps^0.25,
-  intsd=10,
   nsmin=10^-50
 )
 
-plot(outlist$es$am)
-plot(outlist$es$bm)
-plot(outlist$es$as)
-plot(outlist$es$bs)
-plot(outlist$es$amr)
+zam=zamo+mam*zsdo
+wam=wamo+mam*wsdo
+zsd=zsdo*msd
+wsd=wsdo*msd
+rho=0.82
+zw_mu <- c(zam,wam) - log(tau_p)
+zw_sig <- matrix(c(zsd^2,rep(rho*zsd*wsd,2),wsd^2),nr=2,nc=2)
+zw <- mvrnorm(n=nt, mu=zw_mu, Sigma=zw_sig)
 
-with(es[nr,],curve(coaG(w=x,am=am,bm=bm,as=as,bs=bs,abr=abr),xlim=c(-5,5),ylim=c(0,1)))
+eps_y_p <- rnorm(nt,0,sig_y_p)
+eps_y_r <- rnorm(nt,0,sig_y_r)
 
-plot(beta_G~alpha_G,data=outlist$es,type="b",col="red")
-with(outlist$es, text(alpha_G[1],beta_G[1],labels="start",pos=3) )
-with(outlist$es, text(alpha_G[nr],beta_G[nr],labels="end",pos=3) )
+rd <- ressim(w=zw[,2],x_z,am=1,bm=1,as=1,bs=1,abr=1,
+                           beta_p=pl$pr$beta_p[1,19,],beta_r=pl$rs$beta_r[1,19,],
+                           eps_y_p=rep(0,nt),eps_y_r=rep(0,nt),
+                           sig_o_p=pl$pr$sig_o_p[1],phi_r=pl$rs$phi_r[1],
+                           So=0.1,m0=exp(pl$go$alpha_m[1,19]),m1=exp(pl$go$beta_m[1,19]),
+                           nsmin=10^-50
+)
 
-with(outlist$es[nr,],curve(plogis(alpha_G + beta_G*x),xlim=c(-2*zsd,2*zsd)))
+plot(outlist$es$am,type="l")
+plot(outlist$es$bm,type="l")
+plot(outlist$es$as,type="l")
+plot(outlist$es$bs,type="l")
+plot(outlist$es$abr,type="l")
+
+plot(outlist2$es$am)
+plot(outlist2$es$bm)
+plot(outlist2$es$as)
+
+with(outlist$es[nr,],
+     curve(coaG(w=x,am=am,bm=bm,as=as,bs=bs,abr=abr),xlim=c(-5,5),ylim=c(0,1))
+     )
+with(outlist$es[nr,],curve(fixG(x,am,bm),xlim=c(-5,5),col="red",ylim=c(0,1)))
+with(outlist2$es[nr,],curve(fixG(x,am,bm),add=T,col="red"))
+with(outlist3$es[nr,],curve(fixG(x,am,bm),add=T,col="red"))
+with(outlist4$es[nr,],curve(fixG(x,am,bm),add=T,col="red"))
+with(outlist5$es[nr,],curve(fixG(x,am,bm),add=T,col="red"))
+
+quantile(outlist$zw[,1],probs=c(0.05,0.95))
 
 rd <- ressim(1,5) # simulate starting resident dynamics
 plot(log(rd$Ye)~zw[,2])
@@ -241,20 +235,6 @@ lines(supsmu(zw[,2],log(rd$Ye)),col="red")
 abline(h=0,col="blue",lty=3)
 abline(v=0,col="blue",lty=3)
 
-ni;nr=1000;nt=320;nb;20
-zam=zamo+mam*zsdo;zsd=zsdo*msd;
-wam=wamo+mam*wsdo;wsd=wsdo*msd;
-rho=0.82;
-beta_p=pl$pr$beta_p[1,19,];beta_r=pl$rs$beta_r[1,19,];
-sig_y_p=pl$pr$sig_y_p[1,19];sig_y_r=pl$rs$sig_y_r[1,19];
-sig_o_p=pl$pr$sig_o_p[1];phi_r=pl$rs$phi_r[1];
-m0=exp(pl$go$alpha_m[1,19]);m1=exp(pl$go$beta_m[1,19]);
-alpha_G0=0;beta_G0=0;
-sig_alpha_G=0.1;sig_beta_G=0.1;
-nstart=1;
-iterset=NULL;
-savefile=NULL;
-rel.tol=10^-5;
-abs.tol=0;
-intsd=10;
-nsmin=10^-50
+
+
+

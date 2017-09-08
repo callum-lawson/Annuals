@@ -20,6 +20,15 @@ Tvalues <- read.csv("Output/Tvalues_31Jul2015.csv",header=T)
 
 # Define params -----------------------------------------------------------
 
+T1 <- with(Tvalues,duration[period=="T1"])
+T2 <- with(Tvalues,duration[period=="T2"])
+T3 <- with(Tvalues,duration[period=="T3"])
+# T in years
+
+tau_s <- 100  # adujstment for seeds
+tau_d <- 100	# adjustment for density
+tau_p <- 100	# adjustment for rainfall
+
 ### DATA PARAMS
 nspecies <- nlevels(msy$species) # same for all other datasets
 spvals <- levels(msy$species)
@@ -127,7 +136,7 @@ cpc <- 1 # CORES per CLIMATE (assumed equal for resident and invader)
 ncores <- nclim*cpc
 mpos <- rep(1:nclim,each=cpc)
 
-nstart <- rep(1,nspecies)
+nstart <- 1
 nt <- 20
 nb <- 10 # number of "burn-in" timesteps to stabilise resident dynamics
 nj <- 22
