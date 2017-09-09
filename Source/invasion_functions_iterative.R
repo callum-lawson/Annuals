@@ -53,8 +53,8 @@ ressim <- function(w,x_z,am,bm,as,bs,abr,
                    nt,nsmin
                    ){
   ns <- ng <- nn <- Ye <- rep(NA,nt)
-  Gres <- coaG(w,am,bm,as,bs,abr)
-  #Gres <- fixG(w,am,bm)
+  #Gres <- coaG(w,am,bm,as,bs,abr)
+  Gres <- fixG(w,am,bm)
   ns[1] <- nstart
   t <- 1
   while(ns[t] > nsmin & t <= nt){
@@ -74,8 +74,8 @@ ressim <- function(w,x_z,am,bm,as,bs,abr,
 
 invade <- function(w,ami,bmi,asi,bsi,abri,Gres,Ye,So,nt,nb){
   if(!NA %in% Ye){ # t = final value at which loop stopped 
-    Ginv <- coaG(w,ami,bmi,asi,bsi,abri)
-    #Ginv <- fixG(w,ami,bmi)
+    #Ginv <- coaG(w,ami,bmi,asi,bsi,abri)
+    Ginv <- fixG(w,ami,bmi)
     delta_r <- log((1-Ginv)*So + Ginv*Ye) - log((1-Gres)*So + Gres*Ye)
     invaded <- mean(delta_r[(nb+1):nt]) > 0
   }
@@ -126,6 +126,7 @@ evolve <- function(
   es[1,] <- c(am0,bm0,as0,bs0,abr0)
 
   for(i in 1:nr){
+    
     if(i==1){
       rd <- with(es[i,], ressim(zw[,2],x_z,am,bm,as,bs,abr,
                                 beta_p,beta_r,
@@ -173,7 +174,7 @@ evolve <- function(
 }
 
 outlist <- evolve(
-  nr=2000,nt=550,nb=50,
+  nr=1000,nt=10100,nb=100,
   zam=zamo+mam*zsdo,wam=wamo+mam*wsdo,
   zsd=zsdo*msd,wsd=wsdo*msd,rho=0.82,
   beta_p=pl$pr$beta_p[1,19,],beta_r=pl$rs$beta_r[1,19,],
@@ -227,14 +228,41 @@ with(outlist3$es[nr,],curve(fixG(x,am,bm),add=T,col="red"))
 with(outlist4$es[nr,],curve(fixG(x,am,bm),add=T,col="red"))
 with(outlist5$es[nr,],curve(fixG(x,am,bm),add=T,col="red"))
 
-quantile(outlist$zw[,1],probs=c(0.05,0.95))
+with(outlistB$es[nr,],curve(fixG(x,am,bm),add=T,col="blue"))
+with(outlistB2$es[nr,],curve(fixG(x,am,bm),add=T,col="blue"))
+with(outlistB3$es[nr,],curve(fixG(x,am,bm),add=T,col="blue"))
+with(outlistB4$es[nr,],curve(fixG(x,am,bm),add=T,col="blue"))
+with(outlistB5$es[nr,],curve(fixG(x,am,bm),add=T,col="blue"))
 
-rd <- ressim(1,5) # simulate starting resident dynamics
-plot(log(rd$Ye)~zw[,2])
-lines(supsmu(zw[,2],log(rd$Ye)),col="red")
+with(outlistC$es[nr,],curve(fixG(x,am,bm),add=T,col="green"))
+with(outlistC2$es[nr,],curve(fixG(x,am,bm),add=T,col="green"))
+with(outlistC3$es[nr,],curve(fixG(x,am,bm),add=T,col="green"))
+with(outlistC4$es[nr,],curve(fixG(x,am,bm),add=T,col="green"))
+with(outlistC5$es[nr,],curve(fixG(x,am,bm),add=T,col="green"))
+
+abline(v=quantile(outlist$zw[,1],probs=c(0.05,0.95)),lty=3)
+
+with(rd,plot(log(Ye)~zw[,2]))
+with(rd, lines(supsmu(zw[,2],log(Ye)),col="red"))
 abline(h=0,col="blue",lty=3)
 abline(v=0,col="blue",lty=3)
 
+# nr=1000;nt=250;nb=50;
+# zam=zamo+mam*zsdo;wam=wamo+mam*wsdo;
+# zsd=zsdo*msd;wsd=wsdo*msd;rho=0.82;
+# beta_p=pl$pr$beta_p[1,19,];beta_r=pl$rs$beta_r[1,19,];
+# sig_y_p=pl$pr$sig_y_p[1,19];sig_y_r=pl$rs$sig_y_r[1,19];
+# sig_o_p=pl$pr$sig_o_p[1];phi_r=pl$rs$phi_r[1];
+# m0=exp(pl$go$alpha_m[1,19]);m1=exp(pl$go$beta_m[1,19]);
+# am0=1;bm0=1;
+# as0=1;bs0=1;
+# abr0=0.1;
+# smut_m=1;smut_s=0.1;smut_r=0.1;
+# savefile=NULL;
+# nsmin=10^-50
+# 
+# w=zw[,2]
+# attach(es[1,])
 
 
 
