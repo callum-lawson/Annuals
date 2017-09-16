@@ -9,8 +9,7 @@ library(RColorBrewer)
 
 ### LOAD DATA 
 
-source("Source/simulation_functions_analytical.R")
-# source("Source/simulation_functions_stochastic.R")
+source("Source/invasion_functions_iterative.R")
 source("Source/figure_functions.R")
 source("Source/prediction_functions.R")
 source("Source/trait_functions.R")
@@ -28,6 +27,7 @@ T3 <- with(Tvalues,duration[period=="T3"])
 tau_s <- 100  # adujstment for seeds
 tau_d <- 100	# adjustment for density
 tau_p <- 100	# adjustment for rainfall
+  # NB: these T and tau values don't affect sims, which use default arguments
 
 ### DATA PARAMS
 nspecies <- nlevels(msy$species) # same for all other datasets
@@ -70,20 +70,28 @@ pl <- list(
 
 ### MEDIAN PARAMETERS
 
-pls <- pl
-for(i in 1:length(pl)){
-  for(j in 1:length(pl[[i]])){
-    ndim <- length(dim(pl[[i]][[j]])) 
-    if(ndim==1){
-      pls[[i]][[j]] <- rep(median(pl[[i]][[j]]),length(pl[[i]][[j]]))
-    }
-    if(ndim>1){
-      keepdim <- 2:ndim # remove first dim, which is always iter
-      eachrep <- dim(pl[[i]][[j]])[1] # select iterdim
-      pls[[i]][[j]][] <- rep(apply(pl[[i]][[j]],keepdim,median),each=eachrep)
-    }
-    # if is.null(ndim), do nothing
+pls <- with(pl, list(
+  beta_p=pr$beta_p,
+  beta_r=rs$beta_r,
+  sig_y_p=pr$sig_y_p,
+  sig_y_r=rs$sig_y_r,
+  sig_o_p=pr$sig_o_p,
+  phi_r=rs$phi_r,
+  m0=exp(go$alpha_m),
+  m1=exp(go$beta_m)
+))
+
+for(i in 1:length(pls)){
+  ndim <- length(dim(pls[[i]])) 
+  if(ndim==1){
+    pls[[i]] <- rep(median(pls[[i]]),length(pls[[i]]))
   }
+  if(ndim>1){
+    keepdim <- 2:ndim # remove first dim, which is always iter
+    eachrep <- dim(pls[[i]])[1] # select iterdim
+    pls[[i]][] <- rep(apply(pls[[i]],keepdim,median),each=eachrep)
+  }
+  # if is.null(ndim), do nothing
 }
 
 ### PARAMS FOR SENSITIVITY ANALYSES
@@ -113,11 +121,8 @@ if(plasticity==T){
   Gsens$beta_Gz <- with(Gsens,godbeta_f(tau_sd))
 }
 
-nr <- 3 # number of replicated simulations per invasion
-nio <- nr*nsens
-pls$go$alpha_G <- pls$go$beta_Gz <- array(dim=c(nio,22))
-pls$go$alpha_G[1:nio,] <- rep(Gsens$alpha_G,each=nr)
-pls$go$beta_Gz[1:nio,] <- rep(Gsens$beta_Gz,each=nr)
+pls$am0 <- Gsens$alpha_G
+pls$bm0 <- Gsens$beta_Gz
 
 # Sims --------------------------------------------------------------------
 
@@ -136,31 +141,22 @@ cpc <- 1 # CORES per CLIMATE (assumed equal for resident and invader)
 ncores <- nclim*cpc
 mpos <- rep(1:nclim,each=cpc)
 
-nstart <- 1
-nt <- 20
+# nstart <- 1
+nr <- 100
+nt <- 90
 nb <- 10 # number of "burn-in" timesteps to stabilise resident dynamics
 nj <- 22
   # min invader iterations per core = nr * nsens
   
-iseqone <- 1:nio
-iseqres <- rep(iseqone, each=nsens)
-iseqinv <- rep(seq(1,nio,nr), times=nio)
-  # for invader, only G params are used, 
-  # so for itersetli just take first iter from pls for each nr
+iseq <- 1:nsens
 
 cpos <- rep(1:cpc,times=nclim)
 cipos <- rep(1:cpc,each=(nr*nsens)/cpc)
 cirpos <- rep(1:cpc,each=(nr*nsens^2)/cpc)
 
-itersetl <- split(iseqone,cipos)
-itersetlr <- split(iseqres,cirpos)
-itersetli <- split(iseqinv,cirpos)
+itersetl <- split(iseq,cipos)
   # requires that ni < maxiter
-  # resident simulations split between cores
-  # invader simulations replicated once for every resident in each core
-
 ni <- length(itersetl[[1]]) # iterations PER CORE for RESIDENT simulations
-nii <- length(itersetli[[1]]) # iterations per core for INVADER simulations
 
 simp <- function(l){
   lapply(l,function(x){
@@ -177,12 +173,14 @@ cnames_merged <- paste(cnames_unique,collapse="_")
 
 # Resident simulations ----------------------------------------------------
 
-set.seed(1)
 system.time({
 CL = makeCluster(ncores)
-clusterExport(cl=CL, c("popana","pls", 
-  "ni","nt","nj","nstart",
-  "zwyo","zamo","zsdo","wamo","wsdo",
+clusterExport(cl=CL, c(
+  "BHS","logitnorm","logitnormint","nbtmean",
+  "fixG","ressim","invade","evolve","multievolve",
+  "pls", 
+  "ni","nj","nr","nt","nb",
+  "zamo","zsdo","wamo","wsdo",
   "mpos","maml","msdl","cpos",
   "Tvalues","cnames_bycore",
   "itersetl"
@@ -190,17 +188,21 @@ clusterExport(cl=CL, c("popana","pls",
 parLapply(CL, 1:ncores, function(n){
 	mam <- maml[[mpos[n]]]
 	msd <- msdl[[mpos[n]]]
-	popana(pl=pls,ni=ni,nt=nt,nj=nj,
-		nstart=nstart,zam=zamo+mam*zsdo,zsd=zsdo*msd,
-		zwy=zwyo,wam=wamo+mam*wsdo,wsd=wsdo*msd,
-		Tvalues=Tvalues,tau_p=10^2,tau_d=10^2,tau_s=10^2,
-		iterset=itersetl[[cpos[n]]],
-		savefile=paste0("res_",cnames_bycore[n]) # res -> residents
-		)
+	iset <- itersetl[[cpos[n]]]
+	woo <- with(pls, multievolve(
+	  ni=ni,nj=nj,nr=nr,nt=nj,nb=nb,
+	  zam=zamo+mam*zsdo,zsd=zsdo*msd,
+	  wam=wamo+mam*wsdo,wsd=wsdo*msd,
+	  beta_p=beta_p[iset,,],beta_r=beta_r[iset,,],
+	  sig_y_p=sig_y_p[iset,],sig_y_r=sig_y_r[iset,],
+	  sig_o_p=sig_o_p[iset],phi_r=phi_r[iset],
+	  m0=m0[iset,],m1=m1[iset,],
+	  am0=am0[iset],bm0=bm0[iset],
+		savefile=paste0("ESS_",cnames_bycore[n])
+		))
 	})
 stopCluster(CL)
 })
-  # 15 mins (10 cores)
 
 # Read resident simulations back in ---------------------------------------
 
@@ -248,7 +250,7 @@ simcombine <- function(insiml){
 
 psl <- as.list(rep(NA,ncores))
 for(n in 1:ncores){
-  psl[[n]] <- readRDS(paste0("Sims/res_",cnames_bycore[n],"_23Aug2017.rds"))
+  psl[[n]] <- readRDS(paste0("Sims/ESS_",cnames_bycore[n],"_16Sep2017.rds"))
 }
 names(psl) <- cnames_bycore
 
