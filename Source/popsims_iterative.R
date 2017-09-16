@@ -112,7 +112,7 @@ if(plasticity==F){
 }
 
 if(plasticity==T){
-  neach <- 2 # 10
+  neach <- 10
   tau_mu <- seq(tmrange[1],tmrange[2],length.out=neach)
   tau_sd <- 2^seq(tsrange[1],tsrange[2],length.out=neach)
   Gsens <- expand.grid(tau_mu=tau_mu,tau_sd=tau_sd)
@@ -132,27 +132,26 @@ pls$bm0 <- Gsens$beta_Gz
 
 # maml <- as.list(c(1,1,mpam,1,mpam,mpam))
 # msdl <- as.list(c(0,1,1,mpsd,mpsd,0))
-maml <- 1 # as.list(c(1,mpam))
-msdl <- 1 # as.list(c(1,mpsd))
+maml <- as.list(c(1,mpam))
+msdl <- as.list(c(1,mpsd))
   # scaling mean log rainfall (zamo) only works because sign stays the same
 
 nclim <- length(maml)
-cpc <- 1 # CORES per CLIMATE (assumed equal for resident and invader)
+cpc <- 10 # CORES per CLIMATE (assumed equal for resident and invader)
 ncores <- nclim*cpc
 mpos <- rep(1:nclim,each=cpc)
 
 # nstart <- 1
-nr <- 100
-nt <- 90
-nb <- 10 # number of "burn-in" timesteps to stabilise resident dynamics
+nr <- 1000
+nt <- 99900
+nb <- 100 # number of "burn-in" timesteps to stabilise resident dynamics
 nj <- 22
   # min invader iterations per core = nr * nsens
   
 iseq <- 1:nsens
 
 cpos <- rep(1:cpc,times=nclim)
-cipos <- rep(1:cpc,each=(nr*nsens)/cpc)
-cirpos <- rep(1:cpc,each=(nr*nsens^2)/cpc)
+cipos <- rep(1:cpc,each=nsens/cpc)
 
 itersetl <- split(iseq,cipos)
   # requires that ni < maxiter
@@ -189,8 +188,8 @@ parLapply(CL, 1:ncores, function(n){
 	mam <- maml[[mpos[n]]]
 	msd <- msdl[[mpos[n]]]
 	iset <- itersetl[[cpos[n]]]
-	woo <- with(pls, multievolve(
-	  ni=ni,nj=nj,nr=nr,nt=nj,nb=nb,
+	with(pls, multievolve(
+	  ni=ni,nj=nj,nr=nr,nt=nt,nb=nb,
 	  zam=zamo+mam*zsdo,zsd=zsdo*msd,
 	  wam=wamo+mam*wsdo,wsd=wsdo*msd,
 	  beta_p=beta_p[iset,,],beta_r=beta_r[iset,,],
