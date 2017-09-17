@@ -196,7 +196,7 @@ multievolve <- function(
   
   for(i in 1:ni){
     
-    for(j in 1:nj){
+    for(j in 2:nj){ ### ! REMOVING BOIN !
       
     set.seed(i) 
       # climate and random years effects the same for all species

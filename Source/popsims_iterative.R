@@ -103,11 +103,11 @@ tsrange <- c(-3,1)
 plasticity <- T
 
 if(plasticity==F){
-  nsens <- 100
+  nit <- 100
   Gsens <- data.frame(
-    # alpha_G=qlogis(seq(0.001,0.999,length.out=nsens)),
-    alpha_G=seq(-5,5,length.out=nsens),
-    beta_Gz=rep(0,nsens)
+    # alpha_G=qlogis(seq(0.001,0.999,length.out=nit)),
+    alpha_G=seq(-5,5,length.out=nit),
+    beta_Gz=rep(0,nit)
   )
 }
 
@@ -116,7 +116,7 @@ if(plasticity==T){
   tau_mu <- seq(tmrange[1],tmrange[2],length.out=neach)
   tau_sd <- 2^seq(tsrange[1],tsrange[2],length.out=neach)
   Gsens <- expand.grid(tau_mu=tau_mu,tau_sd=tau_sd)
-  nsens <- nrow(Gsens) # = neach^2
+  nit <- nrow(Gsens) # = neach^2
   Gsens$alpha_G <- with(Gsens,godalpha_f(tau_mu,tau_sd))
   Gsens$beta_Gz <- with(Gsens,godbeta_f(tau_sd))
 }
@@ -132,26 +132,26 @@ pls$bm0 <- Gsens$beta_Gz
 
 # maml <- as.list(c(1,1,mpam,1,mpam,mpam))
 # msdl <- as.list(c(0,1,1,mpsd,mpsd,0))
-maml <- as.list(c(1,mpam))
+maml <- as.list(c(1,1))
 msdl <- as.list(c(1,mpsd))
   # scaling mean log rainfall (zamo) only works because sign stays the same
 
 nclim <- length(maml)
-cpc <- 10 # CORES per CLIMATE (assumed equal for resident and invader)
+cpc <- 20 # CORES per CLIMATE (assumed equal for resident and invader)
 ncores <- nclim*cpc
 mpos <- rep(1:nclim,each=cpc)
 
 # nstart <- 1
-nr <- 1000
-nt <- 99900
-nb <- 100 # number of "burn-in" timesteps to stabilise resident dynamics
+nr <- 100
+nt <- 9950
+nb <- 50 # number of "burn-in" timesteps to stabilise resident dynamics
 nj <- 22
-  # min invader iterations per core = nr * nsens
+  # min invader iterations per core = nr * nit
   
-iseq <- 1:nsens
+iseq <- 1:nit
 
 cpos <- rep(1:cpc,times=nclim)
-cipos <- rep(1:cpc,each=nsens/cpc)
+cipos <- rep(1:cpc,each=nit/cpc)
 
 itersetl <- split(iseq,cipos)
   # requires that ni < maxiter
@@ -249,65 +249,96 @@ simcombine <- function(insiml){
 
 psl <- as.list(rep(NA,ncores))
 for(n in 1:ncores){
-  psl[[n]] <- readRDS(paste0("Sims/ESS_",cnames_bycore[n],"_16Sep2017.rds"))
+  psl[[n]] <- readRDS(paste0("Sims/ESS_",cnames_bycore[n],"_17Sep2017.rds"))
 }
 names(psl) <- cnames_bycore
 
 # psl[is.na(psl)] <- psl[1]
 psla <- simcombine(psl)
 
-# Invader simulations -----------------------------------------------------
+# ES G plots --------------------------------------------------------------
 
-# Clunky input because saves on total RAM used
-
-nchunk <- 10
-lchunk <- ncores/nchunk
-corechunk <- split(1:ncores,rep(1:nchunk,each=lchunk))
-for(c in 1:nchunk){ # 1:length(corechunk)
-  curchunk <- corechunk[[c]]
-  system.time({
-    CL = makeCluster(ncores)
-    clusterExport(cl=CL, c(
-      "popinv","mpos","cpos",
-      "pls", "psla",
-      "itersetli","itersetlr",
-      "nii","nt","nj","nstart",
-      "cnames_bycore",
-      "tmin",
-      "curchunk"
-    )) 
-    parLapply(CL, curchunk, function(n){ # doing piece-by-piece to save RAM
-      climpos <- mpos[n]
-      iterseti <- itersetli[[cpos[n]]]
-      itersetr <- itersetlr[[cpos[n]]]
-      popinv(  
-        z=psla$z[itersetr,,climpos],
-        w=psla$w[itersetr,,climpos],
-        alpha_G=pls$go$alpha_G[iterseti,], # change list names if needed
-        beta_Gz=pls$go$beta_Gz[iterseti,], 
-        Y=psla$Y[itersetr,,,climpos],
-        Sn=psla$Sn[itersetr,,,climpos],
-        So=psla$So[itersetr,,,climpos],
-        ni=nii,nt=nt,nj=nj,      
-        tmin=tmin,
-        full=F,
-        savefile=paste0("inv_",cnames_bycore[n]) # inv -> invaders
-      )
-    })
-    stopCluster(CL)
-  })
-  # 18 mins
+seriesquant <- function(a,probs=c(0.25,0.50,0.75),keepdims=2:4){
+  qarr <- apply(a,keepdims,quantile,prob=probs,na.rm=T)
+  return(qarr)
 }
+  # 50% quantiles, not 90% quantiles!
+
+purples <- brewer.pal(9,"Purples")[5] 
+blues <- brewer.pal(9,"Blues")[5] 
+greens <- brewer.pal(9,"Greens")[5] 
+oranges <- brewer.pal(9,"Oranges")[5]
+reds <- brewer.pal(9,"Reds")[5] 
+greys <- brewer.pal(9,"Greys")[5] 
+
+cols <- c(purples,blues,greens,oranges,reds,greys)
+ltys <- c(3,1,3)
+
+colledgetext <- cnames_unique
+detledgetext <- c(
+  paste0("nstart=",1),
+  paste0("ni=",nit),
+  paste0("nb=",nb),
+  paste0("nt=",nt),
+  paste0("nj=",nj)
+)
+
+tran <- 25
+cols_rgb <- col2rgb(cols)
+trancols <- rgb(
+  red=cols_rgb[1,],
+  green=cols_rgb[2,],
+  blue=cols_rgb[3,],
+  alpha=tran,
+  maxColorValue = 255
+)
+
+alpha_G <- as.vector(psla$am)
+beta_Gz <- as.vector(psla$bm)
+
+nw <- 100
+wseq <- seq(-2,2,length.out=nw)
+Gw <- array(dim=c(nw,nit,nj,nclim))
+Gw[] <- plogis(
+  matrix(rep(alpha_G,each=nw),nr=nw,nc=nit*nj*nclim)
+  + outer(wseq,beta_Gz,"*")
+  )
+qGw <- aperm(
+  apply(Gw,c(1,3,4),quantile,prob=c(0.25,0.50,0.75),na.rm=T), 
+  c(2,3,1,4)
+  )
+
+wam <- sapply(maml,function(x) zam=wamo+x*wsdo - log(tau_p))
+wsd <- sapply(msdl,function(x) zam=wsdo*x)
+qw <- rbind(wam-1.96*wsd,wam+1.96*wsd)
+
+trangrey <- rgb(red=190,green=190,blue=190,alpha=0.25,maxColorValue = 255)
+
+pdf(paste0("Plots/ESS_",format(Sys.Date(),"%d%b%Y"),".pdf"),
+  width=plotwidth,height=plotheight)
+
+plotsetup()
+
+for(j in 1:nspecies){
+  matplot(wseq,qGw[,j,,1],type="l",lty=ltys,ylim=c(0,1),col=blues)
+  matplot(wseq,qGw[,j,,2],type="l",lty=ltys,add=T,col=reds)
+
+  for(m in 1:nclim){
+    xx <- rep(qw[,m],each=2)
+    yy <- c(0,1,1,0)
+    polygon(xx, yy, col=trancols[c(2,4)][m],border=NA)
+  }
+    
+  lettlab(j)
   
-# Read invader simulations back in ----------------------------------------
-
-psl2 <- as.list(rep(NA,ncores))
-for(n in 1:ncores){
-  psl2[[n]] <- readRDS(paste0("Sims/inv_",cnames_bycore[n],"_23Aug2017.rds"))
+  if(j %in% 19:23) addxlab("w") 
+  if(j %in% seq(1,23,4)) addylab("G") 
 }
-names(psl2) <- cnames_bycore
 
-psla2 <- simcombine(psl2)
+addledge(ltext=colledgetext,col=cols[c(2,4)],lty=1)
+addledge(ltext=detledgetext)
+
+dev.off()
 
 # Time series graphs ------------------------------------------------------
 
