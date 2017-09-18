@@ -202,6 +202,7 @@ parLapply(CL, 1:ncores, function(n){
 	})
 stopCluster(CL)
 })
+  # 3.1 hours
 
 # Read resident simulations back in ---------------------------------------
 
@@ -257,6 +258,11 @@ names(psl) <- cnames_bycore
 psla <- simcombine(psl)
 
 # ES G plots --------------------------------------------------------------
+
+Gobs <- data.frame(
+  alpha_G = apply(pl$go$alpha_G,2,median),
+  beta_Gz = apply(pl$go$beta_Gz,2,median)
+)
 
 seriesquant <- function(a,probs=c(0.25,0.50,0.75),keepdims=2:4){
   qarr <- apply(a,keepdims,quantile,prob=probs,na.rm=T)
@@ -328,7 +334,9 @@ for(j in 1:nspecies){
     yy <- c(0,1,1,0)
     polygon(xx, yy, col=trancols[c(2,4)][m],border=NA)
   }
-    
+  
+  with(Gobs[j,], curve(fixG(x,alpha_G,beta_Gz),add=T))  
+  
   lettlab(j)
   
   if(j %in% 19:23) addxlab("w") 
