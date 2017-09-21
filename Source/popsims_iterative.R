@@ -9,7 +9,7 @@ library(RColorBrewer)
 
 ### LOAD DATA 
 
-source("Source/invasion_functions_iterative.R")
+source("Source/invasion_functions_iterative_spatial.R")
 source("Source/figure_functions.R")
 source("Source/prediction_functions.R")
 source("Source/trait_functions.R")
@@ -75,6 +75,9 @@ pls <- with(pl, list(
   beta_r=rs$beta_r,
   sig_y_p=pr$sig_y_p,
   sig_y_r=rs$sig_y_r,
+  sig_s_g=gs$sig_s_g,
+  sig_s_p=pr$sig_s_p,
+  sig_s_r=rs$sig_s_r,
   sig_o_p=pr$sig_o_p,
   phi_r=rs$phi_r,
   m0=exp(go$alpha_m),
@@ -112,7 +115,7 @@ if(plasticity==F){
 }
 
 if(plasticity==T){
-  neach <- 10
+  neach <- 5 # 10
   tau_mu <- seq(tmrange[1],tmrange[2],length.out=neach)
   tau_sd <- 2^seq(tsrange[1],tsrange[2],length.out=neach)
   Gsens <- expand.grid(tau_mu=tau_mu,tau_sd=tau_sd)
@@ -137,14 +140,14 @@ msdl <- as.list(c(1,mpsd))
   # scaling mean log rainfall (zamo) only works because sign stays the same
 
 nclim <- length(maml)
-cpc <- 20 # CORES per CLIMATE (assumed equal for resident and invader)
+cpc <- 2 # 20 # CORES per CLIMATE (assumed equal for resident and invader)
 ncores <- nclim*cpc
 mpos <- rep(1:nclim,each=cpc)
 
 # nstart <- 1
-nr <- 100
-nt <- 9950
-nb <- 50 # number of "burn-in" timesteps to stabilise resident dynamics
+nr <- 100 # 100 # number of repeated invasions
+nt <- 120 # 9950
+nb <- 20 # 50 # number of "burn-in" timesteps to stabilise resident dynamics
 nj <- 22
   # min invader iterations per core = nr * nit
   
@@ -175,7 +178,8 @@ cnames_merged <- paste(cnames_unique,collapse="_")
 system.time({
 CL = makeCluster(ncores)
 clusterExport(cl=CL, c(
-  "BHS","logitnorm","logitnormint","nbtmean",
+  "BHS","logitnorm","logitmean",
+  "nbtmean","nbtnorm","nbtlnmean","fnn",
   "fixG","ressim","invade","evolve","multievolve",
   "pls", 
   "ni","nj","nr","nt","nb",
@@ -194,6 +198,7 @@ parLapply(CL, 1:ncores, function(n){
 	  wam=wamo+mam*wsdo,wsd=wsdo*msd,
 	  beta_p=beta_p[iset,,],beta_r=beta_r[iset,,],
 	  sig_y_p=sig_y_p[iset,],sig_y_r=sig_y_r[iset,],
+	  sig_s_g=sig_s_g[iset,],sig_s_p=sig_s_p[iset],sig_s_r=sig_s_r[iset],
 	  sig_o_p=sig_o_p[iset],phi_r=phi_r[iset],
 	  m0=m0[iset,],m1=m1[iset,],
 	  am0=am0[iset],bm0=bm0[iset],
@@ -216,41 +221,9 @@ stopCluster(CL)
 #   }
 # names(psl) <- cnames_bycore_small
 
-simcombine <- function(insiml){
-  
-  varl <- insiml[[1]]
-  nvar <- length(varl)
-  dimvar <- lapply(varl,dim)
-  ndimvar <- sapply(dimvar,length)
-  firstmpos <- match(1:nclim,mpos)
-  
-  # Combine sim matrices by sim type
-  outsiml <- vector("list", nvar)
-  names(outsiml) <- names(varl)
-  for(i in 1:nvar){
-    if(ndimvar[i]>0){
-      for(j in 1:nclim){
-        for(k in 1:cpc){
-          if(k==1) ast <- insiml[[firstmpos[j]]][[i]]
-          else ast <- abind(ast,insiml[[firstmpos[j]+(k-1)]][[i]],along=1)
-        }
-        if(j==1){
-          outsiml[[i]] <- array(ast,dim=c(dim(ast),1))
-        }
-        else{
-          outsiml[[i]] <- abind(outsiml[[i]],ast,along=ndimvar[i]+1)
-        }
-      }
-      if(nclim>1) dimnames(outsiml[[i]])[[ndimvar[i]+1]] <- cnames_unique
-    }
-  }
-  outsiml <- outsiml[ndimvar>0]
-  return(outsiml)
-}
-
 psl <- as.list(rep(NA,ncores))
 for(n in 1:ncores){
-  psl[[n]] <- readRDS(paste0("Sims/ESS_",cnames_bycore[n],"_17Sep2017.rds"))
+  psl[[n]] <- readRDS(paste0("Sims/ESS_",cnames_bycore[n],"_21Sep2017.rds"))
 }
 names(psl) <- cnames_bycore
 
