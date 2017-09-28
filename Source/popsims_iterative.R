@@ -140,7 +140,7 @@ msdl <- as.list(c(1,mpsd))
   # scaling mean log rainfall (zamo) only works because sign stays the same
 
 nclim <- length(maml)
-cpc <- 2 # 20 # CORES per CLIMATE (assumed equal for resident and invader)
+cpc <- 5 # 20 # CORES per CLIMATE (assumed equal for resident and invader)
 ncores <- nclim*cpc
 mpos <- rep(1:nclim,each=cpc)
 
@@ -207,7 +207,7 @@ parLapply(CL, 1:ncores, function(n){
 	})
 stopCluster(CL)
 })
-  # 3.1 hours
+  # 4 hours
 
 # Read resident simulations back in ---------------------------------------
 
@@ -300,7 +300,7 @@ plotsetup()
 
 for(j in 1:nspecies){
   matplot(wseq,qGw[,j,,1],type="l",lty=ltys,ylim=c(0,1),col=blues)
-  matplot(wseq,qGw[,j,,2],type="l",lty=ltys,add=T,col=reds)
+  matplot(wseq,qGw[,j,,2],type="l",lty=ltys,add=T,col=oranges)
 
   for(m in 1:nclim){
     xx <- rep(qw[,m],each=2)
