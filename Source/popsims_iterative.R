@@ -106,7 +106,7 @@ tsrange <- c(-3,1)
 plasticity <- T
 
 if(plasticity==F){
-  nit <- 100
+  np <- 100
   Gsens <- data.frame(
     # alpha_G=qlogis(seq(0.001,0.999,length.out=nit)),
     alpha_G=seq(-5,5,length.out=nit),
@@ -115,14 +115,17 @@ if(plasticity==F){
 }
 
 if(plasticity==T){
-  neach <- 5 # 10
+  neach <- 10
   tau_mu <- seq(tmrange[1],tmrange[2],length.out=neach)
   tau_sd <- 2^seq(tsrange[1],tsrange[2],length.out=neach)
   Gsens <- expand.grid(tau_mu=tau_mu,tau_sd=tau_sd)
-  nit <- nrow(Gsens) # = neach^2
+  np <- nrow(Gsens) # = neach^2
   Gsens$alpha_G <- with(Gsens,godalpha_f(tau_mu,tau_sd))
   Gsens$beta_Gz <- with(Gsens,godbeta_f(tau_sd))
 }
+
+nit <- 50
+Gsens <- Gsens[sample(1:np,nit),]
 
 pls$am0 <- Gsens$alpha_G
 pls$bm0 <- Gsens$beta_Gz
@@ -140,14 +143,14 @@ msdl <- as.list(c(1,mpsd))
   # scaling mean log rainfall (zamo) only works because sign stays the same
 
 nclim <- length(maml)
-cpc <- 5 # 20 # CORES per CLIMATE (assumed equal for resident and invader)
+cpc <- 10 # 20 # CORES per CLIMATE (assumed equal for resident and invader)
 ncores <- nclim*cpc
 mpos <- rep(1:nclim,each=cpc)
 
 # nstart <- 1
 nr <- 100 # 100 # number of repeated invasions
-nt <- 120 # 9950
-nb <- 20 # 50 # number of "burn-in" timesteps to stabilise resident dynamics
+nt <- 1050 # 9950
+nb <- 50 # 50 # number of "burn-in" timesteps to stabilise resident dynamics
 nj <- 22
   # min invader iterations per core = nr * nit
   
@@ -223,7 +226,7 @@ stopCluster(CL)
 
 psl <- as.list(rep(NA,ncores))
 for(n in 1:ncores){
-  psl[[n]] <- readRDS(paste0("Sims/ESS_",cnames_bycore[n],"_21Sep2017.rds"))
+  psl[[n]] <- readRDS(paste0("Sims/ESS_",cnames_bycore[n],"_28Sep2017.rds"))
 }
 names(psl) <- cnames_bycore
 
@@ -257,6 +260,7 @@ colledgetext <- cnames_unique
 detledgetext <- c(
   paste0("nstart=",1),
   paste0("ni=",nit),
+  paste0("nr=",nr),
   paste0("nb=",nb),
   paste0("nt=",nt),
   paste0("nj=",nj)
