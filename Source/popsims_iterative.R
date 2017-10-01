@@ -210,7 +210,7 @@ parLapply(CL, 1:ncores, function(n){
 	})
 stopCluster(CL)
 })
-  # 4 hours
+  # 32 hours
 
 # Read resident simulations back in ---------------------------------------
 
@@ -234,17 +234,6 @@ names(psl) <- cnames_bycore
 psla <- simcombine(psl)
 
 # ES G plots --------------------------------------------------------------
-
-Gobs <- data.frame(
-  alpha_G = apply(pl$go$alpha_G,2,median),
-  beta_Gz = apply(pl$go$beta_Gz,2,median)
-)
-
-seriesquant <- function(a,probs=c(0.25,0.50,0.75),keepdims=2:4){
-  qarr <- apply(a,keepdims,quantile,prob=probs,na.rm=T)
-  return(qarr)
-}
-  # 50% quantiles, not 90% quantiles!
 
 purples <- brewer.pal(9,"Purples")[5] 
 blues <- brewer.pal(9,"Blues")[5] 
@@ -291,6 +280,19 @@ qGw <- aperm(
   c(2,3,1,4)
   )
 
+nob <- nrow(pl$go$alpha_G)
+Gwob <- array(dim=c(nw,nob,nj))
+for(j in 1:nj){
+  Gwob[,,j] <- plogis(
+    matrix(rep(pl$go$alpha_G[,j],each=nw),nr=nw,nc=nob)
+    + outer(wseq,pl$go$beta_Gz[,j],"*")
+  )
+}
+qGob <- aperm(
+  apply(Gwob,c(1,3),quantile,prob=c(0.25,0.50,0.75),na.rm=T), 
+  c(2,3,1)
+)
+
 wam <- sapply(maml,function(x) zam=wamo+x*wsdo - log(tau_p))
 wsd <- sapply(msdl,function(x) zam=wsdo*x)
 qw <- rbind(wam-1.96*wsd,wam+1.96*wsd)
@@ -312,8 +314,8 @@ for(j in 1:nspecies){
     polygon(xx, yy, col=trancols[c(2,4)][m],border=NA)
   }
   
-  with(Gobs[j,], curve(fixG(x,alpha_G,beta_Gz),add=T))  
-  
+  matplot(wseq,qGob[,j,],type="l",lty=ltys,col="black",add=T)
+
   lettlab(j)
   
   if(j %in% 19:23) addxlab("w") 
