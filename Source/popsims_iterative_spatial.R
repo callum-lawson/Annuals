@@ -9,7 +9,7 @@ library(RColorBrewer)
 
 ### LOAD DATA 
 
-source("Source/invasion_functions_iterative.R")
+source("Source/invasion_functions_iterative_spatial.R")
 source("Source/figure_functions.R")
 source("Source/prediction_functions.R")
 source("Source/trait_functions.R")
@@ -84,18 +84,18 @@ pls <- with(pl, list(
   m1=exp(go$beta_m)
 ))
 
-# for(i in 1:length(pls)){
-#   ndim <- length(dim(pls[[i]])) 
-#   if(ndim==1){
-#     pls[[i]] <- rep(median(pls[[i]]),length(pls[[i]]))
-#   }
-#   if(ndim>1){
-#     keepdim <- 2:ndim # remove first dim, which is always iter
-#     eachrep <- dim(pls[[i]])[1] # select iterdim
-#     pls[[i]][] <- rep(apply(pls[[i]],keepdim,median),each=eachrep)
-#   }
-#   # if is.null(ndim), do nothing
-# }
+for(i in 1:length(pls)){
+  ndim <- length(dim(pls[[i]])) 
+  if(ndim==1){
+    pls[[i]] <- rep(median(pls[[i]]),length(pls[[i]]))
+  }
+  if(ndim>1){
+    keepdim <- 2:ndim # remove first dim, which is always iter
+    eachrep <- dim(pls[[i]])[1] # select iterdim
+    pls[[i]][] <- rep(apply(pls[[i]],keepdim,median),each=eachrep)
+  }
+  # if is.null(ndim), do nothing
+}
 
 ### PARAMS FOR SENSITIVITY ANALYSES
 # Creates grid of starting alpha and beta values
@@ -124,7 +124,7 @@ if(plasticity==T){
   Gsens$beta_Gz <- with(Gsens,godbeta_f(tau_sd))
 }
 
-nit <- 100
+nit <- 50
 Gsens <- Gsens[sample(1:np,nit),]
 
 pls$am0 <- Gsens$alpha_G
@@ -143,13 +143,13 @@ msdl <- as.list(c(1,mpsd))
   # scaling mean log rainfall (zamo) only works because sign stays the same
 
 nclim <- length(maml)
-cpc <- 20 # CORES per CLIMATE (assumed equal for resident and invader)
+cpc <- 10 # 20 # CORES per CLIMATE (assumed equal for resident and invader)
 ncores <- nclim*cpc
 mpos <- rep(1:nclim,each=cpc)
 
 # nstart <- 1
 nr <- 100 # 100 # number of repeated invasions
-nt <- 10050 # 9950
+nt <- 1050 # 9950
 nb <- 50 # 50 # number of "burn-in" timesteps to stabilise resident dynamics
 nj <- 22
   # min invader iterations per core = nr * nit
@@ -179,35 +179,38 @@ cnames_merged <- paste(cnames_unique,collapse="_")
 # Resident simulations ----------------------------------------------------
 
 system.time({
-  CL = makeCluster(ncores)
-  clusterExport(cl=CL, c(
-    "BHS","logitnorm","logitnormint","nbtmean",
-    "fixG","ressim","invade","evolve","multievolve",
-    "pls", 
-    "ni","nj","nr","nt","nb",
-    "zamo","zsdo","wamo","wsdo",
-    "mpos","maml","msdl","cpos",
-    "Tvalues","cnames_bycore",
-    "itersetl"
+CL = makeCluster(ncores)
+clusterExport(cl=CL, c(
+  "BHS","logitnorm","logitmean",
+  "nbtmean","nbtnorm","nbtlnmean","fnn",
+  "fixG","ressim","invade","evolve","multievolve",
+  "pls", 
+  "ni","nj","nr","nt","nb",
+  "zamo","zsdo","wamo","wsdo",
+  "mpos","maml","msdl","cpos",
+  "Tvalues","cnames_bycore",
+  "itersetl"
   )) 
-  parLapply(CL, 1:ncores, function(n){
-    mam <- maml[[mpos[n]]]
-    msd <- msdl[[mpos[n]]]
-    iset <- itersetl[[cpos[n]]]
-    with(pls, multievolve(
-      ni=ni,nj=nj,nr=nr,nt=nt,nb=nb,
-      zam=zamo+mam*zsdo,zsd=zsdo*msd,
-      wam=wamo+mam*wsdo,wsd=wsdo*msd,
-      beta_p=beta_p[iset,,],beta_r=beta_r[iset,,],
-      sig_y_p=sig_y_p[iset,],sig_y_r=sig_y_r[iset,],
-      sig_o_p=sig_o_p[iset],phi_r=phi_r[iset],
-      m0=m0[iset,],m1=m1[iset,],
-      am0=am0[iset],bm0=bm0[iset],
-      savefile=paste0("ESS_",cnames_bycore[n])
-    ))
-  })
-  stopCluster(CL)
+parLapply(CL, 1:ncores, function(n){
+	mam <- maml[[mpos[n]]]
+	msd <- msdl[[mpos[n]]]
+	iset <- itersetl[[cpos[n]]]
+	with(pls, multievolve(
+	  ni=ni,nj=nj,nr=nr,nt=nt,nb=nb,
+	  zam=zamo+mam*zsdo,zsd=zsdo*msd,
+	  wam=wamo+mam*wsdo,wsd=wsdo*msd,
+	  beta_p=beta_p[iset,,],beta_r=beta_r[iset,,],
+	  sig_y_p=sig_y_p[iset,],sig_y_r=sig_y_r[iset,],
+	  sig_s_g=sig_s_g[iset,],sig_s_p=sig_s_p[iset],sig_s_r=sig_s_r[iset],
+	  sig_o_p=sig_o_p[iset],phi_r=phi_r[iset],
+	  m0=m0[iset,],m1=m1[iset,],
+	  am0=am0[iset],bm0=bm0[iset],
+		savefile=paste0("ESS_",cnames_bycore[n])
+		))
+	})
+stopCluster(CL)
 })
+  # 32 hours
 
 # Read resident simulations back in ---------------------------------------
 
