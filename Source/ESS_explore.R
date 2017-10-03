@@ -1,5 +1,9 @@
 ### Develop explanations for patterns in ESS germination results ###
 
+source("Source/invasion_functions_iterative.R")
+
+# Empirical simulations ---------------------------------------------------
+
 outlist <- evolve(
   nr=1000,nt=10100,nb=100,
   zam=zamo+mam*zsdo,wam=wamo+mam*wsdo,
@@ -207,3 +211,31 @@ plot(density(log(Ye2)),col="blue")
 # 
 # w=zw[,2]
 # attach(es[1,])
+
+# Simple simulations ------------------------------------------------------
+
+pl <- list(
+  go = readRDS("Models/go_pars_tdistpois_naspecies_noerr_noGDD_loglik_BH_01Mar2017.rds"),
+  gs = readRDS("Models/gnzhh_onhh_pars_medians_26Oct2015.rds"),
+  # gs = g site level
+  # source script: venable_Stan_GO_descriptive_gnzhh_onhh_26Oct2015
+  # uses tau_s = 100
+  # but tau actually irrelevant because all multiplicative?
+  pr = readRDS("Models/pr_pars_yearhet_squared_pc_02Mar2016.rds"),
+  rs = readRDS("Models/rs_pars_yearhet_squared_pc_trunc_05Mar2016.rds")
+)
+
+Gres <- Ginv <- plogis(-5,5,length.out=100)
+gd <- expand.grid(Gres,Ginv)
+
+i <- 1
+j <- 19
+So <- exp(-exp(pl$go$m1[i,j]))
+
+
+
+
+
+
+
+
