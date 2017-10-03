@@ -233,9 +233,26 @@ j <- 19
 So <- exp(-exp(pl$go$m1[i,j]))
 
 
+# Ellner 1985 exploration -------------------------------------------------
 
+msy <- read.csv("Output/msy_seedests_18Jan2017.csv",header=T)
 
+msy$Y <- with(msy, nsdbar/germdbar)
+msy$S <- 0.5
+msy$lambda <- with(msy,csdbar/prevcsdbar) # this probably wrong
+msy$X <- msy$csd
 
+msy$wc <- with(msy,ifelse(gprcp>median(gprcp,na.rm=T),0,1))
 
+Glo <- with(subset(msy,
+                   wc==0 & !is.na(Y) & !is.na(lambda) & !is.na(X) & lambda>0),
+     mean(S/lambda) / mean(Y/lambda)
+)
+Ghi <- with(subset(msy,
+                   wc==1 & !is.na(Y) & !is.na(lambda) & !is.na(X) & lambda>0),
+            mean(S/lambda) / mean(Y/lambda)
+)
 
+with(subset(msy,wc==0),hist(log(Y/lambda),breaks=100))
+with(subset(msy,wc==1),hist(log(Y/lambda),breaks=100))
 
