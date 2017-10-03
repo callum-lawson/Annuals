@@ -148,9 +148,9 @@ ncores <- nclim*cpc
 mpos <- rep(1:nclim,each=cpc)
 
 # nstart <- 1
-nr <- 100 # 100 # number of repeated invasions
-nt <- 10050 # 9950
-nb <- 50 # 50 # number of "burn-in" timesteps to stabilise resident dynamics
+nr <- 100 # number of repeated invasions
+nt <- 10050
+nb <- 50 # number of "burn-in" timesteps to stabilise resident dynamics
 nj <- 22
   # min invader iterations per core = nr * nit
   
@@ -208,8 +208,10 @@ system.time({
   })
   stopCluster(CL)
 })
+  # 3 hours
 
-# Read resident simulations back in ---------------------------------------
+
+# Read simulations back in ------------------------------------------------
 
 ### Small RAM read-in
 
@@ -223,7 +225,7 @@ system.time({
 
 psl <- as.list(rep(NA,ncores))
 for(n in 1:ncores){
-  psl[[n]] <- readRDS(paste0("Sims/ESS_",cnames_bycore[n],"_28Sep2017.rds"))
+  psl[[n]] <- readRDS(paste0("Sims/ESS_",cnames_bycore[n],"_01Oct2017.rds"))
 }
 names(psl) <- cnames_bycore
 

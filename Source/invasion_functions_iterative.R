@@ -239,4 +239,34 @@ multievolve <- function(
     
 }
 
-
+simcombine <- function(insiml){
+  
+  varl <- insiml[[1]]
+  nvar <- length(varl)
+  dimvar <- lapply(varl,dim)
+  ndimvar <- sapply(dimvar,length)
+  firstmpos <- match(1:nclim,mpos)
+  
+  # Combine sim matrices by sim type
+  outsiml <- vector("list", nvar)
+  names(outsiml) <- names(varl)
+  for(i in 1:nvar){
+    if(ndimvar[i]>0){
+      for(j in 1:nclim){
+        for(k in 1:cpc){
+          if(k==1) ast <- insiml[[firstmpos[j]]][[i]]
+          else ast <- abind(ast,insiml[[firstmpos[j]+(k-1)]][[i]],along=1)
+        }
+        if(j==1){
+          outsiml[[i]] <- array(ast,dim=c(dim(ast),1))
+        }
+        else{
+          outsiml[[i]] <- abind(outsiml[[i]],ast,along=ndimvar[i]+1)
+        }
+      }
+      if(nclim>1) dimnames(outsiml[[i]])[[ndimvar[i]+1]] <- cnames_unique
+    }
+  }
+  outsiml <- outsiml[ndimvar>0]
+  return(outsiml)
+}
