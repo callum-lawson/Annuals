@@ -256,3 +256,21 @@ Ghi <- with(subset(msy,
 with(subset(msy,wc==0),hist(log(Y/lambda),breaks=100))
 with(subset(msy,wc==1),hist(log(Y/lambda),breaks=100))
 
+
+sims <- readRDS("Sims/res_mu1_sd1_s7_16Aug2017.rds")
+sims$wc <- with(sims,ifelse(w>median(w,na.rm=T),0,1))
+sims$Ye <- with(sims, Y*Sn)
+sims$lambda <- with(sims, G*Ye + (1-G)*So)
+relY <- with(sims, Ye/lambda)
+relS <- with(sims, So/lambda)
+i <- 1
+j <- 19
+
+with(sims,mean(relS[i,30:250,j]) / mean(relY[i,30:250,j]))
+
+
+1/mean(1/exp(rnorm(10^3,0,1)))
+1/mean(1/exp(rnorm(10^3,0,3)))
+hist(1/exp(rnorm(10^3,0,1)),breaks=1000)
+
+

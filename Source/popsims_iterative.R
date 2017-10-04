@@ -210,7 +210,6 @@ system.time({
 })
   # 3 hours
 
-
 # Read simulations back in ------------------------------------------------
 
 ### Small RAM read-in
@@ -298,7 +297,7 @@ qw <- rbind(wam-1.96*wsd,wam+1.96*wsd)
 
 trangrey <- rgb(red=190,green=190,blue=190,alpha=0.25,maxColorValue = 255)
 
-pdf(paste0("Plots/ESS_",format(Sys.Date(),"%d%b%Y"),".pdf"),
+pdf(paste0("Plots/ESS_nonspatial_uncertain_",format(Sys.Date(),"%d%b%Y"),".pdf"),
   width=plotwidth,height=plotheight)
 
 plotsetup()
