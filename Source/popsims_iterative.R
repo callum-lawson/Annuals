@@ -138,12 +138,12 @@ pls$bm0 <- Gsens$beta_Gz
 
 # maml <- as.list(c(1,1,mpam,1,mpam,mpam))
 # msdl <- as.list(c(0,1,1,mpsd,mpsd,0))
-maml <- as.list(c(1,1))
-msdl <- as.list(c(1,mpsd))
+maml <- as.list(c(-mpam,1,1))
+msdl <- as.list(c(1/mpsd,1,mpsd))
   # scaling mean log rainfall (zamo) only works because sign stays the same
 
 nclim <- length(maml)
-cpc <- 20 # CORES per CLIMATE (assumed equal for resident and invader)
+cpc <- 5 # CORES per CLIMATE (assumed equal for resident and invader)
 ncores <- nclim*cpc
 mpos <- rep(1:nclim,each=cpc)
 
@@ -224,11 +224,11 @@ system.time({
 
 psl <- as.list(rep(NA,ncores))
 for(n in 1:ncores){
-  psl[[n]] <- readRDS(paste0("Sims/ESS_",cnames_bycore[n],"_01Oct2017.rds"))
+  psl[[n]] <- readRDS(paste0("Sims/ESS_",cnames_bycore[n],"_05Oct2017.rds"))
 }
 names(psl) <- cnames_bycore
 
-# psl[is.na(psl)] <- psl[1]
+psl[is.na(psl)] <- psl[1]
 psla <- simcombine(psl)
 
 # ES G plots --------------------------------------------------------------
@@ -303,13 +303,15 @@ pdf(paste0("Plots/ESS_nonspatial_uncertain_",format(Sys.Date(),"%d%b%Y"),".pdf")
 plotsetup()
 
 for(j in 1:nspecies){
-  matplot(wseq,qGw[,j,,1],type="l",lty=ltys,ylim=c(0,1),col=blues)
-  matplot(wseq,qGw[,j,,2],type="l",lty=ltys,add=T,col=oranges)
-
+  matplot(wseq,qGw[,j,,1],type="l",lty=ltys,ylim=c(0,1),col=cols[1])
+  
   for(m in 1:nclim){
+    if(m!=1){
+      matplot(wseq,qGw[,j,,m],type="l",lty=ltys,add=T,col=cols[c(1,2,4)][m])
+    }
     xx <- rep(qw[,m],each=2)
     yy <- c(0,1,1,0)
-    polygon(xx, yy, col=trancols[c(2,4)][m],border=NA)
+    polygon(xx, yy, col=trancols[c(1,2,4)][m],border=NA)
   }
   
   matplot(wseq,qGob[,j,],type="l",lty=ltys,col="black",add=T)
@@ -320,7 +322,7 @@ for(j in 1:nspecies){
   if(j %in% seq(1,23,4)) addylab("G") 
 }
 
-addledge(ltext=colledgetext,col=cols[c(2,4)],lty=1)
+addledge(ltext=colledgetext,col=cols[c(1,2,4)],lty=1)
 addledge(ltext=detledgetext)
 
 dev.off()
