@@ -256,8 +256,62 @@ Ghi <- with(subset(msy,
 with(subset(msy,wc==0),hist(log(Y/lambda),breaks=100))
 with(subset(msy,wc==1),hist(log(Y/lambda),breaks=100))
 
+source("Source/invasion_functions_iterative.R")
 
-sims <- readRDS("Sims/res_mu1_sd1_s7_16Aug2017.rds")
+pl <- list(
+  go = readRDS("Models/go_pars_tdistpois_naspecies_noerr_noGDD_loglik_BH_01Mar2017.rds"),
+  pr = readRDS("Models/pr_pars_yearhet_squared_pc_02Mar2016.rds"),
+  rs = readRDS("Models/rs_pars_yearhet_squared_pc_trunc_05Mar2016.rds")
+)
+
+j <- 15
+i <- 1
+nt <- 10^5
+
+ncy <- read.csv("Output/ncy_15Jan2016.csv",header=T)
+ncy <- subset(ncy,is.na(seasprcp)==F)
+zamo <- mean(log(ncy$seasprcp))
+zsdo <- sd(log(ncy$seasprcp))
+wamo <- mean(log(ncy$germprcp))
+wsdo <- sd(log(ncy$germprcp))
+
+require(MASS)
+zw_mu <- c(zamo,wamo) - log(100)
+zw_sig <- matrix(c(zsdo^2,rep(0.82*zsdo*wsdo,2),wsdo^2),nr=2,nc=2)
+zw <- mvrnorm(n=nt, mu=zw_mu, Sigma=zw_sig)
+x_z <- matrix(nr=nt,nc=3)
+x_z[,1] <- 1 # intercept
+x_z[,2] <- zw[,1]
+x_z[,3] <- zw[,1]^2 
+
+So <- exp(-exp(pl$go$alpha_m[i,j]))
+sim <- ressim(w=zw[,2],x_z=x_z,am=100,bm=0,
+                   beta_p=pl$pr$beta_p[i,j,],beta_r=pl$rs$beta_r[i,j,],
+                   eps_y_p=rnorm(nt,0,1)*pl$pr$sig_y_p[i,j],
+                   eps_y_r=rnorm(nt,0,1)*pl$rs$sig_y_r[i,j],
+                   sig_o_p=pl$pr$sig_o_p[i],phi_r=pl$rs$phi_r[i],
+                   So=So,
+                   m0=exp(pl$go$alpha_m[i,j]),
+                   m1=exp(pl$go$beta_m[i,j]),
+                   nt=nt,nsmin=10^-50,nstart=1,
+                   tau_d=100)
+
+sim$lambda <- with(sim,Gres*Ye + (1-Gres)*So)
+mean(log(sim$lambda)) 
+  # doesn't persist without dormancy
+  # so no point in even trying Ellner harmonic mean calculation
+1/mean(1/sim$lambda)
+So
+hist(log(sim$lambda),breaks=1000)
+abline(v=0,col="red",lty=3)
+plot(log(sim$lambda[1:1000]),type="l")
+
+sapply(1:1000,function(i) sum(sims$G[i,,1]<0.95))
+i <- 67
+plot(sims$G[i,,1]~sims$w[i,])
+oneover <- with(sims, 1 / ( G[i,,1]*Y[i,,1]*Sn[i,,1] + (1-G[i,,1])*So[i,,1] ) )
+1 / mean(oneover)
+
 sims$wc <- with(sims,ifelse(w>median(w,na.rm=T),0,1))
 sims$Ye <- with(sims, Y*Sn)
 sims$lambda <- with(sims, G*Ye + (1-G)*So)
