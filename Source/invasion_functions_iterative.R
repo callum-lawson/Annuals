@@ -51,7 +51,8 @@ ressim <- function(w,x_z,am,bm,# as,bs,abr,
                    sig_o_p,phi_r,
                    So,m0,m1,
                    nt,nsmin,nstart=1,
-                   tau_d=100
+                   tau_d=100,
+                   Sg=1
                    # full=FALSE
                    ){
   ns <- ng <- nn <- Ye <- rep(NA,nt)
@@ -60,7 +61,7 @@ ressim <- function(w,x_z,am,bm,# as,bs,abr,
   ns[1] <- nstart
   t <- 1
   while(ns[t] > nsmin & t <= nt){
-    ng[t] <- Gres[t] * ns[t]
+    ng[t] <- Gres[t] * ns[t] * Sg
     x_t <- c(x_z[t,],log(ng[t])-log(tau_d/10))
     pi_bar_t <- sum(beta_p * x_t) + eps_y_p[t]
     mu_bar_t <- sum(beta_r * x_t) + eps_y_r[t]
@@ -103,7 +104,8 @@ evolve <- function(
   smut_m=0.5,# smut_s=0.1,smut_r=0.1,
   nsmin=10^-50,
   lastonly=T,
-  tau_p=100
+  tau_p=100,
+  ...
   ){
   
   require(MASS)
@@ -137,7 +139,8 @@ evolve <- function(
                                 eps_y_p,eps_y_r,
                                 sig_o_p,phi_r,
                                 So,m0,m1,
-                                nt,nsmin
+                                nt,nsmin,
+                                ...
                                 ) )
         # simulate starting resident dynamics
     }
@@ -158,7 +161,9 @@ evolve <- function(
                      eps_y_p,eps_y_r,
                      sig_o_p,phi_r,
                      So,m0,m1,
-                     nt,nsmin) # simulate new resident dynamics
+                     nt,nsmin,
+                     ...
+                     ) # simulate new resident dynamics
       } 
       if(invaded==FALSE){
         es[i+1,] <- es[i,]
@@ -187,7 +192,8 @@ multievolve <- function(
   am0,bm0,
   smut_m=0.5,
   nsmin=10^-50,
-  savefile=NULL
+  savefile=NULL,
+  ...
   ){
   
   cur_date <- format(Sys.Date(),"%d%b%Y")
@@ -213,7 +219,8 @@ multievolve <- function(
       am0=am0[i],bm0=bm0[i],
       smut_m=0.5,
       nsmin=10^-50,
-      lastonly=T
+      lastonly=T,
+      ...
     )
   
     amm[i,j] <- ESS$am

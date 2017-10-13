@@ -138,8 +138,10 @@ pls$bm0 <- Gsens$beta_Gz
 
 # maml <- as.list(c(1,1,mpam,1,mpam,mpam))
 # msdl <- as.list(c(0,1,1,mpsd,mpsd,0))
-maml <- as.list(c(-mpam,1,1))
-msdl <- as.list(c(1/mpsd,1,mpsd))
+# maml <- as.list(c(-mpam,1,1))
+# msdl <- as.list(c(1/mpsd,1,mpsd))
+maml <- as.list(c(1,1))
+msdl <- as.list(c(1,mpsd))
   # scaling mean log rainfall (zamo) only works because sign stays the same
 
 nclim <- length(maml)
@@ -203,7 +205,8 @@ system.time({
       sig_o_p=sig_o_p[iset],phi_r=phi_r[iset],
       m0=m0[iset,],m1=m1[iset,],
       am0=am0[iset],bm0=bm0[iset],
-      savefile=paste0("ESS_",cnames_bycore[n])
+      savefile=paste0("ESS_",cnames_bycore[n]),
+      Sg=0.5
     ))
   })
   stopCluster(CL)
@@ -224,11 +227,11 @@ system.time({
 
 psl <- as.list(rep(NA,ncores))
 for(n in 1:ncores){
-  psl[[n]] <- readRDS(paste0("Sims/ESS_",cnames_bycore[n],"_05Oct2017.rds"))
+  psl[[n]] <- readRDS(paste0("Sims/ESS_",cnames_bycore[n],"_12Oct2017.rds"))
 }
 names(psl) <- cnames_bycore
 
-psl[is.na(psl)] <- psl[1]
+psl[is.na(psl)] <- psl[5]
 psla <- simcombine(psl)
 
 # ES G plots --------------------------------------------------------------
@@ -297,7 +300,7 @@ qw <- rbind(wam-1.96*wsd,wam+1.96*wsd)
 
 trangrey <- rgb(red=190,green=190,blue=190,alpha=0.25,maxColorValue = 255)
 
-pdf(paste0("Plots/ESS_nonspatial_uncertain_",format(Sys.Date(),"%d%b%Y"),".pdf"),
+pdf(paste0("Plots/ESS_nonspatial_uncertain_Sg_",format(Sys.Date(),"%d%b%Y"),".pdf"),
   width=plotwidth,height=plotheight)
 
 plotsetup()
@@ -307,7 +310,8 @@ for(j in 1:nspecies){
   
   for(m in 1:nclim){
     if(m!=1){
-      matplot(wseq,qGw[,j,,m],type="l",lty=ltys,add=T,col=cols[c(1,2,4)][m])
+      matplot(wseq,qGw[,j,,m],type="l",lty=ltys,add=T,col=cols[c(1,2)][m])
+      #[c(1,2,4)][m]
     }
     xx <- rep(qw[,m],each=2)
     yy <- c(0,1,1,0)
@@ -322,7 +326,7 @@ for(j in 1:nspecies){
   if(j %in% seq(1,23,4)) addylab("G") 
 }
 
-addledge(ltext=colledgetext,col=cols[c(1,2,4)],lty=1)
+addledge(ltext=colledgetext,col=cols[c(1,2)],lty=1) #[c(1,2,4)]
 addledge(ltext=detledgetext)
 
 dev.off()
