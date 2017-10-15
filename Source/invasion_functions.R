@@ -4,6 +4,10 @@
 BHS <- function(n,m0,m1,T3=0.6794521,tau_s=100){
   exp(-m0*T3) / ( 1 + (m1/m0)*(1-exp(-m0*T3))*n/(tau_s/10) )
 }
+
+RICKERS <- function(n,m0,m1,T3=0.6794521,tau_s=100) {
+  exp(-(m0+m1*n/(tau_s/10))*T3)
+}
 # original model in m^2
 # DD functions use density in 0.01 m^2 = 10 x 10 cm plots
 # But we want to use 0.1m^2 plots (to match scale of quadrats)
@@ -21,16 +25,13 @@ logitmean <- function(mu,sigma){
 	   )$value
 }
 
-# logitnormint <- Vectorize(function(mu,sigma,intsd=10,...){
-#   integrate(logitnorm,
-#             mu=mu,sigma=sigma,
-#             lower=mu-intsd*sigma,
-#             upper=mu+intsd*sigma,
-#             ...)$value
-# })
-  
-# rel.tol=rel.tol
-# abs.tol=abs.tol
+logitnormint <- Vectorize(function(mu,sigma,intsd=10,...){
+  integrate(logitnorm,
+            mu=mu,sigma=sigma,
+            lower=mu-intsd*sigma,
+            upper=mu+intsd*sigma,
+            ...)$value
+})
 
 nbtmean <- function(mu,phi){
   mu / ( 1 - (phi/(mu+phi))^phi )
@@ -119,7 +120,9 @@ ressim <- function(w,x_z,am,bm,# as,bs,abr,
                    sig_s_g,sig_s_p,sig_s_r,
                    sig_o_p,phi_r,
                    So,m0,m1,
-                   nt,nsmin,ngmin,
+                   nt,nk,nsmin,ngmin,
+                   DDFUN,
+                   Sg,
                    nc=5,   # n consecutive t that ns must be < nsmin
                    nstart=1,
                    intsd=10,
@@ -137,35 +140,50 @@ ressim <- function(w,x_z,am,bm,# as,bs,abr,
     & ifelse(t < nc, TRUE, FALSE %in% (ns[(t-(nc-1)):t] < nsmin))
     ){
     
-    ng[t] <- Gres[t] * ns[t]
+    ng[t] <- Sg * Gres[t] * ns[t]
     
     if(ng[t] >= ngmin){
-
-      lgmu <- log(ng[t]) - (sig_s_g^2 / 2)
+      
+      if(nk==0){
+        
+        x_t <- c(x_z[t,],log(ng[t])-log(tau_d/10))
+        pi_bar_t <- sum(beta_p * x_t) + eps_y_p[t]
+        mu_bar_t <- sum(beta_r * x_t) + eps_y_r[t]
+        pr_t <- logitnormint(mu=pi_bar_t,sigma=sig_o_p)
+        rs_t <- nbtmean(exp(mu_bar_t),phi_r)
+        nn[t] <- ng[t] * pr_t * rs_t
+        
+      } # nk==0
+      
+      if(nk==Inf){
+        
+        lgmu <- log(ng[t]) - (sig_s_g^2 / 2)
         # arithmetic mean = ng[i,t,]
         # logarithmic sd = sig_s_g[i,,j]
         # mean of lognormal distribution = log(am) - sig^2 / 2
-
-    	intlo <- lgmu - intsd * sig_s_g
-    	inthi <- lgmu + intsd * sig_s_g
+        
+        intlo <- lgmu - intsd * sig_s_g
+        inthi <- lgmu + intsd * sig_s_g
         # setting range to 10 sds to improve convergence
         # (outside this range, ng=0 -> nn=0)
-    	
-    	nn[t] <- integrate(fnn, lower=intlo, upper=inthi,
-    	  lgmu=lgmu,x_z_t=x_z[t,],
-    	  beta_p=beta_p,beta_r=beta_r,
-    	  eps_y_p_t=eps_y_p[t],eps_y_r_t=eps_y_r[t],
-    	  sig_s_g=sig_s_g,sig_s_p=sig_s_p,sig_s_r=sig_s_r,
-    	  sig_o_p=sig_o_p,phi_r=phi_r
-    	  )$value
-
+        
+        nn[t] <- integrate(fnn, lower=intlo, upper=inthi,
+          lgmu=lgmu,x_z_t=x_z[t,],
+          beta_p=beta_p,beta_r=beta_r,
+          eps_y_p_t=eps_y_p[t],eps_y_r_t=eps_y_r[t],
+          sig_s_g=sig_s_g,sig_s_p=sig_s_p,sig_s_r=sig_s_r,
+          sig_o_p=sig_o_p,phi_r=phi_r
+          )$value
+        
+      } # nk==Inf
+      
     } # close if function
     
     if(ng[t] < ngmin){
       nn[t] <- 0
     }
     
-    Ye[t] <- nn[t] * BHS(nn[t],m0,m1) / ng[t]
+    Ye[t] <- nn[t] * DDFUN(nn[t],m0,m1) / ng[t]
     if(t<nt) ns[t+1] <- ns[t] * ( (1-Gres[t])*So + Gres[t]*Ye[t] )
     t <- t + 1
   } # close t loop
@@ -190,7 +208,7 @@ invade <- function(w,ami,bmi,Gres,Ye,So,nt,nb){ # asi,bsi,abri,
 }
 
 evolve <- function(
-  nr,nt,nb,
+  nr,nt,nb,nk,
   zam,wam,zsd,wsd,rho,
   beta_p,beta_r,
   sig_y_p,sig_y_r,
@@ -200,11 +218,13 @@ evolve <- function(
   am0,bm0,
   # as0,bs0,
   # abr0,
+  DDFUN,
+  Sg,
   smut_m,# smut_s=0.1,smut_r=0.1,
   nsmin,
   ngmin,
   lastonly,
-  tau_p
+  tau_p=100
   ){
   
   require(MASS)
@@ -239,7 +259,9 @@ evolve <- function(
                                 sig_s_g,sig_s_p,sig_s_r,
                                 sig_o_p,phi_r,
                                 So,m0,m1,
-                                nt,nsmin,ngmin
+                                nt,nk,nsmin,ngmin,
+                                DDFUN,
+                                Sg
                                 ) )
         # simulate starting resident dynamics
     }
@@ -261,7 +283,10 @@ evolve <- function(
                      sig_s_g,sig_s_p,sig_s_r,
                      sig_o_p,phi_r,
                      So,m0,m1,
-                     nt,nsmin,ngmin) # simulate new resident dynamics
+                     nt,nk,nsmin,ngmin,
+                     DDFUN,
+                     Sg,
+                     ) # simulate new resident dynamics
       } 
       if(invaded==FALSE){
         es[i+1,] <- es[i,]
@@ -281,19 +306,20 @@ evolve <- function(
 }
 
 multievolve <- function(  
-  ni,nj,nr,nt,nb,
+  ni,nj,nr,nt,nb,nk,
   zam,wam,zsd,wsd,rho=0.82,
   beta_p,beta_r,
   sig_y_p,sig_y_r,
-  sig_s_g,sig_s_p,sig_s_r,
+  sig_s_g=NULL,sig_s_p=NULL,sig_s_r=NULL,
   sig_o_p,phi_r,
   m0,m1,
   am0,bm0,
+  DDFUN=BHS,
+  Sg=1,
   smut_m=0.5,# smut_s=0.1,smut_r=0.1,
   nsmin=10^-10,
   ngmin=10^-50,
   lastonly=T,
-  tau_p=100,
   savefile=NULL
   ){
   
@@ -311,7 +337,7 @@ multievolve <- function(
       # of invasions, i.e. population dynamics simulations)
     
     ESS <- evolve(
-      nr=nr,nt=nt,nb=nb,
+      nr=nr,nt=nt,nb=nb,nk,
       zam=zam,wam=wam,zsd=zsd,wsd=wsd,rho=0.82,
       beta_p=beta_p[i,j,],beta_r=beta_r[i,j,],
       sig_y_p=sig_y_p[i,j],sig_y_r=sig_y_r[i,j],
@@ -319,11 +345,12 @@ multievolve <- function(
       sig_o_p=sig_o_p[i],phi_r=phi_r[i],
       m0=m0[i,j],m1=m1[i,j],
       am0=am0[i],bm0=bm0[i],
+      DDFUN,
+      Sg,
       smut_m,
       nsmin,
       ngmin,
-      lastonly,
-      tau_p
+      lastonly
     )
   
     amm[i,j] <- ESS$am

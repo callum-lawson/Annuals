@@ -64,8 +64,6 @@ R code.
 * *popsims_stochastic*: Simulations of population dynamics for finite area.
 * *popsims_stochastic_medpars*: Simulations of population dynamics for finite area, using species-level median values for all parameters except germination ones.
 * *popsims_analytical*: Simulations of population dynamics for infinite area.
-* *popsims_iterative*: Iterated simulations of resdient population dynamics and
-invasions by new strategies.          
 * *poplevel_binomialG*: Germination and seed survival models in Stan, with binomial germination calculation.
 * *poplevel_lnpoisdist*: Germination and seed survival models in Stan, with poisson seed counts.
 * *talk_plots*: Population size and germination graphs for presentations.
@@ -83,5 +81,7 @@ invasions by new strategies.
 * *popsize_timeseries*: Plot population sizes of seedlings and seeds through time. Only two versions, debatable whether to keep / update. 
 * *queries_reproduction*: Subset and save census data to provide examples of potential problems for Venable to investigate
 * *site_germinant_distributions*: How does distributing germinants among discrete sites affect the among-site variance in the number of germinants? 
-* *invasion_functions_iterative*: Calculate ES alpha_G and beta_G by iteratively perturbing parameters and attempting re-invasion. 
+* *invasion_sims*: Iterated simulations of resident population dynamics and
+invasions by new strategies.   
+* *invasion_functions*: Calculate ES alpha_G and beta_G by iteratively perturbing parameters and attempting re-invasion. 
 * *ESS_explore*: Develop explanations for patterns in ESS germination results.

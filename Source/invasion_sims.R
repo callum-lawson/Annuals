@@ -9,7 +9,7 @@ library(RColorBrewer)
 
 ### LOAD DATA 
 
-source("Source/invasion_functions_iterative_spatial.R")
+source("Source/invasion_functions.R")
 source("Source/figure_functions.R")
 source("Source/prediction_functions.R")
 source("Source/trait_functions.R")
@@ -70,6 +70,9 @@ pl <- list(
 
 ### MEDIAN PARAMETERS
 
+uncertainty <- F
+plasticity <- T
+
 pls <- with(pl, list(
   beta_p=pr$beta_p,
   beta_r=rs$beta_r,
@@ -84,17 +87,19 @@ pls <- with(pl, list(
   m1=exp(go$beta_m)
 ))
 
-for(i in 1:length(pls)){
-  ndim <- length(dim(pls[[i]])) 
-  if(ndim==1){
-    pls[[i]] <- rep(median(pls[[i]]),length(pls[[i]]))
+if(uncertainty==F){
+  for(i in 1:length(pls)){
+    ndim <- length(dim(pls[[i]])) 
+    if(ndim==1){
+      pls[[i]] <- rep(median(pls[[i]]),length(pls[[i]]))
+    }
+    if(ndim>1){
+      keepdim <- 2:ndim # remove first dim, which is always iter
+      eachrep <- dim(pls[[i]])[1] # select iterdim
+      pls[[i]][] <- rep(apply(pls[[i]],keepdim,median),each=eachrep)
+    }
+    # if is.null(ndim), do nothing
   }
-  if(ndim>1){
-    keepdim <- 2:ndim # remove first dim, which is always iter
-    eachrep <- dim(pls[[i]])[1] # select iterdim
-    pls[[i]][] <- rep(apply(pls[[i]],keepdim,median),each=eachrep)
-  }
-  # if is.null(ndim), do nothing
 }
 
 ### PARAMS FOR SENSITIVITY ANALYSES
@@ -103,7 +108,6 @@ for(i in 1:length(pls)){
 # transformed climate range approx. -1 -> 1
 tmrange <- c(-1.5,0.5)
 tsrange <- c(-3,1)
-plasticity <- T
 
 if(plasticity==F){
   np <- 100
@@ -124,7 +128,7 @@ if(plasticity==T){
   Gsens$beta_Gz <- with(Gsens,godbeta_f(tau_sd))
 }
 
-nit <- 50
+nit <- 10 # 50
 Gsens <- Gsens[sample(1:np,nit),]
 
 pls$am0 <- Gsens$alpha_G
@@ -143,14 +147,14 @@ msdl <- as.list(c(1,mpsd))
   # scaling mean log rainfall (zamo) only works because sign stays the same
 
 nclim <- length(maml)
-cpc <- 10 # 20 # CORES per CLIMATE (assumed equal for resident and invader)
+cpc <- 5 # CORES per CLIMATE (assumed equal for resident and invader)
 ncores <- nclim*cpc
 mpos <- rep(1:nclim,each=cpc)
 
 # nstart <- 1
-nr <- 100 # 100 # number of repeated invasions
-nt <- 1050 # 9950
-nb <- 50 # 50 # number of "burn-in" timesteps to stabilise resident dynamics
+nr <- 2 # 100 # number of repeated invasions
+nt <- 10 # 1050 
+nb <- 5 # 50 # number of "burn-in" timesteps to stabilise resident dynamics
 nj <- 22
   # min invader iterations per core = nr * nit
   
@@ -181,7 +185,8 @@ cnames_merged <- paste(cnames_unique,collapse="_")
 system.time({
 CL = makeCluster(ncores)
 clusterExport(cl=CL, c(
-  "BHS","logitnorm","logitmean",
+  "BHS","RICKERS",
+  "logitnorm","logitmean","logitnormint",
   "nbtmean","nbtnorm","nbtlnmean","fnn",
   "fixG","ressim","invade","evolve","multievolve",
   "pls", 
@@ -196,7 +201,7 @@ parLapply(CL, 1:ncores, function(n){
 	msd <- msdl[[mpos[n]]]
 	iset <- itersetl[[cpos[n]]]
 	with(pls, multievolve(
-	  ni=ni,nj=nj,nr=nr,nt=nt,nb=nb,
+	  ni=ni,nj=nj,nr=nr,nt=nt,nb=nb,nk=0,
 	  zam=zamo+mam*zsdo,zsd=zsdo*msd,
 	  wam=wamo+mam*wsdo,wsd=wsdo*msd,
 	  beta_p=beta_p[iset,,],beta_r=beta_r[iset,,],
@@ -205,6 +210,8 @@ parLapply(CL, 1:ncores, function(n){
 	  sig_o_p=sig_o_p[iset],phi_r=phi_r[iset],
 	  m0=m0[iset,],m1=m1[iset,],
 	  am0=am0[iset],bm0=bm0[iset],
+	  DDFUN=RICKERS,
+	  Sg=0.5,
 		savefile=paste0("ESS_",cnames_bycore[n])
 		))
 	})
@@ -226,7 +233,7 @@ stopCluster(CL)
 
 psl <- as.list(rep(NA,ncores))
 for(n in 1:ncores){
-  psl[[n]] <- readRDS(paste0("Sims/ESS_",cnames_bycore[n],"_28Sep2017.rds"))
+  psl[[n]] <- readRDS(paste0("Sims/ESS_",cnames_bycore[n],"_15Oct2017.rds"))
 }
 names(psl) <- cnames_bycore
 
@@ -274,11 +281,11 @@ Gw <- array(dim=c(nw,nit,nj,nclim))
 Gw[] <- plogis(
   matrix(rep(alpha_G,each=nw),nr=nw,nc=nit*nj*nclim)
   + outer(wseq,beta_Gz,"*")
-  )
+)
 qGw <- aperm(
   apply(Gw,c(1,3,4),quantile,prob=c(0.25,0.50,0.75),na.rm=T), 
   c(2,3,1,4)
-  )
+)
 
 nob <- nrow(pl$go$alpha_G)
 Gwob <- array(dim=c(nw,nob,nj))
@@ -299,30 +306,33 @@ qw <- rbind(wam-1.96*wsd,wam+1.96*wsd)
 
 trangrey <- rgb(red=190,green=190,blue=190,alpha=0.25,maxColorValue = 255)
 
-pdf(paste0("Plots/ESS_spatial_",format(Sys.Date(),"%d%b%Y"),".pdf"),
+pdf(paste0("Plots/ESS_nonspatial_uncertain_Sg_",format(Sys.Date(),"%d%b%Y"),".pdf"),
   width=plotwidth,height=plotheight)
 
 plotsetup()
 
 for(j in 1:nspecies){
-  matplot(wseq,qGw[,j,,1],type="l",lty=ltys,ylim=c(0,1),col=blues)
-  matplot(wseq,qGw[,j,,2],type="l",lty=ltys,add=T,col=oranges)
-
+  matplot(wseq,qGw[,j,,1],type="l",lty=ltys,ylim=c(0,1),col=cols[1])
+  
   for(m in 1:nclim){
+    if(m!=1){
+      matplot(wseq,qGw[,j,,m],type="l",lty=ltys,add=T,col=cols[c(1,2)][m])
+      #[c(1,2,4)][m]
+    }
     xx <- rep(qw[,m],each=2)
     yy <- c(0,1,1,0)
-    polygon(xx, yy, col=trancols[c(2,4)][m],border=NA)
+    polygon(xx, yy, col=trancols[c(1,2,4)][m],border=NA)
   }
   
   matplot(wseq,qGob[,j,],type="l",lty=ltys,col="black",add=T)
-
+  
   lettlab(j)
   
   if(j %in% 19:23) addxlab("w") 
   if(j %in% seq(1,23,4)) addylab("G") 
 }
 
-addledge(ltext=colledgetext,col=cols[c(2,4)],lty=1)
+addledge(ltext=colledgetext,col=cols[c(1,2)],lty=1) #[c(1,2,4)]
 addledge(ltext=detledgetext)
 
 dev.off()
