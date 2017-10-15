@@ -193,7 +193,8 @@ ressim <- function(w,x_z,am,bm,# as,bs,abr,
   # if(full==TRUE) return(data.frame(Gres=Gres,Ye=Ye,ns=ns))
 }
 
-invade <- function(w,ami,bmi,Gres,Ye,So,nt,nb){ # asi,bsi,abri,
+invade_infinite <- function(w,ami,bmi,Gres,Ye,So,nt,nb){ # asi,bsi,abri,
+  
   if(!NA %in% Ye){ # t = final value at which loop stopped 
     #Ginv <- coaG(w,ami,bmi,asi,bsi,abri)
     Ginv <- fixG(w,ami,bmi)
@@ -205,6 +206,100 @@ invade <- function(w,ami,bmi,Gres,Ye,So,nt,nb){ # asi,bsi,abri,
     # if resident goes extinct, invader establishes immediately
   }
   return(invaded)
+  
+}
+
+invade_finite <- function(THETA_G){
+  
+  require(truncdist)
+  require(MASS)
+  
+  ns <- array(dim=c(nt,2)) # 2 = res and inv
+  x_k <- array(dim=c(nk,4))
+  Gres <- fixG(w,am,bm)
+  Ginv <- fixG(w,ami,bmi)
+  
+  eps_s_g <- rnorm(nk,0,sig_s_g)
+  eps_s_p <- rnorm(nk,0,sig_s_p)
+  eps_s_r <- rnorm(nk,0,sig_s_r)
+  
+  kseq <- 1:nk
+  tottarea <- nk/10
+  
+  zsites <- rbinom(nk,size=1,prob=theta_g) 
+  # theta = prob of zero
+  eps_s_g[zsites==1] <- -Inf
+  # p(germ) = exp(-Inf) = 0
+  
+  ns[1,] <- c(nstart,0)
+  t <- 1
+  
+  while(t <= nt
+    & ifelse(t < nc, TRUE, FALSE %in% (ns[(t-(nc-1)):t] < nsmin))
+    & sum(ns[t,]>0)
+  ){
+    
+    if(t>nb){
+      ns[t,2] <- 1
+      # 1 invader introduced at t = nb + 1
+    }
+    
+    ng <- rbinom(2,prob=c(Gres[t],Ginv[t]),size=ns[t,])
+    no <- rbinom(2,prob=So,size=ns[t,]-ng_t)
+    
+    if(sum(ng)==0){
+      nn <- rep(0,2)
+    }
+    
+    if(sum(ng)>0){
+      
+      ng_k <- sapply(ng, function(x){
+        table(
+          factor(
+            sample(kseq,x,replace=T,prob=exp(eps_s_g)
+            ),
+            levels=kseq
+          )
+        )
+      })
+      # using spatial terms as weights
+  
+      x_k[,1:3] <- rep(x_z[t,],each=nk)
+      x_k[,1:4] <- log(rowSums(ng_k))-log(tau_d/10)
+      
+      eps_o_p_k <- rnorm(nk,0,sig_o_p)
+      
+      pi_k <- beta_p %*% t(x_k) + eps_y_p[t] + eps_s_p + eps_o_p_k
+      eta_k <- beta_r %*% t(x_k) + eps_y_r[t] + eps_s_r
+      
+      nr_k <- rbinom(nk*2,prob=plogis(rep(pi_k,2)),size=ng_k)
+      nzpos <- which(nr_k>0)
+      inv_k <- factor(nzpos > nk,levels=c(TRUE,FALSE)) 
+        # if TRUE, then in 2nd column
+      inv_r <- rep(inv_k,nr_k[nzpos])
+      mus <- rep(exp(eta_k[nzpos]),nr_k[nzpos])
+      nmus <- length(inv_r)
+      nn <- tapply(rtrunc(n=nmus,spec="nbinom",mu=mus,size=phi_r,a=0),
+        inv_r,
+        sum
+      ) 
+      nn[is.na(nn)] <- 0
+      
+      Sn <- DDFUN(nn/tottarea,m0,m1)
+      nnb <- rbinom(2,prob=Sn,size=nn)
+      
+    }
+    
+    if(t<nt) ns[t+1] <- nnb[t] + no[t]
+    t <- t + 1
+  } # close t loop
+  
+  if(ns[t-1,1] < ns[t-1,2] | ns[t-1,1]==0){
+    invaded <- TRUE
+  }
+  else{
+    invaded <- FALSE
+  }
 }
 
 evolve <- function(
@@ -252,46 +347,46 @@ evolve <- function(
 
   for(i in 1:nr){
     
-    if(i==1){
-      rd <- with(es[i,], ressim(zw[,2],x_z,am,bm,# as,bs,abr,
-                                beta_p,beta_r,
-                                eps_y_p,eps_y_r,
-                                sig_s_g,sig_s_p,sig_s_r,
-                                sig_o_p,phi_r,
-                                So,m0,m1,
-                                nt,nk,nsmin,ngmin,
-                                DDFUN,
-                                Sg
-                                ) )
-        # simulate starting resident dynamics
-    }
     ami <- es$am[i] + rnorm(1,0,smut_m)
     bmi <- es$bm[i] + rnorm(1,0,smut_m)
     # asi <- es$as[i] * exp(rnorm(1,0,smut_s))
     # bsi <- es$bs[i] * exp(rnorm(1,0,smut_s))
     # abri <- plogis( (qlogis((es$abr[i]+1)/2) + rnorm(1,0,smut_r)) )*2 - 1 
-      # transform [0,1] to correlation range of [-1,1]
+    # transform [0,1] to correlation range of [-1,1]
     # if(abri==-1) abri <- -0.99
     # if(abri==+1) abri <- +0.99
-    invaded <- invade(zw[,2],ami,bmi,rd$Gres,rd$Ye,So,nt,nb) # asi,bsi,abri,
+    
+    if(nk %in% c(0,Inf)){
+      
+      rd <- with(es[i,], ressim(zw[,2],x_z,am,bm,# as,bs,abr,
+        beta_p,beta_r,
+        eps_y_p,eps_y_r,
+        sig_s_g,sig_s_p,sig_s_r,
+        sig_o_p,phi_r,
+        So,m0,m1,
+        nt,nk,nsmin,ngmin,
+        DDFUN,
+        Sg
+      ) )
+      
+      invaded <- invade_infinite(zw[,2],ami,bmi,rd$Gres,rd$Ye,So,nt,nb) 
+        # asi,bsi,abri,
+      
+    }
+    
+    if(nk>0 & nk<Inf){
+      
+    }
+    
     if(i < nr){
       if(invaded==TRUE){
         es[i+1,] <- c(ami,bmi) # asi,bsi,abri
-        rd <- ressim(zw[,2],x_z,ami,bmi,# asi,bsi,abri,
-                     beta_p,beta_r,
-                     eps_y_p,eps_y_r,
-                     sig_s_g,sig_s_p,sig_s_r,
-                     sig_o_p,phi_r,
-                     So,m0,m1,
-                     nt,nk,nsmin,ngmin,
-                     DDFUN,
-                     Sg,
-                     ) # simulate new resident dynamics
       } 
       if(invaded==FALSE){
         es[i+1,] <- es[i,]
       } 
     }
+    
   } # close i loop
   
   if(lastonly==T){
