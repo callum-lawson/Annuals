@@ -256,7 +256,8 @@ go_mod <- "
   			}
   		else {
 				nd[i] = exp(lnd[npos[i]]);
-				ndb[i] = BH(nd[i],m1[i],m2[i],T3);
+				// ndb[i] = BH(nd[i],m1[i],m2[i],T3);
+				ndb[i] = RICKER(nd[i],m1[i],m2[i],T3);
   			}
 				// densities all in m2*tau_s
 			}
@@ -329,7 +330,7 @@ go_sflist <- parLapply(CL, 1:nchains, fun = function(cid) {  # number of chains
        warmup=2000,
        iter=3000,
        pars=c("alpha_G_mu","beta_Gz_mu"),
-       sample_file=paste0("Models/go_fits_chain",cid,"_poplevel_lnpoistdist_BH_naspecies_diffnu_noerr_noGDD_loglik_",format(Sys.Date(),"%d%b%Y"),".csv"),
+       sample_file=paste0("Models/go_fits_chain",cid,"_poplevel_lnpoistdist_RICKER_naspecies_diffnu_noerr_noGDD_loglik_",format(Sys.Date(),"%d%b%Y"),".csv"),
        chain_id=cid
   )
 })
@@ -342,27 +343,44 @@ finchains <- 1:nchains
 
 nchains <- length(finchains)
 CL = makeCluster(nchains)
-go_sflist <- list()
-clusterExport(cl=CL, c("go_sflist","finchains")) 
+go_sflist_bh <- go_sflist_ricker <- list()
+clusterExport(cl=CL, c("go_sflist_bh","go_sflist_ricker","finchains")) 
 
-go_sflist <- parLapply(CL, 1:nchains, function(i){
+go_sflist_bh <- parLapply(CL, 1:nchains, function(i){
   require(rstan)
   read_stan_csv(paste0("Models/go_fits_chain",finchains[i],"_poplevel_lnpoistdist_BH_naspecies_diffnu_noerr_noGDD_loglik_28Feb2017.csv"))
+})
+
+go_sflist_ricker <- parLapply(CL, 1:nchains, function(i){
+  require(rstan)
+  read_stan_csv(paste0("Models/go_fits_chain",finchains[i],"_poplevel_lnpoistdist_RICKER_naspecies_diffnu_noerr_noGDD_loglik_14Oct2017.csv"))
   })
 
-go_fit <- sflist2stanfit(go_sflist) 
+stopCluster(CL)
 
-traceplot(go_fit,pars=c("alpha_G_mu","beta_Gz_mu","alpha_m_mu","beta_m_mu"),nr=2,nc=3)
-traceplot(go_fit,pars=c("alpha_G"))
-traceplot(go_fit,pars=c("beta_Gz"))
-traceplot(go_fit,pars=c("alpha_m"))
-traceplot(go_fit,pars=c("beta_m"))
+go_fit_bh <- sflist2stanfit(go_sflist_bh) 
+go_fit_ricker <- sflist2stanfit(go_sflist_ricker) 
 
-# Likelihood
+traceplot(go_fit_bh,pars=c("alpha_G_mu","beta_Gz_mu","alpha_m_mu","beta_m_mu"),nr=2,nc=3)
+traceplot(go_fit_bh,pars=c("alpha_G"))
+traceplot(go_fit_bh,pars=c("beta_Gz"))
+traceplot(go_fit_bh,pars=c("alpha_m"))
+traceplot(go_fit_bh,pars=c("beta_m"))
 
-loglik_all <- with(gopars,rowMedians(log_lik))
-( loglik <- sum(loglik_all) )
-( deviance <- -2 * loglik ) 
+traceplot(go_fit_ricker,pars=c("alpha_G_mu","beta_Gz_mu","alpha_m_mu","beta_m_mu"),nr=2,nc=3)
+traceplot(go_fit_ricker,pars=c("alpha_G"))
+traceplot(go_fit_ricker,pars=c("beta_Gz"))
+traceplot(go_fit_ricker,pars=c("alpha_m"))
+traceplot(go_fit_ricker,pars=c("beta_m"))
+
+# LOO
+
+library(loo)
+log_lik_bh <- extract_log_lik(go_fit_bh)
+log_lik_ricker <- extract_log_lik(go_fit)
+loo_bh <- loo(log_lik_bh)
+loo_ricker <- loo(log_lik_ricker)
+compare(loo_bh,loo_ricker) # BH better
 
 ######################
 ### CALCULATE PARS ###
@@ -518,7 +536,7 @@ curve(dgamma(x,shape=2,rate=0.1),xlim=c(0,20))
 ### SAVE PARS ###
 #################
 
-gopars <- extract(go_fit)
+gopars <- extract(go_fit_ricker) # change to BH when necessary
 
 goparl <- as.list(rep(NA,length(gopars)))
 names(goparl) <- names(gopars)
@@ -535,6 +553,6 @@ goparl$loglam_g_marg <- with(gopars,colMedians(loglam_g-eps_g))
 goparl$loglam_o_marg <- with(gopars,colMedians(loglam_o-eps_o))
 
 saveRDS(goparl,
-  paste0("Models/go_pars_tdistpois_naspecies_noerr_noGDD_loglik_BH_",format(Sys.Date(),"%d%b%Y"),".rds")
+  paste0("Models/go_pars_tdistpois_naspecies_noerr_noGDD_loglik_RICKER_",format(Sys.Date(),"%d%b%Y"),".rds")
   )
 
