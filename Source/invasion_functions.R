@@ -34,9 +34,11 @@ logitnormint <- Vectorize(function(mu,sigma,intsd=10,...){
 })
 
 nbtmean <- function(mu,phi){
-  mu / ( 1 - (phi/(mu+phi))^phi )
+  denom <- 1 - (phi/(mu+phi))^phi
+  ifelse(denom==0,0,mu/denom)
 }
-# mean for hurdle model
+  # mean for hurdle model
+  # ifelse prevents calculation failing when expected reproduction = 0
 
 nbtnorm <- function(x,eta,sigma,phi){
   nbtmean(mu=exp(x),phi=phi) * dnorm(x, mean=eta, sd=sigma)
@@ -148,9 +150,9 @@ ressim <- function(w,x_z,am,bm,# as,bs,abr,
         
         x_t <- c(x_z[t,],log(ng[t])-log(tau_d/10))
         pi_bar_t <- sum(beta_p * x_t) + eps_y_p[t]
-        mu_bar_t <- sum(beta_r * x_t) + eps_y_r[t]
+        eta_bar_t <- sum(beta_r * x_t) + eps_y_r[t]
         pr_t <- logitnormint(mu=pi_bar_t,sigma=sig_o_p)
-        rs_t <- nbtmean(exp(mu_bar_t),phi_r)
+        rs_t <- nbtmean(exp(eta_bar_t),phi_r)
         nn[t] <- ng[t] * pr_t * rs_t
         
       } # nk==0
@@ -195,16 +197,18 @@ ressim <- function(w,x_z,am,bm,# as,bs,abr,
 
 invade_infinite <- function(w,ami,bmi,Gres,Ye,So,nt,nb){ # asi,bsi,abri,
   
+  if(NA %in% Ye){   
+    invaded <- TRUE 
+    # if resident goes extinct, invader establishes immediately
+  }
+  
   if(!NA %in% Ye){ # t = final value at which loop stopped 
     #Ginv <- coaG(w,ami,bmi,asi,bsi,abri)
     Ginv <- fixG(w,ami,bmi)
     delta_r <- log((1-Ginv)*So + Ginv*Ye) - log((1-Gres)*So + Gres*Ye)
     invaded <- mean(delta_r[(nb+1):nt]) > 0
   }
-  if(NA %in% Ye){   
-    invaded <- TRUE 
-    # if resident goes extinct, invader establishes immediately
-  }
+
   return(invaded)
   
 }
@@ -357,7 +361,6 @@ evolve <- function(
     # if(abri==+1) abri <- +0.99
     
     if(nk %in% c(0,Inf)){
-      
       rd <- with(es[i,], ressim(zw[,2],x_z,am,bm,# as,bs,abr,
         beta_p,beta_r,
         eps_y_p,eps_y_r,
@@ -368,14 +371,12 @@ evolve <- function(
         DDFUN,
         Sg
       ) )
-      
       invaded <- invade_infinite(zw[,2],ami,bmi,rd$Gres,rd$Ye,So,nt,nb) 
         # asi,bsi,abri,
-      
     }
     
     if(nk>0 & nk<Inf){
-      
+      # invaded <- invade_finite
     }
     
     if(i < nr){
@@ -457,7 +458,7 @@ multievolve <- function(
     
   outlist <- list(
     zam=zam,zsd=zsd,
-    ni=ni,nj=nj,nr=nr,nt=nt,nt=nt,nb=nb,
+    ni=ni,nj=nj,nr=nr,nt=nt,nb=nb,
     am=amm,bm=bmm
     )
   

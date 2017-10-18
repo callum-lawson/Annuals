@@ -58,7 +58,8 @@ wsdo <- sd(log(ncy$germprcp))
 ### MODEL PARAMS (already permuted)
 
 pl <- list(
-	go = readRDS("Models/go_pars_tdistpois_naspecies_noerr_noGDD_loglik_BH_01Mar2017.rds"),
+	# go = readRDS("Models/go_pars_tdistpois_naspecies_noerr_noGDD_loglik_BH_01Mar2017.rds"),
+  go = readRDS("Models/go_pars_tdistpois_naspecies_noerr_noGDD_loglik_RICKER_15Oct2017.rds"),
 	gs = readRDS("Models/gnzhh_onhh_pars_medians_26Oct2015.rds"),
 		# gs = g site level
 		# source script: venable_Stan_GO_descriptive_gnzhh_onhh_26Oct2015
@@ -128,8 +129,11 @@ if(plasticity==T){
   Gsens$beta_Gz <- with(Gsens,godbeta_f(tau_sd))
 }
 
-nit <- 10 # 50
+nit <- 100
+set.seed(1)
 Gsens <- Gsens[sample(1:np,nit),]
+  # random starting points 
+  # -> does't matter how distributed over different climates
 
 pls$am0 <- Gsens$alpha_G
 pls$bm0 <- Gsens$beta_Gz
@@ -147,14 +151,14 @@ msdl <- as.list(c(1,mpsd))
   # scaling mean log rainfall (zamo) only works because sign stays the same
 
 nclim <- length(maml)
-cpc <- 5 # CORES per CLIMATE (assumed equal for resident and invader)
+cpc <- 10 # CORES per CLIMATE (assumed equal for resident and invader)
 ncores <- nclim*cpc
 mpos <- rep(1:nclim,each=cpc)
 
 # nstart <- 1
-nr <- 2 # 100 # number of repeated invasions
-nt <- 10 # 1050 
-nb <- 5 # 50 # number of "burn-in" timesteps to stabilise resident dynamics
+nr <- 100 # number of repeated invasions
+nt <- 10050 
+nb <- 50 # number of "burn-in" timesteps to stabilise resident dynamics
 nj <- 22
   # min invader iterations per core = nr * nit
   
@@ -188,7 +192,7 @@ clusterExport(cl=CL, c(
   "BHS","RICKERS",
   "logitnorm","logitmean","logitnormint",
   "nbtmean","nbtnorm","nbtlnmean","fnn",
-  "fixG","ressim","invade","evolve","multievolve",
+  "fixG","ressim","invade_infinite","evolve","multievolve",
   "pls", 
   "ni","nj","nr","nt","nb",
   "zamo","zsdo","wamo","wsdo",
@@ -211,13 +215,15 @@ parLapply(CL, 1:ncores, function(n){
 	  m0=m0[iset,],m1=m1[iset,],
 	  am0=am0[iset],bm0=bm0[iset],
 	  DDFUN=RICKERS,
-	  Sg=0.5,
+	  Sg=1,
 		savefile=paste0("ESS_",cnames_bycore[n])
 		))
 	})
 stopCluster(CL)
 })
   # 32 hours
+
+# write verbose form that allows convergence to be checked?
 
 # Read resident simulations back in ---------------------------------------
 
