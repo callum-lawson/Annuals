@@ -213,13 +213,24 @@ invade_infinite <- function(w,ami,bmi,Gres,Ye,So,nt,nb){ # asi,bsi,abri,
   
 }
 
-invade_finite <- function(THETA_G){
+invade_finite <- function(w,x_z,am,bm,ami,bmi,
+                          beta_p,beta_r,
+                          eps_y_p,eps_y_r,
+                          sig_s_g,sig_s_p,sig_s_r,
+                          sig_o_p,phi_r,theta_g,
+                          So,m0,m1,
+                          nt,nb,nk,nsmin,ngmin,
+                          DDFUN,
+                          Sg,
+                          nc=5,   # n consecutive t that ns must be < nsmin
+                          nstart=1,
+                          intsd=10,
+                          tau_d=100){
   
   require(truncdist)
   require(MASS)
   
   ns <- array(dim=c(nt,2)) # 2 = res and inv
-  x_k <- array(dim=c(nk,4))
   Gres <- fixG(w,am,bm)
   Ginv <- fixG(w,ami,bmi)
   
@@ -228,19 +239,19 @@ invade_finite <- function(THETA_G){
   eps_s_r <- rnorm(nk,0,sig_s_r)
   
   kseq <- 1:nk
-  tottarea <- nk/10
+  totarea <- nk/10
   
   zsites <- rbinom(nk,size=1,prob=theta_g) 
   # theta = prob of zero
   eps_s_g[zsites==1] <- -Inf
   # p(germ) = exp(-Inf) = 0
   
-  ns[1,] <- c(nstart,0)
+  ns[1,] <- c(round(nstart*totarea,0),0)
   t <- 1
   
   while(t <= nt
     & ifelse(t < nc, TRUE, FALSE %in% (ns[(t-(nc-1)):t] < nsmin))
-    & sum(ns[t,]>0)
+    & sum(ns[t,])>0
   ){
     
     if(t>nb){
@@ -249,7 +260,7 @@ invade_finite <- function(THETA_G){
     }
     
     ng <- rbinom(2,prob=c(Gres[t],Ginv[t]),size=ns[t,])
-    no <- rbinom(2,prob=So,size=ns[t,]-ng_t)
+    no <- rbinom(2,prob=So,size=ns[t,]-ng)
     
     if(sum(ng)==0){
       nn <- rep(0,2)
@@ -267,43 +278,56 @@ invade_finite <- function(THETA_G){
         )
       })
       # using spatial terms as weights
-  
-      x_k[,1:3] <- rep(x_z[t,],each=nk)
-      x_k[,1:4] <- log(rowSums(ng_k))-log(tau_d/10)
+
+      ngt_k <- rowSums(ng_k)  # total germinants (residents and invaders)
+      isg_k <- ngt_k>0        # binary: are there germinants in plot?
+      nkg <- sum(isg_k)       # total number of *plots* with germinants
       
-      eps_o_p_k <- rnorm(nk,0,sig_o_p)
+      x_k <- array(dim=c(nkg,4))
+      x_k[,1:3] <- rep(x_z[t,],each=nkg)
+      x_k[,4] <- log(ngt_k[isg_k]) - log(tau_d/10)
       
-      pi_k <- beta_p %*% t(x_k) + eps_y_p[t] + eps_s_p + eps_o_p_k
-      eta_k <- beta_r %*% t(x_k) + eps_y_r[t] + eps_s_r
+      eps_o_p_k <- rnorm(nkg,0,sig_o_p)
       
-      nr_k <- rbinom(nk*2,prob=plogis(rep(pi_k,2)),size=ng_k)
-      nzpos <- which(nr_k>0)
-      inv_k <- factor(nzpos > nk,levels=c(TRUE,FALSE)) 
-        # if TRUE, then in 2nd column
-      inv_r <- rep(inv_k,nr_k[nzpos])
-      mus <- rep(exp(eta_k[nzpos]),nr_k[nzpos])
-      nmus <- length(inv_r)
-      nn <- tapply(rtrunc(n=nmus,spec="nbinom",mu=mus,size=phi_r,a=0),
-        inv_r,
-        sum
-      ) 
-      nn[is.na(nn)] <- 0
+      pi_k <- beta_p %*% t(x_k) + eps_y_p[t] + eps_s_p[isg_k] + eps_o_p_k
+      eta_k <- beta_r %*% t(x_k) + eps_y_r[t] + eps_s_r[isg_k]
       
-      Sn <- DDFUN(nn/tottarea,m0,m1)
-      nnb <- rbinom(2,prob=Sn,size=nn)
+      nr_k <- rbinom(nkg*2,prob=plogis(rep(pi_k,2)),size=ng_k[isg_k])
+      nr_all <- sum(nr_k)
+      
+      if(nr_all==0){
+        nnb <- c(0,0)
+      }
+      
+      if(nr_all>0){
+        nzpos <- which(nr_k>0)
+        isinv_k <- factor(nzpos > nkg,levels=c(TRUE,FALSE)) 
+          # if TRUE, then in 2nd column
+        isinv_r <- rep(isinv_k,nr_k[nzpos])
+        mus <- rep(exp(eta_k[nzpos]),nr_k[nzpos])
+        y_all <- rtrunc(n=nr_all,spec="nbinom",mu=mus,size=phi_r,a=0)
+        nn <- tapply(y_all,isinv_r,sum) 
+        nn[is.na(nn)] <- 0 # required when no reproducers in resident / invader
+        Sn <- ifelse(nn==0,0,DDFUN(nn/tottarea,m0,m1))
+        nnb <- rbinom(2,prob=Sn,size=nn)
+      }
       
     }
     
-    if(t<nt) ns[t+1] <- nnb[t] + no[t]
+    if(t<nt) ns[t+1,] <- nnb + no
     t <- t + 1
+    
   } # close t loop
   
-  if(ns[t-1,1] < ns[t-1,2] | ns[t-1,1]==0){
+  if(ns[t,1] < ns[t,2] | ns[t,1]==0){
     invaded <- TRUE
   }
   else{
     invaded <- FALSE
   }
+  
+  return(invaded)
+  
 }
 
 evolve <- function(
@@ -312,7 +336,7 @@ evolve <- function(
   beta_p,beta_r,
   sig_y_p,sig_y_r,
   sig_s_g,sig_s_p,sig_s_r,
-  sig_o_p,phi_r,
+  sig_o_p,phi_r,theta_g,
   m0,m1,
   am0,bm0,
   # as0,bs0,
@@ -376,7 +400,16 @@ evolve <- function(
     }
     
     if(nk>0 & nk<Inf){
-      # invaded <- invade_finite
+      invaded <- invade_finite(w,x_z,am,bm,ami,bmi,
+                               beta_p,beta_r,
+                               eps_y_p,eps_y_r,
+                               sig_s_g,sig_s_p,sig_s_r,
+                               sig_o_p,phi_r,theta_g,
+                               So,m0,m1,
+                               nt,nb,nk,nsmin,ngmin,
+                               DDFUN,
+                               Sg
+                               )
     }
     
     if(i < nr){
@@ -407,7 +440,7 @@ multievolve <- function(
   beta_p,beta_r,
   sig_y_p,sig_y_r,
   sig_s_g=NULL,sig_s_p=NULL,sig_s_r=NULL,
-  sig_o_p,phi_r,
+  sig_o_p,phi_r,theta_g,
   m0,m1,
   am0,bm0,
   DDFUN=BHS,
@@ -437,8 +470,9 @@ multievolve <- function(
       zam=zam,wam=wam,zsd=zsd,wsd=wsd,rho=0.82,
       beta_p=beta_p[i,j,],beta_r=beta_r[i,j,],
       sig_y_p=sig_y_p[i,j],sig_y_r=sig_y_r[i,j],
-      sig_s_g[i,j],sig_s_p[i],sig_s_r[i],
+      sig_s_g=sig_s_g[i,j],sig_s_p=sig_s_p[i],sig_s_r=sig_s_r[i],
       sig_o_p=sig_o_p[i],phi_r=phi_r[i],
+      theta_g=ifelse(is.null(theta_g),NULL,theta_g[i]),
       m0=m0[i,j],m1=m1[i,j],
       am0=am0[i],bm0=bm0[i],
       DDFUN,

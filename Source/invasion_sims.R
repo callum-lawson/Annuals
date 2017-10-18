@@ -58,8 +58,8 @@ wsdo <- sd(log(ncy$germprcp))
 ### MODEL PARAMS (already permuted)
 
 pl <- list(
-	# go = readRDS("Models/go_pars_tdistpois_naspecies_noerr_noGDD_loglik_BH_01Mar2017.rds"),
-  go = readRDS("Models/go_pars_tdistpois_naspecies_noerr_noGDD_loglik_RICKER_15Oct2017.rds"),
+	go = readRDS("Models/go_pars_tdistpois_naspecies_noerr_noGDD_loglik_BH_01Mar2017.rds"),
+  # go = readRDS("Models/go_pars_tdistpois_naspecies_noerr_noGDD_loglik_RICKER_15Oct2017.rds"),
 	gs = readRDS("Models/gnzhh_onhh_pars_medians_26Oct2015.rds"),
 		# gs = g site level
 		# source script: venable_Stan_GO_descriptive_gnzhh_onhh_26Oct2015
@@ -84,6 +84,7 @@ pls <- with(pl, list(
   sig_s_r=rs$sig_s_r,
   sig_o_p=pr$sig_o_p,
   phi_r=rs$phi_r,
+  theta_g=gs$theta_g,
   m0=exp(go$alpha_m),
   m1=exp(go$beta_m)
 ))
@@ -157,8 +158,8 @@ mpos <- rep(1:nclim,each=cpc)
 
 # nstart <- 1
 nr <- 100 # number of repeated invasions
-nt <- 10050 
-nb <- 50 # number of "burn-in" timesteps to stabilise resident dynamics
+nt <- 50 # 10050 
+nb <- 15 # 50 # number of "burn-in" timesteps to stabilise resident dynamics
 nj <- 22
   # min invader iterations per core = nr * nit
   
