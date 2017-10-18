@@ -35,7 +35,7 @@ logitnormint <- Vectorize(function(mu,sigma,intsd=10,...){
 
 nbtmean <- function(mu,phi){
   denom <- 1 - (phi/(mu+phi))^phi
-  ifelse(denom==0,0,mu/denom)
+  ifelse(denom==0 | mu==0, 0, mu/denom)
 }
   # mean for hurdle model
   # ifelse prevents calculation failing when expected reproduction = 0
@@ -185,7 +185,7 @@ ressim <- function(w,x_z,am,bm,# as,bs,abr,
       nn[t] <- 0
     }
     
-    Ye[t] <- nn[t] * DDFUN(nn[t],m0,m1) / ng[t]
+    Ye[t] <- ifelse(nn[t]==0, 0, nn[t] * DDFUN(nn[t],m0,m1) / ng[t])
     if(t<nt) ns[t+1] <- ns[t] * ( (1-Gres[t])*So + Gres[t]*Ye[t] )
     t <- t + 1
   } # close t loop
@@ -440,7 +440,7 @@ multievolve <- function(
   beta_p,beta_r,
   sig_y_p,sig_y_r,
   sig_s_g=NULL,sig_s_p=NULL,sig_s_r=NULL,
-  sig_o_p,phi_r,theta_g,
+  sig_o_p,phi_r,theta_g=NULL,
   m0,m1,
   am0,bm0,
   DDFUN=BHS,
