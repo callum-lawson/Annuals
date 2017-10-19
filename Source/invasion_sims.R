@@ -130,7 +130,7 @@ if(plasticity==T){
   Gsens$beta_Gz <- with(Gsens,godbeta_f(tau_sd))
 }
 
-nit <- 20
+nit <- 50
 set.seed(1)
 Gsens <- Gsens[sample(1:np,nit),]
   # random starting points 
@@ -152,12 +152,12 @@ msdl <- as.list(1) # as.list(c(1,mpsd))
   # scaling mean log rainfall (zamo) only works because sign stays the same
 
 nclim <- length(maml)
-cpc <- 20 # CORES per CLIMATE (assumed equal for resident and invader)
+cpc <- 25 # CORES per CLIMATE (assumed equal for resident and invader)
 ncores <- nclim*cpc
 mpos <- rep(1:nclim,each=cpc)
 
 # nstart <- 1
-nr <- 100 # number of repeated invasions
+nr <- 1000 # number of repeated invasions
 nt <- 1050 # 10050 
 nb <- 50 # number of "burn-in" timesteps to stabilise resident dynamics
 nj <- 22
@@ -194,9 +194,10 @@ clusterExport(cl=CL, c(
   "BHS","RICKERS",
   "logitnorm","logitmean","logitnormint",
   "nbtmean","nbtnorm","nbtlnmean","fnn",
-  "fixG","ressim","invade_infinite","evolve","multievolve",
+  "fixG","ressim","invade_infinite","invade_finite",
+  "evolve","multievolve",
   "pls", 
-  "ni","nj","nr","nt","nb",
+  "ni","nj","nr","nt","nb","nk",
   "zamo","zsdo","wamo","wsdo",
   "mpos","maml","msdl","cpos",
   "Tvalues","cnames_bycore",
@@ -216,7 +217,7 @@ parLapply(CL, 1:ncores, function(n){
 	  sig_o_p=sig_o_p[iset],phi_r=phi_r[iset],theta_g=theta_g[iset,],
 	  m0=m0[iset,],m1=m1[iset,],
 	  am0=am0[iset],bm0=bm0[iset],
-	  DDFUN=BH,
+	  DDFUN=BHS,
 	  Sg=1,
 		savefile=paste0("ESS_finite_",cnames_bycore[n])
 		))
@@ -241,7 +242,7 @@ stopCluster(CL)
 
 psl <- as.list(rep(NA,ncores))
 for(n in 1:ncores){
-  psl[[n]] <- readRDS(paste0("Sims/ESS_",cnames_bycore[n],"_19Oct2017.rds"))
+  psl[[n]] <- readRDS(paste0("Sims/ESS_finite_",cnames_bycore[n],"_19Oct2017.rds"))
 }
 names(psl) <- cnames_bycore
 
@@ -314,7 +315,7 @@ qw <- rbind(wam-1.96*wsd,wam+1.96*wsd)
 
 trangrey <- rgb(red=190,green=190,blue=190,alpha=0.25,maxColorValue = 255)
 
-pdf(paste0("Plots/ESS_nonspatial_uncertain_Sg_",format(Sys.Date(),"%d%b%Y"),".pdf"),
+pdf(paste0("Plots/ESS_finite_",format(Sys.Date(),"%d%b%Y"),".pdf"),
   width=plotwidth,height=plotheight)
 
 plotsetup()
@@ -324,7 +325,7 @@ for(j in 1:nspecies){
   
   for(m in 1:nclim){
     if(m!=1){
-      matplot(wseq,qGw[,j,,m],type="l",lty=ltys,add=T,col=cols[c(1,2)][m])
+      matplot(wseq,qGw[,j,,m],type="l",lty=ltys,add=T,col=cols[2][m])
       #[c(1,2,4)][m]
     }
     xx <- rep(qw[,m],each=2)
@@ -340,7 +341,7 @@ for(j in 1:nspecies){
   if(j %in% seq(1,23,4)) addylab("G") 
 }
 
-addledge(ltext=colledgetext,col=cols[c(1,2)],lty=1) #[c(1,2,4)]
+addledge(ltext=colledgetext,col=cols[2],lty=1) #[c(1,2,4)]
 addledge(ltext=detledgetext)
 
 dev.off()

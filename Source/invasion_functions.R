@@ -188,6 +188,7 @@ ressim <- function(w,x_z,am,bm,# as,bs,abr,
     Ye[t] <- ifelse(nn[t]==0, 0, nn[t] * DDFUN(nn[t],m0,m1) / ng[t])
     if(t<nt) ns[t+1] <- ns[t] * ( (1-Gres[t])*So + Gres[t]*Ye[t] )
     t <- t + 1
+    
   } # close t loop
   
   return(data.frame(Gres=Gres,Ye=Ye))
@@ -248,12 +249,12 @@ invade_finite <- function(w,x_z,am,bm,ami,bmi,
   ns[1,] <- c(round(nstart*nk/10,0),0)
   t <- 1
   
-  while(t <= nt
+  while(t < nt
     & ifelse(t < nc, TRUE, FALSE %in% (ns[(t-(nc-1)):t] < nsmin))
     & sum(ns[t,])>0
   ){
     
-    if(t>nb){
+    if(t==(nb+1)){
       ns[t,2] <- 1
       # 1 invader introduced at t = nb + 1
     }
@@ -288,10 +289,10 @@ invade_finite <- function(w,x_z,am,bm,ami,bmi,
       
       eps_o_p_k <- rnorm(nkg,0,sig_o_p)
       
-      pi_k <- beta_p %*% t(x_k) + eps_y_p[t] + eps_s_p[isg_k] + eps_o_p_k
-      eta_k <- beta_r %*% t(x_k) + eps_y_r[t] + eps_s_r[isg_k]
+      pi_k <- rep(beta_p %*% t(x_k) + eps_y_p[t] + eps_s_p[isg_k] + eps_o_p_k, 2)
+      eta_k <- rep(beta_r %*% t(x_k) + eps_y_r[t] + eps_s_r[isg_k], 2)
       
-      nr_k <- rbinom(nkg*2,prob=plogis(rep(pi_k,2)),size=ng_k[isg_k])
+      nr_k <- rbinom(nkg*2,prob=plogis(pi_k),size=ng_k[isg_k])
       nr_all <- sum(nr_k)
       
       if(nr_all==0){
@@ -299,11 +300,11 @@ invade_finite <- function(w,x_z,am,bm,ami,bmi,
       }
       
       if(nr_all>0){
-        nzpos <- which(nr_k>0)
-        isinv_k <- factor(nzpos > nkg,levels=c(TRUE,FALSE)) 
+        whichpos <- which(nr_k > 0)
+        isinv_k <- factor(whichpos > nkg,levels=c(FALSE,TRUE)) 
           # if TRUE, then in 2nd column
-        isinv_r <- rep(isinv_k,nr_k[nzpos])
-        mus <- rep(exp(eta_k[nzpos]),nr_k[nzpos])
+        isinv_r <- rep(isinv_k,nr_k[whichpos])
+        mus <- rep(exp(eta_k[whichpos]),nr_k[whichpos])
         y_all <- rtrunc(n=nr_all,spec="nbinom",mu=mus,size=phi_r,a=0)
         nn <- tapply(y_all,isinv_r,sum) 
         nn[is.na(nn)] <- 0 # required when no reproducers in resident / invader
@@ -314,7 +315,7 @@ invade_finite <- function(w,x_z,am,bm,ami,bmi,
       
     }
     
-    if(t<nt) ns[t+1,] <- nnb + no
+    ns[t+1,] <- nnb + no
     t <- t + 1
     
   } # close t loop
