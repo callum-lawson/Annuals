@@ -158,8 +158,8 @@ mpos <- rep(1:nclim,each=cpc)
 
 # nstart <- 1
 nr <- 1000 # number of repeated invasions
-nt <- 1050 # 10050 
-nb <- 50 # number of "burn-in" timesteps to stabilise resident dynamics
+nt <- 125 # 10050 
+nb <- 25 # number of "burn-in" timesteps to stabilise resident dynamics
 nj <- 22
   # min invader iterations per core = nr * nit
 nk <- 1000  

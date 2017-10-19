@@ -250,8 +250,8 @@ invade_finite <- function(w,x_z,am,bm,ami,bmi,
   t <- 1
   
   while(t < nt
-    & ifelse(t < nc, TRUE, FALSE %in% (ns[(t-(nc-1)):t] < nsmin))
-    & sum(ns[t,])>0
+    & ns[t,1] > 0
+    & (t <= (nb+1) | ns[t,2] > 0)
   ){
     
     if(t==(nb+1)){
@@ -319,11 +319,13 @@ invade_finite <- function(w,x_z,am,bm,ami,bmi,
     t <- t + 1
     
   } # close t loop
+    # simulation stops when either resident or invader has gone extinct
+    # (or when maximum time limit has been reached -> coalition)
   
-  if(ns[t,1] < ns[t,2] | ns[t,1]==0){
+  if(ns[t,2] > 0){
     invaded <- TRUE
   }
-  else{
+  if(ns[t,2] == 0){
     invaded <- FALSE
   }
   
