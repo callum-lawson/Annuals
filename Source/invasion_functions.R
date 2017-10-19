@@ -239,14 +239,13 @@ invade_finite <- function(w,x_z,am,bm,ami,bmi,
   eps_s_r <- rnorm(nk,0,sig_s_r)
   
   kseq <- 1:nk
-  totarea <- nk/10
-  
+
   zsites <- rbinom(nk,size=1,prob=theta_g) 
   # theta = prob of zero
   eps_s_g[zsites==1] <- -Inf
   # p(germ) = exp(-Inf) = 0
   
-  ns[1,] <- c(round(nstart*totarea,0),0)
+  ns[1,] <- c(round(nstart*nk/10,0),0)
   t <- 1
   
   while(t <= nt
@@ -263,7 +262,7 @@ invade_finite <- function(w,x_z,am,bm,ami,bmi,
     no <- rbinom(2,prob=So,size=ns[t,]-ng)
     
     if(sum(ng)==0){
-      nn <- rep(0,2)
+      nnb <- rep(0,2)
     }
     
     if(sum(ng)>0){
@@ -308,7 +307,8 @@ invade_finite <- function(w,x_z,am,bm,ami,bmi,
         y_all <- rtrunc(n=nr_all,spec="nbinom",mu=mus,size=phi_r,a=0)
         nn <- tapply(y_all,isinv_r,sum) 
         nn[is.na(nn)] <- 0 # required when no reproducers in resident / invader
-        Sn <- ifelse(nn==0,0,DDFUN(nn/tottarea,m0,m1))
+        Sn <- ifelse(nn==0,0,DDFUN(nn/nk,m0,m1))
+          # division by 10 (i.e. scaling up to m^2) occurs within DDFUN
         nnb <- rbinom(2,prob=Sn,size=nn)
       }
       
@@ -365,12 +365,9 @@ evolve <- function(
   x_z[,2] <- zw[,1]
   x_z[,3] <- zw[,1]^2 
   
-  es <- data.frame(am=rep(NA,times=nr),
-                   bm=rep(NA,times=nr)
-                   # as=rep(NA,times=nr),
-                   # bs=rep(NA,times=nr),
-                   # abr=rep(NA,times=nr)
-                   )
+  es <- data.frame(am=rep(NA,times=nr),bm=rep(NA,times=nr))
+    # as=rep(NA,times=nr), bs=rep(NA,times=nr),abr=rep(NA,times=nr)
+
   es[1,] <- c(am0,bm0) # ,as0,bs0,abr0)
 
   for(i in 1:nr){
@@ -400,7 +397,7 @@ evolve <- function(
     }
     
     if(nk>0 & nk<Inf){
-      invaded <- invade_finite(w,x_z,am,bm,ami,bmi,
+      invaded <- with(es[i,], invade_finite(w=zw[,2],x_z,am,bm,ami,bmi,
                                beta_p,beta_r,
                                eps_y_p,eps_y_r,
                                sig_s_g,sig_s_p,sig_s_r,
@@ -409,7 +406,7 @@ evolve <- function(
                                nt,nb,nk,nsmin,ngmin,
                                DDFUN,
                                Sg
-                               )
+                               ))
     }
     
     if(i < nr){
@@ -472,7 +469,7 @@ multievolve <- function(
       sig_y_p=sig_y_p[i,j],sig_y_r=sig_y_r[i,j],
       sig_s_g=sig_s_g[i,j],sig_s_p=sig_s_p[i],sig_s_r=sig_s_r[i],
       sig_o_p=sig_o_p[i],phi_r=phi_r[i],
-      theta_g=ifelse(is.null(theta_g),NULL,theta_g[i]),
+      theta_g=ifelse(is.null(theta_g),NULL,theta_g[i,j]),
       m0=m0[i,j],m1=m1[i,j],
       am0=am0[i],bm0=bm0[i],
       DDFUN,

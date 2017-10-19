@@ -130,7 +130,7 @@ if(plasticity==T){
   Gsens$beta_Gz <- with(Gsens,godbeta_f(tau_sd))
 }
 
-nit <- 100
+nit <- 20
 set.seed(1)
 Gsens <- Gsens[sample(1:np,nit),]
   # random starting points 
@@ -147,22 +147,23 @@ pls$bm0 <- Gsens$beta_Gz
 
 # maml <- as.list(c(1,1,mpam,1,mpam,mpam))
 # msdl <- as.list(c(0,1,1,mpsd,mpsd,0))
-maml <- as.list(c(1,1))
-msdl <- as.list(c(1,mpsd))
+maml <- as.list(1) # as.list(c(1,1))
+msdl <- as.list(1) # as.list(c(1,mpsd))
   # scaling mean log rainfall (zamo) only works because sign stays the same
 
 nclim <- length(maml)
-cpc <- 10 # CORES per CLIMATE (assumed equal for resident and invader)
+cpc <- 20 # CORES per CLIMATE (assumed equal for resident and invader)
 ncores <- nclim*cpc
 mpos <- rep(1:nclim,each=cpc)
 
 # nstart <- 1
 nr <- 100 # number of repeated invasions
-nt <- 50 # 10050 
-nb <- 15 # 50 # number of "burn-in" timesteps to stabilise resident dynamics
+nt <- 1050 # 10050 
+nb <- 50 # number of "burn-in" timesteps to stabilise resident dynamics
 nj <- 22
   # min invader iterations per core = nr * nit
-  
+nk <- 1000  
+
 iseq <- 1:nit
 
 cpos <- rep(1:cpc,times=nclim)
@@ -206,18 +207,18 @@ parLapply(CL, 1:ncores, function(n){
 	msd <- msdl[[mpos[n]]]
 	iset <- itersetl[[cpos[n]]]
 	with(pls, multievolve(
-	  ni=ni,nj=nj,nr=nr,nt=nt,nb=nb,nk=0,
+	  ni=ni,nj=nj,nr=nr,nt=nt,nb=nb,nk=nk,
 	  zam=zamo+mam*zsdo,zsd=zsdo*msd,
 	  wam=wamo+mam*wsdo,wsd=wsdo*msd,
 	  beta_p=beta_p[iset,,],beta_r=beta_r[iset,,],
 	  sig_y_p=sig_y_p[iset,],sig_y_r=sig_y_r[iset,],
 	  sig_s_g=sig_s_g[iset,],sig_s_p=sig_s_p[iset],sig_s_r=sig_s_r[iset],
-	  sig_o_p=sig_o_p[iset],phi_r=phi_r[iset],
+	  sig_o_p=sig_o_p[iset],phi_r=phi_r[iset],theta_g=theta_g[iset,],
 	  m0=m0[iset,],m1=m1[iset,],
 	  am0=am0[iset],bm0=bm0[iset],
-	  DDFUN=RICKERS,
+	  DDFUN=BH,
 	  Sg=1,
-		savefile=paste0("ESS_",cnames_bycore[n])
+		savefile=paste0("ESS_finite_",cnames_bycore[n])
 		))
 	})
 stopCluster(CL)
@@ -240,7 +241,7 @@ stopCluster(CL)
 
 psl <- as.list(rep(NA,ncores))
 for(n in 1:ncores){
-  psl[[n]] <- readRDS(paste0("Sims/ESS_",cnames_bycore[n],"_18Oct2017.rds"))
+  psl[[n]] <- readRDS(paste0("Sims/ESS_",cnames_bycore[n],"_19Oct2017.rds"))
 }
 names(psl) <- cnames_bycore
 
