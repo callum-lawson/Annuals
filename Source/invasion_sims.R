@@ -71,7 +71,7 @@ pl <- list(
 
 ### MEDIAN PARAMETERS
 
-uncertainty <- F
+uncertainty <- T
 plasticity <- T
 
 pls <- with(pl, list(
@@ -157,12 +157,12 @@ ncores <- nclim*cpc
 mpos <- rep(1:nclim,each=cpc)
 
 # nstart <- 1
-nr <- 1000 # number of repeated invasions
+nr <- 100 # number of repeated invasions
 nt <- 125 # 10050 
-nb <- 25 # number of "burn-in" timesteps to stabilise resident dynamics
+nb <- 25  # number of "burn-in" timesteps to stabilise resident dynamics
 nj <- 22
   # min invader iterations per core = nr * nit
-nk <- 1000  
+nk <- 10000  
 
 iseq <- 1:nit
 
@@ -224,7 +224,11 @@ parLapply(CL, 1:ncores, function(n){
 	})
 stopCluster(CL)
 })
-  # 32 hours
+  # 54 hours (25 cores, long time series [nt=1025])
+  # 23 hours (25 cores, short time series with 100 iterations [ni])
+  # 48 hours (25 cores, same but 200 instead of 100 invasions [nr])
+  # 100 hours (25 cores, nk=10000, nit=50, nt=125, nr=100; 
+  #   3/25 cores didn't finish)
 
 # write verbose form that allows convergence to be checked?
 
@@ -241,12 +245,18 @@ stopCluster(CL)
 # names(psl) <- cnames_bycore_small
 
 psl <- as.list(rep(NA,ncores))
+dir <- paste0(getwd(),"/Sims/")
+files <- paste0(dir,list.files(dir))
 for(n in 1:ncores){
-  psl[[n]] <- readRDS(paste0("Sims/ESS_finite_",cnames_bycore[n],"_19Oct2017.rds"))
+  curname <- paste0("Sims/ESS_finite_",cnames_bycore[n],"_27Oct2017.rds")
+  finished <- grep(curname,files)
+  if(length(finished)!=0){
+    psl[[n]] <- readRDS(curname)
+    }
 }
 names(psl) <- cnames_bycore
 
-# psl[is.na(psl)] <- psl[1]
+psl[is.na(psl)] <- psl[1:2]
 psla <- simcombine(psl)
 
 # ES G plots --------------------------------------------------------------
@@ -268,6 +278,7 @@ detledgetext <- c(
   paste0("nr=",nr),
   paste0("nb=",nb),
   paste0("nt=",nt),
+  paste0("nk=",nk),
   paste0("nj=",nj)
 )
 
@@ -315,7 +326,7 @@ qw <- rbind(wam-1.96*wsd,wam+1.96*wsd)
 
 trangrey <- rgb(red=190,green=190,blue=190,alpha=0.25,maxColorValue = 255)
 
-pdf(paste0("Plots/ESS_finite_",format(Sys.Date(),"%d%b%Y"),".pdf"),
+pdf(paste0("Plots/ESS_finite_uncertain_",format(Sys.Date(),"%d%b%Y"),".pdf"),
   width=plotwidth,height=plotheight)
 
 plotsetup()
