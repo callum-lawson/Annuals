@@ -228,7 +228,7 @@ stopCluster(CL)
   # 23 hours (25 cores, short time series with 100 iterations [ni])
   # 48 hours (25 cores, same but 200 instead of 100 invasions [nr])
   # 100 hours (25 cores, nk=10000, nit=50, nt=125, nr=100; 
-  #   3/25 cores didn't finish)
+  #   2/25 cores didn't finish)
 
 # write verbose form that allows convergence to be checked?
 

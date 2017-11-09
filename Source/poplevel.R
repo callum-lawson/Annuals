@@ -170,9 +170,6 @@ go_mod <- "
     real<lower=0> sig_o_sig;
 		vector<lower=0>[L] sig_o;
 
-		vector<lower=0>[L] nu_g;
-		vector<lower=0>[L] nu_o;
-
 		vector[I] eps_g;
     vector[I] eps_o;
 
@@ -193,13 +190,11 @@ go_mod <- "
 		vector<lower=0>[I] odb;
 		vector<lower=0>[I] ndb;
 
-		vector[I] loglam_g;
-    vector[I] loglam_o;
-
  		vector<lower=0>[I] sig_g_vec;	
     vector<lower=0>[I] sig_o_vec;	
-		vector<lower=0>[I] nu_g_vec;
-    vector<lower=0>[I] nu_o_vec;
+
+		vector[I] loglam_g;
+    vector[I] loglam_o;
 
 		alpha_m_mu = log(m1_mu);
 
@@ -237,15 +232,13 @@ go_mod <- "
  			lgd[i] = lbd[i] + log(G[i]);
 
 			odb[i] = exp(lod[i] - m1[i]*(T2+T3));
-
-      nu_g_vec[i] = nu_g[species[i]];
-      nu_o_vec[i] = nu_o[species[i]];
-
+  
       sig_g_vec[i] = sig_g[species[i]];
       sig_o_vec[i] = sig_o[species[i]];
-  
-			loglam_g[i] = lgd[i] + larea_g[i] + eps_g[i];
-			loglam_o[i] = lod[i] + larea_o[i] + eps_o[i];
+
+			loglam_g[i] = lgd[i] + larea_g[i] + eps_g[i] - 0.5*square(sig_g_vec[i]);
+			loglam_o[i] = lod[i] + larea_o[i] + eps_o[i] - 0.5*square(sig_o_vec[i]);
+        // log(xbar/exp(0.5*square(sigma)))
 
   		// NEW SEEDS
 
@@ -256,8 +249,8 @@ go_mod <- "
   			}
   		else {
 				nd[i] = exp(lnd[npos[i]]);
-				// ndb[i] = BH(nd[i],m1[i],m2[i],T3);
-				ndb[i] = RICKER(nd[i],m1[i],m2[i],T3);
+			  ndb[i] = BH(nd[i],m1[i],m2[i],T3);
+				// ndb[i] = RICKER(nd[i],m1[i],m2[i],T3);
   			}
 				// densities all in m2*tau_s
 			}
@@ -278,12 +271,8 @@ go_mod <- "
 		alpha_m ~ normal(alpha_m_mu,sig_m_alpha);
 		beta_m ~ normal(beta_m_mu,sig_m_beta);
 
-    sig_g ~ lognormal(sig_g_mu,sig_g_sig);
-    sig_o ~ lognormal(sig_o_mu,sig_o_sig);
-    nu_g ~ gamma(2,0.1);
-    nu_o ~ gamma(2,0.1);
-  	eps_g ~ student_t(nu_g_vec,0,sig_g_vec);
-  	eps_o ~ student_t(nu_o_vec,0,sig_o_vec);
+  	eps_g ~ normal(0,sig_g_vec);
+  	eps_o ~ normal(0,sig_o_vec);
 
 		lbd0 ~ normal(lbd0_mu,sig_lbd0);
 		lnd ~ normal(lnd_mu,sig_lnd);
@@ -292,8 +281,11 @@ go_mod <- "
 		sig_Gz_beta ~ cauchy(0,2.5);
 		sig_m_alpha ~ cauchy(0,2.5);
 		sig_m_beta ~ cauchy(0,2.5);
+
     sig_g_sig ~ cauchy(0,2.5);
     sig_o_sig ~ cauchy(0,2.5);
+    sig_g ~ lognormal(sig_g_mu,sig_g_sig);
+    sig_o ~ lognormal(sig_o_mu,sig_o_sig);
 
 		// LIKELIHOOD
 
@@ -320,7 +312,7 @@ go_fit <- stan(model_code=go_mod,data=dl,chains=0)
 nchains <- 10
 
 system.time({
-CL = makeCluster(nchains, outfile=paste0("Models/gofit_poplevel_lnpoistdist_BH_naspecies_diffnu_noerr_noGDD_loglik_",format(Sys.Date(),"%d%b%Y"),".log"))
+CL = makeCluster(nchains, outfile=paste0("Models/gofit_poplevel_amlnpois_BH_",format(Sys.Date(),"%d%b%Y"),".log"))
 clusterExport(cl=CL, c("dl","go_fit")) 
 go_sflist <- parLapply(CL, 1:nchains, fun = function(cid) {  # number of chains
   require(rstan)
@@ -330,7 +322,7 @@ go_sflist <- parLapply(CL, 1:nchains, fun = function(cid) {  # number of chains
        warmup=2000,
        iter=3000,
        pars=c("alpha_G_mu","beta_Gz_mu"),
-       sample_file=paste0("Models/go_fits_chain",cid,"_poplevel_lnpoistdist_RICKER_naspecies_diffnu_noerr_noGDD_loglik_",format(Sys.Date(),"%d%b%Y"),".csv"),
+       sample_file=paste0("Models/go_fits_chain",cid,"_poplevel_amlnpois_BH_",format(Sys.Date(),"%d%b%Y"),".csv"),
        chain_id=cid
   )
 })
@@ -348,7 +340,7 @@ clusterExport(cl=CL, c("go_sflist_bh","go_sflist_ricker","finchains"))
 
 go_sflist_bh <- parLapply(CL, 1:nchains, function(i){
   require(rstan)
-  read_stan_csv(paste0("Models/go_fits_chain",finchains[i],"_poplevel_lnpoistdist_BH_naspecies_diffnu_noerr_noGDD_loglik_28Feb2017.csv"))
+  read_stan_csv(paste0("Models/go_fits_chain",finchains[i],"_poplevel_amlnpois_BH_09Nov2017.csv"))
 })
 
 go_sflist_ricker <- parLapply(CL, 1:nchains, function(i){
@@ -536,7 +528,7 @@ curve(dgamma(x,shape=2,rate=0.1),xlim=c(0,20))
 ### SAVE PARS ###
 #################
 
-gopars <- extract(go_fit_ricker) # change to BH when necessary
+gopars <- extract(go_fit_bh) # change to BH when necessary
 
 goparl <- as.list(rep(NA,length(gopars)))
 names(goparl) <- names(gopars)
@@ -553,6 +545,6 @@ goparl$loglam_g_marg <- with(gopars,colMedians(loglam_g-eps_g))
 goparl$loglam_o_marg <- with(gopars,colMedians(loglam_o-eps_o))
 
 saveRDS(goparl,
-  paste0("Models/go_pars_tdistpois_naspecies_noerr_noGDD_loglik_RICKER_",format(Sys.Date(),"%d%b%Y"),".rds")
+  paste0("Models/go_pars_tdistpois_naspecies_noerr_noGDD_loglik_BH_",format(Sys.Date(),"%d%b%Y"),".rds")
   )
 
