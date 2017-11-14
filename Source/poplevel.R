@@ -162,16 +162,11 @@ go_mod <- "
  		real<lower=0> sig_lnd;   		
 		vector[N] lnd; //  N not I
 
-    real sig_g_mu;
-    real<lower=0> sig_g_sig;
-		vector<lower=0>[L] sig_g;
+    real sig_G;
+    real sig_m;
 
-    real sig_o_mu;
-    real<lower=0> sig_o_sig;
-		vector<lower=0>[L] sig_o;
-
-		vector[I] eps_g;
-    vector[I] eps_o;
+		vector[I] eps_G;
+    vector[I] eps_m;
 
 		}
 		
@@ -190,9 +185,6 @@ go_mod <- "
 		vector<lower=0>[I] odb;
 		vector<lower=0>[I] ndb;
 
- 		vector<lower=0>[I] sig_g_vec;	
-    vector<lower=0>[I] sig_o_vec;	
-
 		vector[I] loglam_g;
     vector[I] loglam_o;
 
@@ -205,7 +197,8 @@ go_mod <- "
 				lbd[i] = lbd0[species[i]];
 
 			  G[i] = inv_logit(alpha_G[species[i]] 
-          + beta_Gz[species[i]]*tprcp[i]);
+          + beta_Gz[species[i]]*tprcp[i]
+          + eps_G[i]);
 
         m1[i] = exp(alpha_m[species[i]]);
         m2[i] = exp(beta_m[species[i]]);
@@ -216,11 +209,13 @@ go_mod <- "
 
 			if(year[i]>J0[species[i]]){
   
-				lbd[i] = log(odb[i-1] + ndb[i-1]);
+				lbd[i] = log(odb[i-1] + ndb[i-1]) + eps_m[i];
 			  // i-1 always same species, previous year
 
 			  G[i] = inv_logit(alpha_G[species[i]] 
-          + beta_Gz[species[i]]*tprcp[i]);
+          + beta_Gz[species[i]]*tprcp[i]
+          + eps_G[i]);
+
         m1[i] = exp(alpha_m[species[i]]);
         m2[i] = exp(beta_m[species[i]]);
 
@@ -232,13 +227,9 @@ go_mod <- "
  			lgd[i] = lbd[i] + log(G[i]);
 
 			odb[i] = exp(lod[i] - m1[i]*(T2+T3));
-  
-      sig_g_vec[i] = sig_g[species[i]];
-      sig_o_vec[i] = sig_o[species[i]];
 
-			loglam_g[i] = lgd[i] + larea_g[i] + eps_g[i] - 0.5*square(sig_g_vec[i]);
-			loglam_o[i] = lod[i] + larea_o[i] + eps_o[i] - 0.5*square(sig_o_vec[i]);
-        // log(xbar/exp(0.5*square(sigma)))
+			loglam_g[i] = lgd[i] + larea_g[i];
+			loglam_o[i] = lod[i] + larea_o[i];
 
   		// NEW SEEDS
 
@@ -271,8 +262,8 @@ go_mod <- "
 		alpha_m ~ normal(alpha_m_mu,sig_m_alpha);
 		beta_m ~ normal(beta_m_mu,sig_m_beta);
 
-  	eps_g ~ normal(0,sig_g_vec);
-  	eps_o ~ normal(0,sig_o_vec);
+  	eps_G ~ normal(0,sig_G);
+  	eps_m ~ normal(0,sig_m);
 
 		lbd0 ~ normal(lbd0_mu,sig_lbd0);
 		lnd ~ normal(lnd_mu,sig_lnd);
@@ -282,10 +273,8 @@ go_mod <- "
 		sig_m_alpha ~ cauchy(0,2.5);
 		sig_m_beta ~ cauchy(0,2.5);
 
-    sig_g_sig ~ cauchy(0,2.5);
-    sig_o_sig ~ cauchy(0,2.5);
-    sig_g ~ lognormal(sig_g_mu,sig_g_sig);
-    sig_o ~ lognormal(sig_o_mu,sig_o_sig);
+    sig_G ~ cauchy(0,2.5);
+    sig_m ~ cauchy(0,2.5);
 
 		// LIKELIHOOD
 
@@ -312,7 +301,7 @@ go_fit <- stan(model_code=go_mod,data=dl,chains=0)
 nchains <- 10
 
 system.time({
-CL = makeCluster(nchains, outfile=paste0("Models/gofit_poplevel_amlnpois_BH_",format(Sys.Date(),"%d%b%Y"),".log"))
+CL = makeCluster(nchains, outfile=paste0("Models/gofit_poplevel_lnmG_BH_",format(Sys.Date(),"%d%b%Y"),".log"))
 clusterExport(cl=CL, c("dl","go_fit")) 
 go_sflist <- parLapply(CL, 1:nchains, fun = function(cid) {  # number of chains
   require(rstan)
@@ -322,7 +311,7 @@ go_sflist <- parLapply(CL, 1:nchains, fun = function(cid) {  # number of chains
        warmup=2000,
        iter=3000,
        pars=c("alpha_G_mu","beta_Gz_mu"),
-       sample_file=paste0("Models/go_fits_chain",cid,"_poplevel_amlnpois_BH_",format(Sys.Date(),"%d%b%Y"),".csv"),
+       sample_file=paste0("Models/go_fits_chain",cid,"_poplevel_lnmG_BH_",format(Sys.Date(),"%d%b%Y"),".csv"),
        chain_id=cid
   )
 })
@@ -340,7 +329,7 @@ clusterExport(cl=CL, c("go_sflist_bh","go_sflist_ricker","finchains"))
 
 go_sflist_bh <- parLapply(CL, 1:nchains, function(i){
   require(rstan)
-  read_stan_csv(paste0("Models/go_fits_chain",finchains[i],"_poplevel_amlnpois_BH_09Nov2017.csv"))
+  read_stan_csv(paste0("Models/go_fits_chain",finchains[i],"_poplevel_lnmG_BH_09Nov2017.csv"))
 })
 
 go_sflist_ricker <- parLapply(CL, 1:nchains, function(i){
@@ -545,6 +534,6 @@ goparl$loglam_g_marg <- with(gopars,colMedians(loglam_g-eps_g))
 goparl$loglam_o_marg <- with(gopars,colMedians(loglam_o-eps_o))
 
 saveRDS(goparl,
-  paste0("Models/go_pars_tdistpois_naspecies_noerr_noGDD_loglik_BH_",format(Sys.Date(),"%d%b%Y"),".rds")
+  paste0("Models/go_pars_lnmG_BH_",format(Sys.Date(),"%d%b%Y"),".rds")
   )
 
