@@ -4,7 +4,7 @@
 
 ### LOAD PARAMS
 
-go <- readRDS("Models/go_pars_tdistpois_naspecies_noerr_noGDD_loglik_BH_09Nov2017.rds")
+go <- readRDS("Models/go_pars_lnam_BH_15Nov2017.rds")
   # change later
 gs <- readRDS("Models/gnzhh_onhh_pars_medians_26Oct2015.rds")
 pr <- readRDS("Models/pr_pars_yearhet_squared_pc_02Mar2016.rds")

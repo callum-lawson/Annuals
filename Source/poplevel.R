@@ -102,7 +102,19 @@ go_mod <- "
 			real n_out;
 			n_out = n_in * exp(-(m1+m2*n_in)*T3);
 			return n_out;
-			}
+		}
+
+		real LNM(real xm, real xs) {
+			real mu;
+			mu = 2 * log(xm) - 0.5 * log(xs^2 + xm^2);
+			return mu;
+		}
+
+		real LNS(real xm, real xs) {
+			real sigma;
+			sigma = sqrt(log(1 + xs^2 / xm^2));
+			return sigma;
+		}
 
 		}
 
@@ -162,11 +174,16 @@ go_mod <- "
  		real<lower=0> sig_lnd;   		
 		vector[N] lnd; //  N not I
 
-    real sig_G;
-    real sig_m;
+    real sig_g_mu;
+    real<lower=0> sig_g_sig;
+		vector<lower=0>[L] sig_g;
 
-		vector[I] eps_G;
-    vector[I] eps_m;
+    real sig_o_mu;
+    real<lower=0> sig_o_sig;
+		vector<lower=0>[L] sig_o;
+
+		vector[I] eps_g;
+    vector[I] eps_o;
 
 		}
 		
@@ -179,11 +196,15 @@ go_mod <- "
 		vector<lower=0>[I] m2;
 
 		vector[I] lbd;
-		vector[I] lgd;
 		vector[I] lod;
+		vector<lower=0>[I] gd;
+		vector<lower=0>[I] od;
 		vector<lower=0>[I] nd;
 		vector<lower=0>[I] odb;
 		vector<lower=0>[I] ndb;
+
+ 		vector<lower=0>[I] sig_g_vec;	
+    vector<lower=0>[I] sig_o_vec;	
 
 		vector[I] loglam_g;
     vector[I] loglam_o;
@@ -197,8 +218,7 @@ go_mod <- "
 				lbd[i] = lbd0[species[i]];
 
 			  G[i] = inv_logit(alpha_G[species[i]] 
-          + beta_Gz[species[i]]*tprcp[i]
-          + eps_G[i]);
+          + beta_Gz[species[i]]*tprcp[i]);
 
         m1[i] = exp(alpha_m[species[i]]);
         m2[i] = exp(beta_m[species[i]]);
@@ -209,12 +229,11 @@ go_mod <- "
 
 			if(year[i]>J0[species[i]]){
   
-				lbd[i] = log(odb[i-1] + ndb[i-1]) + eps_m[i];
+				lbd[i] = log(odb[i-1] + ndb[i-1]);
 			  // i-1 always same species, previous year
 
 			  G[i] = inv_logit(alpha_G[species[i]] 
-          + beta_Gz[species[i]]*tprcp[i]
-          + eps_G[i]);
+          + beta_Gz[species[i]]*tprcp[i]);
 
         m1[i] = exp(alpha_m[species[i]]);
         m2[i] = exp(beta_m[species[i]]);
@@ -224,12 +243,17 @@ go_mod <- "
 
   			}	
 
- 			lgd[i] = lbd[i] + log(G[i]);
+ 			gd[i] = exp(lbd[i]) * G[i];
+      od[i] = exp(lod[i]);
 
 			odb[i] = exp(lod[i] - m1[i]*(T2+T3));
 
-			loglam_g[i] = lgd[i] + larea_g[i];
-			loglam_o[i] = lod[i] + larea_o[i];
+      sig_g_vec[i] = LNS(gd[i],sig_g[species[i]]);
+      sig_o_vec[i] = LNS(od[i],sig_o[species[i]]);
+        // converted to sigma on log scale for eps calculations
+
+			loglam_g[i] = LNM(gd[i],sig_g[species[i]]) + larea_g[i] + eps_g[i];
+			loglam_o[i] = LNM(od[i],sig_o[species[i]]) + larea_o[i] + eps_o[i];
 
   		// NEW SEEDS
 
@@ -237,7 +261,8 @@ go_mod <- "
   			nd[i] = 0;
   			ndb[i] = 0;
   			// no lnd needed because ipos means that never used
-  			}
+  		}
+
   		else {
 				nd[i] = exp(lnd[npos[i]]);
 			  ndb[i] = BH(nd[i],m1[i],m2[i],T3);
@@ -262,19 +287,21 @@ go_mod <- "
 		alpha_m ~ normal(alpha_m_mu,sig_m_alpha);
 		beta_m ~ normal(beta_m_mu,sig_m_beta);
 
-  	eps_G ~ normal(0,sig_G);
-  	eps_m ~ normal(0,sig_m);
+  	eps_g ~ normal(0,sig_g_vec);
+  	eps_o ~ normal(0,sig_o_vec);
 
 		lbd0 ~ normal(lbd0_mu,sig_lbd0);
 		lnd ~ normal(lnd_mu,sig_lnd);
+
+    sig_g ~ lognormal(sig_g_mu,sig_g_sig);
+    sig_o ~ lognormal(sig_o_mu,sig_o_sig);
 
 		sig_G_alpha ~ cauchy(0,2.5);
 		sig_Gz_beta ~ cauchy(0,2.5);
 		sig_m_alpha ~ cauchy(0,2.5);
 		sig_m_beta ~ cauchy(0,2.5);
-
-    sig_G ~ cauchy(0,2.5);
-    sig_m ~ cauchy(0,2.5);
+    sig_g_sig ~ cauchy(0,2.5);
+    sig_o_sig ~ cauchy(0,2.5);
 
 		// LIKELIHOOD
 
@@ -289,7 +316,8 @@ go_mod <- "
     for (i in 1:I){
       log_lik[i] = poisson_log_lpmf(totgerm[i] | loglam_g[i])
         + poisson_log_lpmf(totlive[i] | loglam_o[i]);
-      }
+    }
+      // lseeddens not included in log_lik calculation
     }
 	"
 
@@ -301,7 +329,7 @@ go_fit <- stan(model_code=go_mod,data=dl,chains=0)
 nchains <- 10
 
 system.time({
-CL = makeCluster(nchains, outfile=paste0("Models/gofit_poplevel_lnmG_BH_",format(Sys.Date(),"%d%b%Y"),".log"))
+CL = makeCluster(nchains, outfile=paste0("Models/gofit_poplevel_lnam_BH_",format(Sys.Date(),"%d%b%Y"),".log"))
 clusterExport(cl=CL, c("dl","go_fit")) 
 go_sflist <- parLapply(CL, 1:nchains, fun = function(cid) {  # number of chains
   require(rstan)
@@ -311,7 +339,7 @@ go_sflist <- parLapply(CL, 1:nchains, fun = function(cid) {  # number of chains
        warmup=2000,
        iter=3000,
        pars=c("alpha_G_mu","beta_Gz_mu"),
-       sample_file=paste0("Models/go_fits_chain",cid,"_poplevel_lnmG_BH_",format(Sys.Date(),"%d%b%Y"),".csv"),
+       sample_file=paste0("Models/go_fits_chain",cid,"_poplevel_lnam_BH_",format(Sys.Date(),"%d%b%Y"),".csv"),
        chain_id=cid
   )
 })
@@ -329,7 +357,7 @@ clusterExport(cl=CL, c("go_sflist_bh","go_sflist_ricker","finchains"))
 
 go_sflist_bh <- parLapply(CL, 1:nchains, function(i){
   require(rstan)
-  read_stan_csv(paste0("Models/go_fits_chain",finchains[i],"_poplevel_lnmG_BH_09Nov2017.csv"))
+  read_stan_csv(paste0("Models/go_fits_chain",finchains[i],"_poplevel_lnam_BH_15Nov2017.csv"))
 })
 
 go_sflist_ricker <- parLapply(CL, 1:nchains, function(i){
@@ -534,6 +562,6 @@ goparl$loglam_g_marg <- with(gopars,colMedians(loglam_g-eps_g))
 goparl$loglam_o_marg <- with(gopars,colMedians(loglam_o-eps_o))
 
 saveRDS(goparl,
-  paste0("Models/go_pars_lnmG_BH_",format(Sys.Date(),"%d%b%Y"),".rds")
+  paste0("Models/go_pars_lnam_BH_",format(Sys.Date(),"%d%b%Y"),".rds")
   )
 
