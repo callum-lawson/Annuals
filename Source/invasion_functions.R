@@ -12,6 +12,9 @@ RICKERS <- function(n,m0,m1,T3=0.6794521,tau_s=100) {
 # DD functions use density in 0.01 m^2 = 10 x 10 cm plots
 # But we want to use 0.1m^2 plots (to match scale of quadrats)
 # Therefore, tau_s set to 10 instead of 100
+# In infinite-area models, all that matters for ES G is that same areas
+# are used for plant and seed densities (scaling irrelevant - just alters 
+# densities, not ES G)
  
 logitnorm <- function(x,mu,sigma){
   plogis(x) * dnorm(x, mean=mu, sd=sigma)

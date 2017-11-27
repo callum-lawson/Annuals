@@ -293,7 +293,7 @@ msize <- with(msy90,
 )
 
 with(msy90,
-  preddatplot("S_relationships_max1_newonly_naspecies_tdistbpar_normndat_",
+  preddatplot("S_relationships_max1_newonly_lnGtnt_BH_",
     xdat=log(prevnsdhat),
     ydat=log(Shat1),
     sind=species,
@@ -309,7 +309,7 @@ with(msy90,
 )
 
 with(msy90,
-  preddatplot("S_relationships_max1_oldonly_naspecies_tdistbpar_normndat_",
+  preddatplot("S_relationships_max1_oldonly_lnGtnt_BH_",
     xdat=log(prevolsdhat),
     ydat=log(Shat1),
     sind=species,
@@ -325,7 +325,7 @@ with(msy90,
 )
 
 with(msy90,
-  preddatplot("G_z_relationships_olsdadj_naspecies_tdistbpar_normndat_",
+  preddatplot("G_z_relationships_olsdadj_lnGtnt_BH_",
     xdat=tprcp + log(tau_p),
     ydat=Ghat,
     sind=species,

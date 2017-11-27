@@ -58,7 +58,7 @@ wsdo <- sd(log(ncy$germprcp))
 ### MODEL PARAMS (already permuted)
 
 pl <- list(
-	go = readRDS("Models/go_pars_tdistpois_naspecies_noerr_noGDD_loglik_BH_01Mar2017.rds"),
+	go = readRDS("Models/go_pars_lnGtnt_BH_25Nov2017.rds"),
   # go = readRDS("Models/go_pars_tdistpois_naspecies_noerr_noGDD_loglik_RICKER_15Oct2017.rds"),
 	gs = readRDS("Models/gnzhh_onhh_pars_medians_26Oct2015.rds"),
 		# gs = g site level
@@ -130,7 +130,7 @@ if(plasticity==T){
   Gsens$beta_Gz <- with(Gsens,godbeta_f(tau_sd))
 }
 
-nit <- 50
+nit <- 100
 set.seed(1)
 Gsens <- Gsens[sample(1:np,nit),]
   # random starting points 
@@ -147,8 +147,8 @@ pls$bm0 <- Gsens$beta_Gz
 
 # maml <- as.list(c(1,1,mpam,1,mpam,mpam))
 # msdl <- as.list(c(0,1,1,mpsd,mpsd,0))
-maml <- as.list(1) # as.list(c(1,1))
-msdl <- as.list(1) # as.list(c(1,mpsd))
+maml <- as.list(c(1,1,1)) # as.list(c(1,1))
+msdl <- as.list(c(1/mpsd,1,mpsd)) # as.list(c(1,mpsd))
   # scaling mean log rainfall (zamo) only works because sign stays the same
 
 nclim <- length(maml)
@@ -162,7 +162,7 @@ nt <- 125 # 10050
 nb <- 25  # number of "burn-in" timesteps to stabilise resident dynamics
 nj <- 22
   # min invader iterations per core = nr * nit
-nk <- 10000  
+nk <- 1000  
 
 iseq <- 1:nit
 
@@ -226,6 +226,7 @@ stopCluster(CL)
 })
   # 54 hours (25 cores, long time series [nt=1025])
   # 23 hours (25 cores, short time series with 100 iterations [ni])
+    # 46 hours with low-mid-high variability - but most finished in 24 hours
   # 48 hours (25 cores, same but 200 instead of 100 invasions [nr])
   # 100 hours (25 cores, nk=10000, nit=50, nt=125, nr=100; 
   #   2/25 cores didn't finish)
@@ -248,7 +249,7 @@ psl <- as.list(rep(NA,ncores))
 dir <- paste0(getwd(),"/Sims/")
 files <- paste0(dir,list.files(dir))
 for(n in 1:ncores){
-  curname <- paste0("Sims/ESS_finite_",cnames_bycore[n],"_27Oct2017.rds")
+  curname <- paste0("Sims/ESS_finite_",cnames_bycore[n],"_25Nov2017.rds")
   finished <- grep(curname,files)
   if(length(finished)!=0){
     psl[[n]] <- readRDS(curname)
@@ -256,7 +257,7 @@ for(n in 1:ncores){
 }
 names(psl) <- cnames_bycore
 
-psl[is.na(psl)] <- psl[1:2]
+# psl[is.na(psl)] <- psl[1:2]
 psla <- simcombine(psl)
 
 # ES G plots --------------------------------------------------------------
@@ -336,12 +337,12 @@ for(j in 1:nspecies){
   
   for(m in 1:nclim){
     if(m!=1){
-      matplot(wseq,qGw[,j,,m],type="l",lty=ltys,add=T,col=cols[2][m])
+      matplot(wseq,qGw[,j,,m],type="l",lty=ltys,add=T,col=cols[c(1,2,3)][m])
       #[c(1,2,4)][m]
     }
     xx <- rep(qw[,m],each=2)
     yy <- c(0,1,1,0)
-    polygon(xx, yy, col=trancols[c(1,2,4)][m],border=NA)
+    polygon(xx, yy, col=trancols[c(1,2,3)][m],border=NA)
   }
   
   matplot(wseq,qGob[,j,],type="l",lty=ltys,col="black",add=T)
@@ -352,7 +353,7 @@ for(j in 1:nspecies){
   if(j %in% seq(1,23,4)) addylab("G") 
 }
 
-addledge(ltext=colledgetext,col=cols[2],lty=1) #[c(1,2,4)]
+addledge(ltext=colledgetext,col=cols[c(1,2,3)],lty=1) #[c(1,2,4)]
 addledge(ltext=detledgetext)
 
 dev.off()
