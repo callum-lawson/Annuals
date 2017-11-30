@@ -123,7 +123,7 @@ ressim <- function(w,x_z,am,bm,# as,bs,abr,
                    beta_p,beta_r,
                    eps_y_p,eps_y_r,
                    sig_s_g,sig_s_p,sig_s_r,
-                   sig_o_p,phi_r,
+                   sig_o_p,phi_r,theta_g,
                    So,m0,m1,
                    nt,nk,nsmin,ngmin,
                    DDFUN,
@@ -188,7 +188,7 @@ ressim <- function(w,x_z,am,bm,# as,bs,abr,
       nn[t] <- 0
     }
     
-    Ye[t] <- ifelse(nn[t]==0, 0, nn[t] * DDFUN(nn[t],m0,m1) / ng[t])
+    Ye[t] <- ifelse(nn[t]==0, 0, nn[t] * DDFUN(nn[t]*(1-theta_g),m0,m1) / ng[t])
     if(t<nt) ns[t+1] <- ns[t] * ( (1-Gres[t])*So + Gres[t]*Ye[t] )
     t <- t + 1
     
@@ -392,7 +392,7 @@ evolve <- function(
         beta_p,beta_r,
         eps_y_p,eps_y_r,
         sig_s_g,sig_s_p,sig_s_r,
-        sig_o_p,phi_r,
+        sig_o_p,phi_r,theta_g,
         So,m0,m1,
         nt,nk,nsmin,ngmin,
         DDFUN,

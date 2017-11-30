@@ -147,12 +147,12 @@ pls$bm0 <- Gsens$beta_Gz
 
 # maml <- as.list(c(1,1,mpam,1,mpam,mpam))
 # msdl <- as.list(c(0,1,1,mpsd,mpsd,0))
-maml <- as.list(c(1,1,1)) # as.list(c(1,1))
-msdl <- as.list(c(1/mpsd,1,mpsd)) # as.list(c(1,mpsd))
+maml <- as.list(c(1,1,1,mpam)) 
+msdl <- as.list(c(1/mpsd,1,mpsd,1)) 
   # scaling mean log rainfall (zamo) only works because sign stays the same
 
 nclim <- length(maml)
-cpc <- 25 # CORES per CLIMATE (assumed equal for resident and invader)
+cpc <- 10 # CORES per CLIMATE (assumed equal for resident and invader)
 ncores <- nclim*cpc
 mpos <- rep(1:nclim,each=cpc)
 
@@ -162,7 +162,7 @@ nt <- 125 # 10050
 nb <- 25  # number of "burn-in" timesteps to stabilise resident dynamics
 nj <- 22
   # min invader iterations per core = nr * nit
-nk <- 1000  
+nk <- Inf # 1000  
 
 iseq <- 1:nit
 
@@ -219,7 +219,7 @@ parLapply(CL, 1:ncores, function(n){
 	  am0=am0[iset],bm0=bm0[iset],
 	  DDFUN=BHS,
 	  Sg=1,
-		savefile=paste0("ESS_finite_",cnames_bycore[n])
+		savefile=paste0("ESS_infinite_spatial_",cnames_bycore[n])
 		))
 	})
 stopCluster(CL)
@@ -230,6 +230,7 @@ stopCluster(CL)
   # 48 hours (25 cores, same but 200 instead of 100 invasions [nr])
   # 100 hours (25 cores, nk=10000, nit=50, nt=125, nr=100; 
   #   2/25 cores didn't finish)
+  # 33 hours (10 cores, nk=Inf, nit=100, nr=100, nt=125)
 
 # write verbose form that allows convergence to be checked?
 
@@ -249,7 +250,7 @@ psl <- as.list(rep(NA,ncores))
 dir <- paste0(getwd(),"/Sims/")
 files <- paste0(dir,list.files(dir))
 for(n in 1:ncores){
-  curname <- paste0("Sims/ESS_finite_",cnames_bycore[n],"_25Nov2017.rds")
+  curname <- paste0("Sims/ESS_infinite_spatial_",cnames_bycore[n],"_28Nov2017.rds")
   finished <- grep(curname,files)
   if(length(finished)!=0){
     psl[[n]] <- readRDS(curname)
@@ -284,7 +285,7 @@ detledgetext <- c(
 )
 
 tran <- 25
-cols_rgb <- col2rgb(cols)
+cols_rgb <- col2rgb(cols[colpos])
 trancols <- rgb(
   red=cols_rgb[1,],
   green=cols_rgb[2,],
@@ -326,8 +327,9 @@ wsd <- sapply(msdl,function(x) zam=wsdo*x)
 qw <- rbind(wam-1.96*wsd,wam+1.96*wsd)
 
 trangrey <- rgb(red=190,green=190,blue=190,alpha=0.25,maxColorValue = 255)
+colpos <- 1:4
 
-pdf(paste0("Plots/ESS_finite_uncertain_",format(Sys.Date(),"%d%b%Y"),".pdf"),
+pdf(paste0("Plots/ESS_infinite_spatial_",format(Sys.Date(),"%d%b%Y"),".pdf"),
   width=plotwidth,height=plotheight)
 
 plotsetup()
@@ -337,12 +339,12 @@ for(j in 1:nspecies){
   
   for(m in 1:nclim){
     if(m!=1){
-      matplot(wseq,qGw[,j,,m],type="l",lty=ltys,add=T,col=cols[c(1,2,3)][m])
+      matplot(wseq,qGw[,j,,m],type="l",lty=ltys,add=T,col=cols[colpos][m])
       #[c(1,2,4)][m]
     }
     xx <- rep(qw[,m],each=2)
     yy <- c(0,1,1,0)
-    polygon(xx, yy, col=trancols[c(1,2,3)][m],border=NA)
+    polygon(xx, yy, col=trancols[colpos][m],border=NA)
   }
   
   matplot(wseq,qGob[,j,],type="l",lty=ltys,col="black",add=T)
@@ -353,7 +355,7 @@ for(j in 1:nspecies){
   if(j %in% seq(1,23,4)) addylab("G") 
 }
 
-addledge(ltext=colledgetext,col=cols[c(1,2,3)],lty=1) #[c(1,2,4)]
+addledge(ltext=colledgetext,col=cols[colpos],lty=1) #[c(1,2,4)]
 addledge(ltext=detledgetext)
 
 dev.off()
