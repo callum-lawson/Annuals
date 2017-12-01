@@ -130,7 +130,7 @@ if(plasticity==T){
   Gsens$beta_Gz <- with(Gsens,godbeta_f(tau_sd))
 }
 
-nit <- 100
+nit <- 10 # 100
 set.seed(1)
 Gsens <- Gsens[sample(1:np,nit),]
   # random starting points 
@@ -152,17 +152,17 @@ msdl <- as.list(c(1/mpsd,1,mpsd,1))
   # scaling mean log rainfall (zamo) only works because sign stays the same
 
 nclim <- length(maml)
-cpc <- 10 # CORES per CLIMATE (assumed equal for resident and invader)
+cpc <- 5 # CORES per CLIMATE (assumed equal for resident and invader)
 ncores <- nclim*cpc
 mpos <- rep(1:nclim,each=cpc)
 
 # nstart <- 1
-nr <- 100 # number of repeated invasions
-nt <- 125 # 10050 
-nb <- 25  # number of "burn-in" timesteps to stabilise resident dynamics
+nr <- 2 # 100 # number of repeated invasions
+nt <- 15 # 125 # 10050 
+nb <- 5 # 25  # number of "burn-in" timesteps to stabilise resident dynamics
 nj <- 22
   # min invader iterations per core = nr * nit
-nk <- Inf # 1000  
+nk <- 100 # 1000  
 
 iseq <- 1:nit
 

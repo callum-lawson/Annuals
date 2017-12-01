@@ -1,6 +1,9 @@
 ### Calculate ES alpha_G and beta_G by iteratively perturbing parameters  ###
 ### and attempting re-invasion                                            ###
 
+# TODO
+# - double-check that sum of infinite-area zinbd isn't altered by zeroes
+
 BHS <- function(n,m0,m1,T3=0.6794521,tau_s=100){
   exp(-m0*T3) / ( 1 + (m1/m0)*(1-exp(-m0*T3))*n/(tau_s/10) )
 }
@@ -231,7 +234,8 @@ invade_finite <- function(w,x_z,am,bm,ami,bmi,
                           intsd=10,
                           tau_d=100){
   
-  require(truncdist)
+  # require(truncdist)
+  require(countreg)
   require(MASS)
   
   ns <- array(dim=c(nt,2)) # 2 = res and inv
@@ -308,10 +312,12 @@ invade_finite <- function(w,x_z,am,bm,ami,bmi,
           # if TRUE, then in 2nd column
         isinv_r <- rep(isinv_k,nr_k[whichpos])
         mus <- rep(exp(eta_k[whichpos]),nr_k[whichpos])
-        y_all <- rtrunc(n=nr_all,spec="nbinom",mu=mus,size=phi_r,a=0)
+        y_all <- rztnbinom(n=nr_all, mu=mus, size=phi_r)
+        # y_all <- rtrunc(n=nr_all,spec="nbinom",mu=mus,size=phi_r,a=0)
         nn <- tapply(y_all,isinv_r,sum) 
         nn[is.na(nn)] <- 0 # required when no reproducers in resident / invader
         Sn <- ifelse(nn==0,0,DDFUN(nn/nk,m0,m1))
+          # ifelse needed because doing separately for res and inv
           # division by 10 (i.e. scaling up to m^2) occurs within DDFUN
         nnb <- rbinom(2,prob=Sn,size=nn)
       }
@@ -469,7 +475,7 @@ multievolve <- function(
       # of invasions, i.e. population dynamics simulations)
     
     ESS <- evolve(
-      nr=nr,nt=nt,nb=nb,nk,
+      nr=nr,nt=nt,nb=nb,nk=nk,
       zam=zam,wam=wam,zsd=zsd,wsd=wsd,rho=0.82,
       beta_p=beta_p[i,j,],beta_r=beta_r[i,j,],
       sig_y_p=sig_y_p[i,j],sig_y_r=sig_y_r[i,j],
