@@ -1,5 +1,5 @@
 nt <- nb + 100
-nk <- 1000
+nk <- 100
 n <- 1
 mam <- maml[[mpos[n]]]
 msd <- msdl[[mpos[n]]]
@@ -19,7 +19,7 @@ DDFUN=BHS,
 Sg=1
 ))
 
-i <- 1; j <- 19; 
+i <- 1; j <- 19;
 
 par2 <- with(par1,list(
 nr=nr,nt=nt,nb=nb,nk=nk,
@@ -68,6 +68,11 @@ bm <- bm0
 ami <- es$am[i] + rnorm(1,0,smut_m)
 bmi <- es$bm[i] + rnorm(1,0,smut_m)
 w=zw[,2]
+
+nc=5   # n consecutive t that ns must be < nsmin
+nstart=1
+intsd=10
+tau_d=100
 
 set.seed(1)
 library("profvis")

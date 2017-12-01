@@ -68,6 +68,11 @@ nbtlnmean <- function(eta,sigma,phi,intsd=10){
   # Ref: Econometric Analysis of Count Data - Rainer Winkelmann
 	# (checked by simulation that still works with zero-truncation)
 
+pradj <- function(pr,mu,phi){
+  q <- dnbinom(0, mu=mu, size=phi) # Pr(Y>0)
+  return(pr / (1-q)) # zero-inflated
+}
+
 fnn <- function(g,
   lgmu,x_z_t,
   beta_p,beta_r,
@@ -287,7 +292,7 @@ invade_finite <- function(w,x_z,am,bm,ami,bmi,
       # using spatial terms as weights
 
       ngt_k <- rowSums(ng_k)  # total germinants (residents and invaders)
-      isg_k <- ngt_k>0        # binary: are there germinants in plot?
+      isg_k <- ngt_k>0        # binary: are there any germinants in plot?
       nkg <- sum(isg_k)       # total number of *plots* with germinants
       
       x_k <- array(dim=c(nkg,4))
@@ -296,32 +301,53 @@ invade_finite <- function(w,x_z,am,bm,ami,bmi,
       
       eps_o_p_k <- rnorm(nkg,0,sig_o_p)
       
-      pi_k <- rep(beta_p %*% t(x_k) + eps_y_p[t] + eps_s_p[isg_k] + eps_o_p_k, 2)
-      eta_k <- rep(beta_r %*% t(x_k) + eps_y_r[t] + eps_s_r[isg_k], 2)
+      pr_k <- plogis(beta_p %*% t(x_k) + eps_y_p[t] + eps_s_p[isg_k] + eps_o_p_k)
+      mu_k <- exp(beta_r %*% t(x_k) + eps_y_r[t] + eps_s_r[isg_k])
       
-      nr_k <- rbinom(nkg*2,prob=plogis(pi_k),size=ng_k[isg_k])
-      nr_all <- sum(nr_k)
+      pradj_k <- pradj(pr_k,mu_k,phi_r)
+      
+      qu <- pradj_k <= 1 # quick plots
+      nqu <- sum(qu)
+      nsl <- nkg-nqu
+      
+      nr_kq <- array(dim=c(nqu,2))
+      nr_ks <- array(dim=c(nkg-nqu,2))
+      nr_kq[] <- rbinom(nqu*2,prob=rep(pradj_k[qu],2),size=ng_k[isg_k][qu])
+      nr_ks[] <- rbinom(nsl*2,prob=rep(pr_k[!qu],2),size=ng_k[isg_k][!qu])
+      
+      nr_all <- sum(nr_kq) + sum(nr_ks)
       
       if(nr_all==0){
         nnb <- c(0,0)
       }
-      
+
       if(nr_all>0){
-        whichpos <- which(nr_k > 0)
-        isinv_k <- factor(whichpos > nkg,levels=c(FALSE,TRUE)) 
-          # if TRUE, then in 2nd column
-        isinv_r <- rep(isinv_k,nr_k[whichpos])
-        mus <- rep(exp(eta_k[whichpos]),nr_k[whichpos])
-        y_all <- rztnbinom(n=nr_all, mu=mus, size=phi_r)
+        
+        qp <- nr_kq > 0
+        nn1m <- matrix(0,nr=nrow(nr_kq),nc=ncol(nr_kq))
+        nn1m[qp] <- rnbinom(sum(qp), 
+                  prob=phi_r/(phi_r+rep(mu_k[qu],2)[qp]), 
+                  size=phi_r*nr_kq[qp]
+                  )
+        nn1 <- colSums(nn1m)
+        
+        whichpos <- which(nr_ks > 0)
+        isinv_k <- factor(whichpos > nsl,levels=c(FALSE,TRUE)) 
+        # if TRUE, then in 2nd column
+        isinv_r <- rep(isinv_k,nr_ks[whichpos])
+        mus <- rep(rep(mu_k[!qu],2)[whichpos],nr_ks[whichpos])
+        y_all <- rztnbinom(n=sum(nr_ks), mu=mus, size=phi_r)
         # y_all <- rtrunc(n=nr_all,spec="nbinom",mu=mus,size=phi_r,a=0)
-        nn <- tapply(y_all,isinv_r,sum) 
-        nn[is.na(nn)] <- 0 # required when no reproducers in resident / invader
-        Sn <- ifelse(nn==0,0,DDFUN(nn/nk,m0,m1))
-          # ifelse needed because doing separately for res and inv
-          # division by 10 (i.e. scaling up to m^2) occurs within DDFUN
-        nnb <- rbinom(2,prob=Sn,size=nn)
+        nn2 <- tapply(y_all,isinv_r,sum) 
+        nn2[is.na(nn2)] <- 0 # required when no reproducers in resident / invader
+        nnt <- nn1 + nn2
+        Sn <- ifelse(nnt==0,0,DDFUN(nnt/nk,m0,m1))
+        # ifelse needed because doing separately for res and inv
+        # division by 10 (i.e. scaling up to m^2) occurs within DDFUN
+        nnb <- rbinom(2,prob=Sn,size=nnt)
+        
       }
-      
+ 
     }
     
     ns[t+1,] <- nnb + no

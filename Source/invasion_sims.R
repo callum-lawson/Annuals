@@ -147,12 +147,12 @@ pls$bm0 <- Gsens$beta_Gz
 
 # maml <- as.list(c(1,1,mpam,1,mpam,mpam))
 # msdl <- as.list(c(0,1,1,mpsd,mpsd,0))
-maml <- as.list(c(1,1,1,mpam)) 
-msdl <- as.list(c(1/mpsd,1,mpsd,1)) 
+maml <- as.list(c(1,1,1)) 
+msdl <- as.list(c(1/mpsd,1,mpsd)) 
   # scaling mean log rainfall (zamo) only works because sign stays the same
 
 nclim <- length(maml)
-cpc <- 5 # CORES per CLIMATE (assumed equal for resident and invader)
+cpc <- 15 # CORES per CLIMATE (assumed equal for resident and invader)
 ncores <- nclim*cpc
 mpos <- rep(1:nclim,each=cpc)
 
@@ -193,7 +193,7 @@ CL = makeCluster(ncores)
 clusterExport(cl=CL, c(
   "BHS","RICKERS",
   "logitnorm","logitmean","logitnormint",
-  "nbtmean","nbtnorm","nbtlnmean","fnn",
+  "nbtmean","nbtnorm","nbtlnmean","pradj","fnn",
   "fixG","ressim","invade_infinite","invade_finite",
   "evolve","multievolve",
   "pls", 
