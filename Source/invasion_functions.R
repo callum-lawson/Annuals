@@ -237,7 +237,8 @@ invade_finite <- function(w,x_z,am,bm,ami,bmi,
                           nc=5,   # n consecutive t that ns must be < nsmin
                           nstart=1,
                           intsd=10,
-                          tau_d=100){
+                          tau_d=100,
+                          mumax=10^6){
   
   # require(truncdist)
   require(countreg)
@@ -303,6 +304,9 @@ invade_finite <- function(w,x_z,am,bm,ami,bmi,
       
       pr_k <- plogis(beta_p %*% t(x_k) + eps_y_p[t] + eps_s_p[isg_k] + eps_o_p_k)
       mu_k <- exp(beta_r %*% t(x_k) + eps_y_r[t] + eps_s_r[isg_k])
+      mu_k[mu_k>mumax] <- mumax
+        # maximum expected per-capita reproduction
+        # prevents negative binomial distribution with p=0
       
       pradj_k <- pradj(pr_k,mu_k,phi_r)
       
@@ -408,19 +412,19 @@ evolve <- function(
 
   es[1,] <- c(am0,bm0) # ,as0,bs0,abr0)
 
-  for(i in 1:nr){
+  for(r in 1:nr){
     
-    ami <- es$am[i] + rnorm(1,0,smut_m)
-    bmi <- es$bm[i] + rnorm(1,0,smut_m)
-    # asi <- es$as[i] * exp(rnorm(1,0,smut_s))
-    # bsi <- es$bs[i] * exp(rnorm(1,0,smut_s))
-    # abri <- plogis( (qlogis((es$abr[i]+1)/2) + rnorm(1,0,smut_r)) )*2 - 1 
+    ami <- es$am[r] + rnorm(1,0,smut_m)
+    bmi <- es$bm[r] + rnorm(1,0,smut_m)
+    # asi <- es$as[r] * exp(rnorm(1,0,smut_s))
+    # bsi <- es$bs[r] * exp(rnorm(1,0,smut_s))
+    # abri <- plogis( (qlogis((es$abr[r]+1)/2) + rnorm(1,0,smut_r)) )*2 - 1 
     # transform [0,1] to correlation range of [-1,1]
     # if(abri==-1) abri <- -0.99
     # if(abri==+1) abri <- +0.99
     
     if(nk %in% c(0,Inf)){
-      rd <- with(es[i,], ressim(zw[,2],x_z,am,bm,# as,bs,abr,
+      rd <- with(es[r,], ressim(zw[,2],x_z,am,bm,# as,bs,abr,
         beta_p,beta_r,
         eps_y_p,eps_y_r,
         sig_s_g,sig_s_p,sig_s_r,
@@ -435,7 +439,7 @@ evolve <- function(
     }
     
     if(nk>0 & nk<Inf){
-      invaded <- with(es[i,], invade_finite(w=zw[,2],x_z,am,bm,ami,bmi,
+      invaded <- with(es[r,], invade_finite(w=zw[,2],x_z,am,bm,ami,bmi,
                                beta_p,beta_r,
                                eps_y_p,eps_y_r,
                                sig_s_g,sig_s_p,sig_s_r,
@@ -447,16 +451,16 @@ evolve <- function(
                                ))
     }
     
-    if(i < nr){
+    if(r < nr){
       if(invaded==TRUE){
-        es[i+1,] <- c(ami,bmi) # asi,bsi,abri
+        es[r+1,] <- c(ami,bmi) # asi,bsi,abri
       } 
       if(invaded==FALSE){
-        es[i+1,] <- es[i,]
+        es[r+1,] <- es[r,]
       } 
     }
     
-  } # close i loop
+  } # close r loop
   
   if(lastonly==T){
     return(es[nr,])

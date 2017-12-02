@@ -130,7 +130,7 @@ if(plasticity==T){
   Gsens$beta_Gz <- with(Gsens,godbeta_f(tau_sd))
 }
 
-nit <- 10 # 100
+nit <- 100
 set.seed(1)
 Gsens <- Gsens[sample(1:np,nit),]
   # random starting points 
@@ -152,14 +152,14 @@ msdl <- as.list(c(1/mpsd,1,mpsd))
   # scaling mean log rainfall (zamo) only works because sign stays the same
 
 nclim <- length(maml)
-cpc <- 15 # CORES per CLIMATE (assumed equal for resident and invader)
+cpc <- 10 # CORES per CLIMATE (assumed equal for resident and invader)
 ncores <- nclim*cpc
 mpos <- rep(1:nclim,each=cpc)
 
 # nstart <- 1
-nr <- 2 # 100 # number of repeated invasions
-nt <- 15 # 125 # 10050 
-nb <- 5 # 25  # number of "burn-in" timesteps to stabilise resident dynamics
+nr <- 100 # number of repeated invasions
+nt <- 125 # 10050 
+nb <- 25  # number of "burn-in" timesteps to stabilise resident dynamics
 nj <- 22
   # min invader iterations per core = nr * nit
 nk <- 100 # 1000  
@@ -219,7 +219,7 @@ parLapply(CL, 1:ncores, function(n){
 	  am0=am0[iset],bm0=bm0[iset],
 	  DDFUN=BHS,
 	  Sg=1,
-		savefile=paste0("ESS_infinite_spatial_",cnames_bycore[n])
+		savefile=paste0("ESS_finite_",cnames_bycore[n])
 		))
 	})
 stopCluster(CL)
@@ -250,7 +250,7 @@ psl <- as.list(rep(NA,ncores))
 dir <- paste0(getwd(),"/Sims/")
 files <- paste0(dir,list.files(dir))
 for(n in 1:ncores){
-  curname <- paste0("Sims/ESS_infinite_spatial_",cnames_bycore[n],"_28Nov2017.rds")
+  curname <- paste0("Sims/ESS_finite_",cnames_bycore[n],"_01Dec2017.rds")
   finished <- grep(curname,files)
   if(length(finished)!=0){
     psl[[n]] <- readRDS(curname)
@@ -329,7 +329,7 @@ qw <- rbind(wam-1.96*wsd,wam+1.96*wsd)
 trangrey <- rgb(red=190,green=190,blue=190,alpha=0.25,maxColorValue = 255)
 colpos <- 1:4
 
-pdf(paste0("Plots/ESS_infinite_spatial_",format(Sys.Date(),"%d%b%Y"),".pdf"),
+pdf(paste0("Plots/ESS_finite_",format(Sys.Date(),"%d%b%Y"),".pdf"),
   width=plotwidth,height=plotheight)
 
 plotsetup()

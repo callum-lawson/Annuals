@@ -32,12 +32,7 @@ theta_g=ifelse(is.null(theta_g),NULL,theta_g[i,j]),
 m0=m0[i,j],m1=m1[i,j],
 am0=am0[i],bm0=bm0[i],
 DDFUN=BHS,
-Sg=1,
-smut_m=0.5,# smut_s=0.1,smut_r=0.1,
-nsmin=10^-10,
-ngmin=10^-50,
-lastonly=T,
-savefile=NULL
+Sg=1
 ))
 
 attach(par1)
