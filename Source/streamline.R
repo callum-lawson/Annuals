@@ -1,5 +1,5 @@
-nt <- nb + 100
-nk <- 100
+# nt <- nb + 100
+# nk <- 100
 n <- 1
 mam <- maml[[mpos[n]]]
 msd <- msdl[[mpos[n]]]
@@ -19,7 +19,7 @@ DDFUN=BHS,
 Sg=1
 ))
 
-i <- 1; j <- 19;
+i <- 1; j <- 19; r <- 1
 
 par2 <- with(par1,list(
 nr=nr,nt=nt,nb=nb,nk=nk,
@@ -39,6 +39,12 @@ attach(par1)
 attach(par2)
 
 require(MASS)
+
+smut_m=0.5
+nsmin=10^-10
+ngmin=10^-50
+lastonly=T
+savefile=NULL
 
 zw_mu <- c(zam,wam) - log(tau_p)
 zw_sig <- matrix(c(zsd^2,rep(rho*zsd*wsd,2),wsd^2),nr=2,nc=2)
@@ -69,21 +75,49 @@ nstart=1
 intsd=10
 tau_d=100
 
-set.seed(1)
+# Single invasion
+
+set.seed(3) 
+
 library("profvis")
 profvis({
-  invade_finite(w,x_z,am,bm,ami,bmi,
-                beta_p,beta_r,
-                eps_y_p,eps_y_r,
-                sig_s_g,sig_s_p,sig_s_r,
-                sig_o_p,phi_r,theta_g,
-                So,m0,m1,
-                nt,nb,nk,nsmin,ngmin,
-                DDFUN,
-                Sg
+  
+invaded <- invade_finite(w,x_z,am,bm,ami,bmi,
+    beta_p,beta_r,
+    eps_y_p,eps_y_r,
+    sig_s_g,sig_s_p,sig_s_r,
+    sig_o_p,phi_r,theta_g,
+    So,m0,m1,
+    nt,nb,nk,nsmin,ngmin,
+    DDFUN,
+    Sg
   )
+  
   })
-?profvis
+
+# Profile for whole evolve run
+library("profvis")
+profvis({
+  
+  evolve(
+    nr=nr,nt=nt,nb=nb,nk=nk,
+    zam=zam,wam=wam,zsd=zsd,wsd=wsd,rho=0.82,
+    beta_p=beta_p[i,j,],beta_r=beta_r[i,j,],
+    sig_y_p=sig_y_p[i,j],sig_y_r=sig_y_r[i,j],
+    sig_s_g=sig_s_g[i,j],sig_s_p=sig_s_p[i],sig_s_r=sig_s_r[i],
+    sig_o_p=sig_o_p[i],phi_r=phi_r[i],
+    theta_g=ifelse(is.null(theta_g),NULL,theta_g[i,j]),
+    m0=m0[i,j],m1=m1[i,j],
+    am0=am0[i],bm0=bm0[i],
+    DDFUN,
+    Sg,
+    smut_m,
+    nsmin,
+    ngmin,
+    lastonly
+  )
+  
+})
 
 ### Testing truncated negbin distribution
 
@@ -91,6 +125,8 @@ pradj <- function(pr,mu,phi){
   q <- dnbinom(0, mu=mu, size=phi) # Pr(Y>0)
   return(pr / (1-q)) # zero-inflated
 }
+
+
 
 pradj2 <- function(pr,mu,phi){
   q <- dnbinom(0, mu=mu, size=phi) # Pr(Y>0)

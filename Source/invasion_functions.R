@@ -68,11 +68,6 @@ nbtlnmean <- function(eta,sigma,phi,intsd=10){
   # Ref: Econometric Analysis of Count Data - Rainer Winkelmann
 	# (checked by simulation that still works with zero-truncation)
 
-pradj <- function(pr,mu,phi){
-  q <- dnbinom(0, mu=mu, size=phi) # Pr(Y>0)
-  return(pr / (1-q)) # zero-inflated
-}
-
 fnn <- function(g,
   lgmu,x_z_t,
   beta_p,beta_r,
@@ -125,6 +120,15 @@ fnn <- function(g,
 
 fixG <- function(w,a,b){
   plogis(a+b*w)
+}
+
+pradj <- function(pr,mu,phi){
+  q <- dnbinom(0, mu=mu, size=phi) # Pr(Y>0)
+  return(pr / (1-q)) # zero-inflated
+}
+
+sprinkle <- function(x,kseq,probs){
+  table(sample(kseq,x,replace=T,prob=probs))
 }
 
 ressim <- function(w,x_z,am,bm,# as,bs,abr,
@@ -252,12 +256,13 @@ invade_finite <- function(w,x_z,am,bm,ami,bmi,
   eps_s_p <- rnorm(nk,0,sig_s_p)
   eps_s_r <- rnorm(nk,0,sig_s_r)
   
-  kseq <- 1:nk
+  kseq <- as.factor(1:nk)
 
   zsites <- rbinom(nk,size=1,prob=theta_g) 
   # theta = prob of zero
   eps_s_g[zsites==1] <- -Inf
   # p(germ) = exp(-Inf) = 0
+  eps_s_g_exp <- exp(eps_s_g)
   
   ns[1,] <- c(round(nstart*nk/10,0),0)
   t <- 1
@@ -281,15 +286,7 @@ invade_finite <- function(w,x_z,am,bm,ami,bmi,
     
     if(sum(ng)>0){
       
-      ng_k <- sapply(ng, function(x){
-        table(
-          factor(
-            sample(kseq,x,replace=T,prob=exp(eps_s_g)
-            ),
-            levels=kseq
-          )
-        )
-      })
+      ng_k <- sapply(ng,sprinkle,kseq=kseq,probs=eps_s_g_exp)
       # using spatial terms as weights
 
       ngt_k <- rowSums(ng_k)  # total germinants (residents and invaders)
@@ -331,7 +328,7 @@ invade_finite <- function(w,x_z,am,bm,ami,bmi,
         nn1m <- matrix(0,nr=nrow(nr_kq),nc=ncol(nr_kq))
         nn1m[qp] <- rnbinom(sum(qp), 
                   prob=phi_r/(phi_r+rep(mu_k[qu],2)[qp]), 
-                  size=phi_r*nr_kq[qp]
+                  size=phi_r * nr_kq[qp]
                   )
         nn1 <- colSums(nn1m)
         
