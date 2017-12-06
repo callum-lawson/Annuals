@@ -128,7 +128,7 @@ pradj <- function(pr,mu,phi){
 }
 
 sprinkle <- function(x,kseq,probs){
-  table(sample(kseq,x,replace=T,prob=probs))
+  rmultinom(n=kseq, size=x, prob=probs)
 }
 
 ressim <- function(w,x_z,am,bm,# as,bs,abr,
@@ -256,14 +256,14 @@ invade_finite <- function(w,x_z,am,bm,ami,bmi,
   eps_s_p <- rnorm(nk,0,sig_s_p)
   eps_s_r <- rnorm(nk,0,sig_s_r)
   
-  kseq <- as.factor(1:nk)
+  kseq <- 1:nk
 
   zsites <- rbinom(nk,size=1,prob=theta_g) 
   # theta = prob of zero
   eps_s_g[zsites==1] <- -Inf
   # p(germ) = exp(-Inf) = 0
   eps_s_g_exp <- exp(eps_s_g)
-  
+
   ns[1,] <- c(round(nstart*nk/10,0),0)
   t <- 1
   
@@ -285,9 +285,10 @@ invade_finite <- function(w,x_z,am,bm,ami,bmi,
     }
     
     if(sum(ng)>0){
-      
-      ng_k <- sapply(ng,sprinkle,kseq=kseq,probs=eps_s_g_exp)
-      # using spatial terms as weights
+      sprinkle(ng[1],kseq,probs=eps_s_g_exp)
+      ng_k <- sapply(ng,sprinkle,kseq,probs=eps_s_g_exp)
+      # using spatial terms as weights 
+      # (normalised within function to sum to 1)
 
       ngt_k <- rowSums(ng_k)  # total germinants (residents and invaders)
       isg_k <- ngt_k>0        # binary: are there any germinants in plot?

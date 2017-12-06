@@ -77,7 +77,7 @@ tau_d=100
 
 # Single invasion
 
-set.seed(3) 
+set.seed(1) 
 
 library("profvis")
 profvis({
@@ -96,10 +96,12 @@ invaded <- invade_finite(w,x_z,am,bm,ami,bmi,
   })
 
 # Profile for whole evolve run
+set.seed(1) 
+
 library("profvis")
 profvis({
   
-  evolve(
+  trial <- evolve(
     nr=nr,nt=nt,nb=nb,nk=nk,
     zam=zam,wam=wam,zsd=zsd,wsd=wsd,rho=0.82,
     beta_p=beta_p[i,j,],beta_r=beta_r[i,j,],
