@@ -152,7 +152,7 @@ msdl <- as.list(c(1/mpsd,1,mpsd))
   # scaling mean log rainfall (zamo) only works because sign stays the same
 
 nclim <- length(maml)
-cpc <- 20 # CORES per CLIMATE (assumed equal for resident and invader)
+cpc <- 25 # CORES per CLIMATE (assumed equal for resident and invader)
 ncores <- nclim*cpc
 mpos <- rep(1:nclim,each=cpc)
 
@@ -162,7 +162,7 @@ nt <- 125 # 10050
 nb <- 25  # number of "burn-in" timesteps to stabilise resident dynamics
 nj <- 22
   # min invader iterations per core = nr * nit
-nk <- 10^2  
+nk <- 10^4  
 
 iseq <- 1:nit
 
@@ -237,6 +237,10 @@ stopCluster(CL)
   # 2 hours: 20 cores, nk=100, nit=100, nr=100, nt=125
   # stopped at 100 hours: 10 cores, nk=10000, nit=100, nr=100, nt=125
   #   only 8/30 finished, 7 of which were high-variance (am=1,sd=12)
+  #
+  # NEW METHOD 2
+  # 39 mins: 20 cores, nk=100, nit=100, nr=100, nt=125
+
 
 # write verbose form that allows convergence to be checked?
 
@@ -256,7 +260,7 @@ psl <- as.list(rep(NA,ncores))
 dir <- paste0(getwd(),"/Sims/")
 files <- paste0(dir,list.files(dir))
 for(n in 1:ncores){
-  curname <- paste0("Sims/ESS_finite_",cnames_bycore[n],"_02Dec2017.rds")
+  curname <- paste0("Sims/ESS_finite_",cnames_bycore[n],"_06Dec2017.rds")
   finished <- grep(curname,files)
   if(length(finished)!=0){
     psl[[n]] <- readRDS(curname)
