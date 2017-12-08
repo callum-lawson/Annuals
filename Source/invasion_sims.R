@@ -384,6 +384,44 @@ addledge(ltext=detledgetext)
 
 dev.off()
 
+# Example G plots ---------------------------------------------------------
+
+nd <- 5 # number of draws to plot
+
+pdf(paste0("Plots/Gdraws_finite_nk",nk,"_",format(Sys.Date(),"%d%b%Y"),".pdf"),
+    width=plotwidth,height=plotheight)
+
+plotsetup()
+
+for(j in 1:nspecies){
+  matplot(wseq,Gw[,1:nd,j,1],type="l",lty=1,ylim=c(0,1),col=cols[colpos][1])
+  xx <- rep(qw[,colpos[1]],each=2)
+  yy <- c(0,1,1,0)
+  polygon(xx, yy, col=trancols[colpos][1],border=NA)
+  
+  for(m in 1:nclim){
+    if(m!=1){
+      matplot(wseq,Gw[,1:nd,j,m],type="l",lty=1,add=T,col=cols[colpos][m])
+      #[c(1,2,4)][m]
+    }
+    xx <- rep(qw[,colpos[m]],each=2)
+    yy <- c(0,1,1,0)
+    polygon(xx, yy, col=trancols[colpos][m],border=NA)
+  }
+  
+  matplot(wseq,qGob[,j,1],type="l",lty=1,col="black",add=T)
+  
+  lettlab(j)
+  
+  if(j %in% 19:23) addxlab("w") 
+  if(j %in% seq(1,23,4)) addylab("G") 
+}
+
+addledge(ltext=colledgetext[colpos],col=cols[colpos],lty=1) #[c(1,2,4)]
+addledge(ltext=detledgetext)
+
+dev.off()
+
 # Time series graphs ------------------------------------------------------
 
 j <- 19
