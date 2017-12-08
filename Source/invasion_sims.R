@@ -152,7 +152,7 @@ msdl <- as.list(c(1/mpsd,1,mpsd))
   # scaling mean log rainfall (zamo) only works because sign stays the same
 
 nclim <- length(maml)
-cpc <- 25 # CORES per CLIMATE (assumed equal for resident and invader)
+cpc <- 1 # 25 # CORES per CLIMATE (assumed equal for resident and invader)
 ncores <- nclim*cpc
 mpos <- rep(1:nclim,each=cpc)
 
@@ -162,7 +162,7 @@ nt <- 125 # 10050
 nb <- 25  # number of "burn-in" timesteps to stabilise resident dynamics
 nj <- 22
   # min invader iterations per core = nr * nit
-nk <- 10^4  
+nk <- 10^1 # 10^4 
 
 iseq <- 1:nit
 
@@ -241,7 +241,6 @@ stopCluster(CL)
   # NEW METHOD 2
   # 39 mins: 20 cores, nk=100, nit=100, nr=100, nt=125
 
-
 # write verbose form that allows convergence to be checked?
 
 # Read resident simulations back in ---------------------------------------
@@ -259,8 +258,9 @@ stopCluster(CL)
 psl <- as.list(rep(NA,ncores))
 dir <- paste0(getwd(),"/Sims/")
 files <- paste0(dir,list.files(dir))
+
 for(n in 1:ncores){
-  curname <- paste0("Sims/ESS_finite_",cnames_bycore[n],"_06Dec2017.rds")
+  curname <- paste0("Sims/ESS_finite_",cnames_bycore[n],"_08Dec2017.rds") # 06Dec
   finished <- grep(curname,files)
   if(length(finished)!=0){
     psl[[n]] <- readRDS(curname)
@@ -268,8 +268,16 @@ for(n in 1:ncores){
 }
 names(psl) <- cnames_bycore
 
-# psl[is.na(psl)] <- psl[1:2]
-psla <- simcombine(psl)
+preplace <- function(x){
+  dnf <- is.na(x)
+  x[dnf] <- x[!dnf][1:sum(dnf)]
+  return(x)
+}
+psls <- unlist(lapply(split(psl,mpos),preplace),recursive=FALSE)
+  # sequentially replaces sims that didn't finish
+  # requires that for each climate, there are more finished than missing cores
+
+psla <- simcombine(psls,nclim=nclim,cpc=cpc)
 
 # ES G plots --------------------------------------------------------------
 
@@ -294,10 +302,10 @@ detledgetext <- c(
   paste0("nj=",nj)
 )
 
-colpos <- 1:nclim
+colpos <- 1:nclim 
 
 tran <- 25
-cols_rgb <- col2rgb(cols[colpos])
+cols_rgb <- col2rgb(cols)
 trancols <- rgb(
   red=cols_rgb[1,],
   green=cols_rgb[2,],
@@ -308,12 +316,14 @@ trancols <- rgb(
 
 alpha_G <- as.vector(psla$am)
 beta_Gz <- as.vector(psla$bm)
+# alpha_G <- with(psl,c(mu1_sd081_s1$am,mu1_sd1_s1$am,mu1_sd12_s1$am))
+# beta_Gz <- with(psl,c(mu1_sd081_s1$bm,mu1_sd1_s1$bm,mu1_sd12_s1$bm))
 
 nw <- 100
 wseq <- seq(-2,2,length.out=nw)
-Gw <- array(dim=c(nw,nit,nj,nclim))
+Gw <- array(dim=c(nw,ni*cpc,nj,nclim))
 Gw[] <- plogis(
-  matrix(rep(alpha_G,each=nw),nr=nw,nc=nit*nj*nclim)
+  matrix(rep(alpha_G,each=nw),nr=nw,nc=ni*cpc*nj*nclim)
   + outer(wseq,beta_Gz,"*")
 )
 qGw <- aperm(
@@ -340,20 +350,23 @@ qw <- rbind(wam-1.96*wsd,wam+1.96*wsd)
 
 trangrey <- rgb(red=190,green=190,blue=190,alpha=0.25,maxColorValue = 255)
 
-pdf(paste0("Plots/ESS_finite_",format(Sys.Date(),"%d%b%Y"),".pdf"),
+pdf(paste0("Plots/ESS_finite_nk",nk,"_",format(Sys.Date(),"%d%b%Y"),".pdf"),
   width=plotwidth,height=plotheight)
 
 plotsetup()
 
 for(j in 1:nspecies){
-  matplot(wseq,qGw[,j,,1],type="l",lty=ltys,ylim=c(0,1),col=cols[1])
+  matplot(wseq,qGw[,j,,1],type="l",lty=ltys,ylim=c(0,1),col=cols[colpos][1])
+  xx <- rep(qw[,colpos[1]],each=2)
+  yy <- c(0,1,1,0)
+  polygon(xx, yy, col=trancols[colpos][1],border=NA)
   
   for(m in 1:nclim){
     if(m!=1){
       matplot(wseq,qGw[,j,,m],type="l",lty=ltys,add=T,col=cols[colpos][m])
       #[c(1,2,4)][m]
     }
-    xx <- rep(qw[,m],each=2)
+    xx <- rep(qw[,colpos[m]],each=2)
     yy <- c(0,1,1,0)
     polygon(xx, yy, col=trancols[colpos][m],border=NA)
   }
@@ -366,7 +379,7 @@ for(j in 1:nspecies){
   if(j %in% seq(1,23,4)) addylab("G") 
 }
 
-addledge(ltext=colledgetext,col=cols[colpos],lty=1) #[c(1,2,4)]
+addledge(ltext=colledgetext[colpos],col=cols[colpos],lty=1) #[c(1,2,4)]
 addledge(ltext=detledgetext)
 
 dev.off()
