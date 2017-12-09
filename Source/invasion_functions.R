@@ -1,9 +1,6 @@
 ### Calculate ES alpha_G and beta_G by iteratively perturbing parameters  ###
 ### and attempting re-invasion                                            ###
 
-# TODO
-# - double-check that sum of infinite-area zinbd isn't altered by zeroes
-
 BHS <- function(n,m0,m1,T3=0.6794521,tau_s=100){
   exp(-m0*T3) / ( 1 + (m1/m0)*(1-exp(-m0*T3))*n/(tau_s/10) )
 }
@@ -62,11 +59,7 @@ nbtlnmean <- function(eta,sigma,phi,intsd=10){
   # - calculate probability of each value from lognormal distribution
   # - each of these values produces a mean from a trunc negbin distribution
   # - then integrate to calculate the mean of these means
-  # - can be done because:
-  # sum(negbin(lognormal(mu,sig),phi))
-  # = sum( negbin(exp(mu+sig),phi) + negbin(exp(mu,-sig),phi) )
-  # Ref: Econometric Analysis of Count Data - Rainer Winkelmann
-	# (checked by simulation that still works with zero-truncation)
+  # - can be done because just calculating mean of means for each plot type
 
 fnn <- function(g,
   lgmu,x_z_t,
@@ -232,8 +225,8 @@ invade_infinite <- function(w,ami,bmi,Gres,Ye,So,nt,nb){ # asi,bsi,abri,
 invade_finite <- function(w,x_z,am,bm,ami,bmi,
                           beta_p,beta_r,
                           eps_y_p,eps_y_r,
-                          sig_s_g,sig_s_p,sig_s_r,
-                          sig_o_p,phi_r,theta_g,
+                          eps_s_g,eps_s_p,eps_s_r,
+                          sig_o_p,phi_r,
                           So,m0,m1,
                           nt,nb,nk,nsmin,ngmin,
                           DDFUN,
@@ -251,21 +244,11 @@ invade_finite <- function(w,x_z,am,bm,ami,bmi,
   ns <- array(dim=c(nt,2)) # 2 = res and inv
   Gres <- fixG(w,am,bm)
   Ginv <- fixG(w,ami,bmi)
-  
-  eps_s_g <- rnorm(nk,0,sig_s_g)
-  eps_s_p <- rnorm(nk,0,sig_s_p)
-  eps_s_r <- rnorm(nk,0,sig_s_r)
-  
-  kseq <- 1:nk
-
-  zsites <- rbinom(nk,size=1,prob=theta_g) 
-  # theta = prob of zero
-  eps_s_g[zsites==1] <- -Inf
-  # p(germ) = exp(-Inf) = 0
-  eps_s_g_exp <- exp(eps_s_g)
 
   ns[1,] <- c(round(nstart*nk/10,0),0)
   t <- 1
+  kseq <- 1:nk
+  ng_k <- matrix(nr=nk,nc=2)
   
   while(t < nt
     & ns[t,1] > 0
@@ -285,8 +268,7 @@ invade_finite <- function(w,x_z,am,bm,ami,bmi,
     }
     
     if(sum(ng)>0){
-      sprinkle(ng[1],kseq,probs=eps_s_g_exp)
-      ng_k <- sapply(ng,sprinkle,kseq,probs=eps_s_g_exp)
+      ng_k[] <- sapply(ng,sprinkle,kseq,probs=eps_s_g)
       # using spatial terms as weights 
       # (normalised within function to sum to 1)
 
@@ -437,11 +419,25 @@ evolve <- function(
     }
     
     if(nk>0 & nk<Inf){
+
+      eps_s_p <- rnorm(nk,0,sig_s_p)
+      eps_s_r <- rnorm(nk,0,sig_s_r)
+        # done before g because want to match set.seed
+      
+      eps_s_g <- exp(rnorm(nk,0,sig_s_g))
+      zsites <- rbinom(nk,size=1,prob=theta_g) 
+      while(sum(zsites)==nk){
+        zsites <- rbinom(nk,size=1,prob=theta_g) 
+      }
+        # theta = prob of zero
+        # redraw until have at least one non-zero site
+      eps_s_g[zsites==1] <- 0
+      
       invaded <- with(es[r,], invade_finite(w=zw[,2],x_z,am,bm,ami,bmi,
                                beta_p,beta_r,
                                eps_y_p,eps_y_r,
-                               sig_s_g,sig_s_p,sig_s_r,
-                               sig_o_p,phi_r,theta_g,
+                               eps_s_g,eps_s_p,eps_s_r,
+                               sig_o_p,phi_r,
                                So,m0,m1,
                                nt,nb,nk,nsmin,ngmin,
                                DDFUN,
@@ -502,24 +498,50 @@ multievolve <- function(
       # but parameter drift isn't (disrupted by differences in timing
       # of invasions, i.e. population dynamics simulations)
     
-    ESS <- evolve(
-      nr=nr,nt=nt,nb=nb,nk=nk,
-      zam=zam,wam=wam,zsd=zsd,wsd=wsd,rho=0.82,
-      beta_p=beta_p[i,j,],beta_r=beta_r[i,j,],
-      sig_y_p=sig_y_p[i,j],sig_y_r=sig_y_r[i,j],
-      sig_s_g=sig_s_g[i,j],sig_s_p=sig_s_p[i],sig_s_r=sig_s_r[i],
-      sig_o_p=sig_o_p[i],phi_r=phi_r[i],
-      theta_g=ifelse(is.null(theta_g),NULL,theta_g[i,j]),
-      m0=m0[i,j],m1=m1[i,j],
-      am0=am0[i],bm0=bm0[i],
-      DDFUN,
-      Sg,
-      smut_m,
-      nsmin,
-      ngmin,
-      lastonly
-    )
+      if(ni>1){
+      
+      ESS <- evolve(
+        nr=nr,nt=nt,nb=nb,nk=nk,
+        zam=zam,wam=wam,zsd=zsd,wsd=wsd,rho=0.82,
+        beta_p=beta_p[i,j,],beta_r=beta_r[i,j,],
+        sig_y_p=sig_y_p[i,j],sig_y_r=sig_y_r[i,j],
+        sig_s_g=sig_s_g[i,j],sig_s_p=sig_s_p[i],sig_s_r=sig_s_r[i],
+        sig_o_p=sig_o_p[i],phi_r=phi_r[i],
+        theta_g=ifelse(is.null(theta_g),NULL,theta_g[i,j]),
+        m0=m0[i,j],m1=m1[i,j],
+        am0=am0[i],bm0=bm0[i],
+        DDFUN,
+        Sg,
+        smut_m,
+        nsmin,
+        ngmin,
+        lastonly
+      )
   
+    }
+      
+    if(ni==1){
+        
+      ESS <- evolve(
+        nr=nr,nt=nt,nb=nb,nk=nk,
+        zam=zam,wam=wam,zsd=zsd,wsd=wsd,rho=0.82,
+        beta_p=beta_p[j,],beta_r=beta_r[j,],
+        sig_y_p=sig_y_p[j],sig_y_r=sig_y_r[j],
+        sig_s_g=sig_s_g[j],sig_s_p=sig_s_p,sig_s_r=sig_s_r,
+        sig_o_p=sig_o_p,phi_r=phi_r,
+        theta_g=ifelse(is.null(theta_g),NULL,theta_g[j]),
+        m0=m0[j],m1=m1[j],
+        am0=am0,bm0=bm0,
+        DDFUN,
+        Sg,
+        smut_m,
+        nsmin,
+        ngmin,
+        lastonly
+      )
+        
+    }
+      
     amm[i,j] <- ESS$am
     bmm[i,j] <- ESS$bm
     
@@ -543,7 +565,7 @@ multievolve <- function(
     
 }
 
-simcombine <- function(insiml){
+simcombine <- function(insiml,nclim,cpc){
   
   varl <- insiml[[1]]
   nvar <- length(varl)
