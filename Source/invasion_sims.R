@@ -152,7 +152,7 @@ msdl <- as.list(c(1/mpsd,1,mpsd))
   # scaling mean log rainfall (zamo) only works because sign stays the same
 
 nclim <- length(maml)
-cpc <- 25 # CORES per CLIMATE (assumed equal for resident and invader)
+cpc <- 2 # CORES per CLIMATE (assumed equal for resident and invader)
 ncores <- nclim*cpc
 mpos <- rep(1:nclim,each=cpc)
 
@@ -162,7 +162,7 @@ nt <- 125 # 10050
 nb <- 25  # number of "burn-in" timesteps to stabilise resident dynamics
 nj <- 22
   # min invader iterations per core = nr * nit
-nk <- 10^4  
+nk <- 10^3  
 
 iseq <- 1:nit
 
