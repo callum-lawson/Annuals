@@ -152,7 +152,7 @@ msdl <- as.list(c(1/mpsd,1,mpsd))
   # scaling mean log rainfall (zamo) only works because sign stays the same
 
 nclim <- length(maml)
-cpc <- 1 # 25 # CORES per CLIMATE (assumed equal for resident and invader)
+cpc <- 25 # 1 # CORES per CLIMATE (assumed equal for resident and invader)
 ncores <- nclim*cpc
 mpos <- rep(1:nclim,each=cpc)
 
@@ -162,7 +162,7 @@ nt <- 125 # 10050
 nb <- 25  # number of "burn-in" timesteps to stabilise resident dynamics
 nj <- 22
   # min invader iterations per core = nr * nit
-nk <- 10^1 # 10^4 
+nk <- 10^4 # 10^1
 
 iseq <- 1:nit
 
@@ -219,7 +219,7 @@ parLapply(CL, 1:ncores, function(n){
 	  am0=am0[iset],bm0=bm0[iset],
 	  DDFUN=BHS,
 	  Sg=1,
-		savefile=paste0("ESS_finite_",cnames_bycore[n])
+		savefile=paste0("ESS_finite_",cnames_bycore[n]) 
 		))
 	})
 stopCluster(CL)
@@ -240,8 +240,67 @@ stopCluster(CL)
   #
   # NEW METHOD 2
   # 39 mins: 20 cores, nk=100, nit=100, nr=100, nt=125
+  # 50 hours: 25 cores, nk=10^4, nit=100, nr=100, nt=125 (but 10 missing)
 
 # write verbose form that allows convergence to be checked?
+
+# Redo missed sims --------------------------------------------------------
+
+reclim <- c(1,1,1,1,1,2,2,2,2,3,3,3)
+reset <- c(4,6,9,14,25,6,9,14,24,6,9,25)
+# rerun <-  c("mu1_sd081_s4","mu1_sd081_s6","mu1_sd081_s9",
+#   "mu1_sd081_s14","mu1_sd081_s25","mu1_sd1_s6",  
+#   "mu1_sd1_s9","mu1_sd1_s14","mu1_sd1_s24",  
+#   "mu1_sd12_s6","mu1_sd12_s9","mu1_sd12_s25"
+# )
+reit <- unlist(lapply(itersetl[reset],function(x){
+  split(x,1:4)
+}), recursive = TRUE)
+renames <- paste(
+  rep(cnames_unique,table(reclim)),
+  rep(reset,each=4),
+  rep(1:4,times=length(reset)
+  ),sep="_")
+
+ncoresre <- length(reclim)*4
+
+system.time({
+  CL = makeCluster(ncoresre)
+  clusterExport(cl=CL, c(
+    "reclim","reset","reit","renames","ncoresre",
+    "BHS","RICKERS",
+    "logitnorm","logitmean","logitnormint",
+    "nbtmean","nbtnorm","nbtlnmean","fnn","pradj","sprinkle",
+    "fixG","ressim","invade_infinite","invade_finite",
+    "evolve","multievolve",
+    "pls", 
+    "ni","nj","nr","nt","nb","nk",
+    "zamo","zsdo","wamo","wsdo",
+    "mpos","maml","msdl","cpos",
+    "Tvalues","cnames_bycore",
+    "itersetl"
+  )) 
+  parLapply(CL, 1:ncoresre, function(n){
+    mam <- maml[[rep(reclim,each=4)[n]]]
+    msd <- msdl[[rep(reclim,each=4)[n]]]
+    iset <- reit[n]
+    with(pls, multievolve(
+      ni=1,nj=nj,nr=nr,nt=nt,nb=nb,nk=nk,
+      zam=zamo+mam*zsdo,zsd=zsdo*msd,
+      wam=wamo+mam*wsdo,wsd=wsdo*msd,
+      beta_p=beta_p[iset,,],beta_r=beta_r[iset,,],
+      sig_y_p=sig_y_p[iset,],sig_y_r=sig_y_r[iset,],
+      sig_s_g=sig_s_g[iset,],sig_s_p=sig_s_p[iset],sig_s_r=sig_s_r[iset],
+      sig_o_p=sig_o_p[iset],phi_r=phi_r[iset],theta_g=theta_g[iset,],
+      m0=m0[iset,],m1=m1[iset,],
+      am0=am0[iset],bm0=bm0[iset],
+      DDFUN=BHS,
+      Sg=1,
+      savefile=paste0("ESS_finite_",renames[n]) 
+    ))
+  })
+  stopCluster(CL)
+})
 
 # Read resident simulations back in ---------------------------------------
 
@@ -260,7 +319,8 @@ dir <- paste0(getwd(),"/Sims/")
 files <- paste0(dir,list.files(dir))
 
 for(n in 1:ncores){
-  curname <- paste0("Sims/ESS_finite_",cnames_bycore[n],"_08Dec2017.rds") # 06Dec
+  curname <- paste0("Sims/ESS_finite_",cnames_bycore[n],"_06Dec2017.rds") 
+    # 08Dec
   finished <- grep(curname,files)
   if(length(finished)!=0){
     psl[[n]] <- readRDS(curname)
@@ -277,7 +337,7 @@ psls <- unlist(lapply(split(psl,mpos),preplace),recursive=FALSE)
   # sequentially replaces sims that didn't finish
   # requires that for each climate, there are more finished than missing cores
 
-psla <- simcombine(psls,nclim=nclim,cpc=cpc)
+psla <- simcombine(psl,nclim=nclim,cpc=cpc) # psls
 
 # ES G plots --------------------------------------------------------------
 

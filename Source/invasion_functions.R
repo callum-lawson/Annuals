@@ -496,24 +496,50 @@ multievolve <- function(
       # but parameter drift isn't (disrupted by differences in timing
       # of invasions, i.e. population dynamics simulations)
     
-    ESS <- evolve(
-      nr=nr,nt=nt,nb=nb,nk=nk,
-      zam=zam,wam=wam,zsd=zsd,wsd=wsd,rho=0.82,
-      beta_p=beta_p[i,j,],beta_r=beta_r[i,j,],
-      sig_y_p=sig_y_p[i,j],sig_y_r=sig_y_r[i,j],
-      sig_s_g=sig_s_g[i,j],sig_s_p=sig_s_p[i],sig_s_r=sig_s_r[i],
-      sig_o_p=sig_o_p[i],phi_r=phi_r[i],
-      theta_g=ifelse(is.null(theta_g),NULL,theta_g[i,j]),
-      m0=m0[i,j],m1=m1[i,j],
-      am0=am0[i],bm0=bm0[i],
-      DDFUN,
-      Sg,
-      smut_m,
-      nsmin,
-      ngmin,
-      lastonly
-    )
+      if(ni>1){
+      
+      ESS <- evolve(
+        nr=nr,nt=nt,nb=nb,nk=nk,
+        zam=zam,wam=wam,zsd=zsd,wsd=wsd,rho=0.82,
+        beta_p=beta_p[i,j,],beta_r=beta_r[i,j,],
+        sig_y_p=sig_y_p[i,j],sig_y_r=sig_y_r[i,j],
+        sig_s_g=sig_s_g[i,j],sig_s_p=sig_s_p[i],sig_s_r=sig_s_r[i],
+        sig_o_p=sig_o_p[i],phi_r=phi_r[i],
+        theta_g=ifelse(is.null(theta_g),NULL,theta_g[i,j]),
+        m0=m0[i,j],m1=m1[i,j],
+        am0=am0[i],bm0=bm0[i],
+        DDFUN,
+        Sg,
+        smut_m,
+        nsmin,
+        ngmin,
+        lastonly
+      )
   
+    }
+      
+    if(ni==1){
+        
+      ESS <- evolve(
+        nr=nr,nt=nt,nb=nb,nk=nk,
+        zam=zam,wam=wam,zsd=zsd,wsd=wsd,rho=0.82,
+        beta_p=beta_p[j,],beta_r=beta_r[j,],
+        sig_y_p=sig_y_p[j],sig_y_r=sig_y_r[j],
+        sig_s_g=sig_s_g[j],sig_s_p=sig_s_p,sig_s_r=sig_s_r,
+        sig_o_p=sig_o_p,phi_r=phi_r,
+        theta_g=ifelse(is.null(theta_g),NULL,theta_g[j]),
+        m0=m0[j],m1=m1[j],
+        am0=am0,bm0=bm0,
+        DDFUN,
+        Sg,
+        smut_m,
+        nsmin,
+        ngmin,
+        lastonly
+      )
+        
+    }
+      
     amm[i,j] <- ESS$am
     bmm[i,j] <- ESS$bm
     
