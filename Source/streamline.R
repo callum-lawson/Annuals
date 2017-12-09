@@ -70,6 +70,19 @@ ami <- es$am[i] + rnorm(1,0,smut_m)
 bmi <- es$bm[i] + rnorm(1,0,smut_m)
 w=zw[,2]
 
+eps_s_p <- rnorm(nk,0,sig_s_p)
+eps_s_r <- rnorm(nk,0,sig_s_r)
+# done before g because want to match set.seed
+
+eps_s_g <- exp(rnorm(nk,0,sig_s_g))
+zsites <- rbinom(nk,size=1,prob=theta_g) 
+while(sum(zsites)==nk){
+  zsites <- rbinom(nk,size=1,prob=theta_g) 
+}
+# theta = prob of zero
+# redraw until have at least one non-zero site
+eps_s_g[zsites==1] <- 0
+
 nc=5   # n consecutive t that ns must be < nsmin
 nstart=1
 intsd=10

@@ -246,6 +246,8 @@ invade_finite <- function(w,x_z,am,bm,ami,bmi,
   Ginv <- fixG(w,ami,bmi)
 
   ns[1,] <- c(round(nstart*nk/10,0),0)
+  ns[1,][ns[1,]==0] <- 1
+    # if starting density is 0, set to 1 instead
   t <- 1
   kseq <- 1:nk
   ng_k <- matrix(nr=nk,nc=2)
@@ -365,7 +367,7 @@ evolve <- function(
   # abr0,
   DDFUN,
   Sg,
-  smut_m,# smut_s=0.1,smut_r=0.1,
+  smut_a,smut_b,# smut_s=0.1,smut_r=0.1,
   nsmin,
   ngmin,
   lastonly,
@@ -394,8 +396,8 @@ evolve <- function(
 
   for(r in 1:nr){
     
-    ami <- es$am[r] + rnorm(1,0,smut_m)
-    bmi <- es$bm[r] + rnorm(1,0,smut_m)
+    ami <- es$am[r] + rnorm(1,0,smut_a)
+    bmi <- es$bm[r] + rnorm(1,0,smut_b)
     # asi <- es$as[r] * exp(rnorm(1,0,smut_s))
     # bsi <- es$bs[r] * exp(rnorm(1,0,smut_s))
     # abri <- plogis( (qlogis((es$abr[r]+1)/2) + rnorm(1,0,smut_r)) )*2 - 1 
@@ -478,7 +480,7 @@ multievolve <- function(
   am0,bm0,
   DDFUN=BHS,
   Sg=1,
-  smut_m=0.5,# smut_s=0.1,smut_r=0.1,
+  smut_a=2,smut_b=2,# smut_s=0.1,smut_r=0.1,
   nsmin=10^-10,
   ngmin=10^-50,
   lastonly=T,
@@ -512,7 +514,7 @@ multievolve <- function(
         am0=am0[i],bm0=bm0[i],
         DDFUN,
         Sg,
-        smut_m,
+        smut_a,smut_b,
         nsmin,
         ngmin,
         lastonly
@@ -534,7 +536,7 @@ multievolve <- function(
         am0=am0,bm0=bm0,
         DDFUN,
         Sg,
-        smut_m,
+        smut_a,smut_b,
         nsmin,
         ngmin,
         lastonly
