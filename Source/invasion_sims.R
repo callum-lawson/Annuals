@@ -107,7 +107,7 @@ if(uncertainty==F){
 ### PARAMS FOR SENSITIVITY ANALYSES
 # Creates grid of starting alpha and beta values
 
-nit <- 50 # 100
+nit <- 100 # 100
 
 if(plasticity==F){
   Gsens <- data.frame(
@@ -164,12 +164,12 @@ ncores <- nclim*cpc
 mpos <- rep(1:nclim,each=cpc)
 
 # nstart <- 1
-nr <- 50 # 100 # number of repeated invasions
-nt <- 75 # 125 # 10050 
+nr <- 100 # 100 # number of repeated invasions
+nt <- 1025 # 125 # 10050 
 nb <- 25  # number of "burn-in" timesteps to stabilise resident dynamics
 nj <- 22
   # min invader iterations per core = nr * nit
-nk <- Inf  
+nk <- 0  
 
 iseq <- 1:nit
 
@@ -240,6 +240,8 @@ stopCluster(CL)
   # 54 hours (25 cores, long time series [nt=1025])
   # 23 hours (25 cores, short time series with 100 iterations [ni])
     # 46 hours with low-mid-high variability - but most finished in 24 hours
+    # 3.3 hours with nt=75, ni=50, nr=50
+    # but non-spatial = 2.25 mins!
   # 48 hours (25 cores, same but 200 instead of 100 invasions [nr])
   # 100 hours (25 cores, nk=10000, nit=50, nt=125, nr=100; 
   #   2/25 cores didn't finish)
@@ -261,6 +263,7 @@ stopCluster(CL)
   # nk=1: 53 secs
   # nk=10: 122 secs
   # nk=100: 1010 secs
+  # nk=1000, ni=50, nr=50, cpc=2: 3.23 hours
 
 # write verbose form that allows convergence to be checked?
 
@@ -340,7 +343,7 @@ dir <- paste0(getwd(),"/Sims/")
 files <- paste0(dir,list.files(dir))
 
 for(n in 1:ncores){
-  curname <- paste0("Sims/ESS",apptext,cnames_bycore[n],"_09Dec2017.rds")
+  curname <- paste0("Sims/ESS",apptext,cnames_bycore[n],"_10Dec2017.rds")
   # curname <- paste0("Sims/ESS_finite_nk",nk,"_",cnames_bycore[n],"_08Dec2017.rds")
   # curname <- paste0("Sims/ESS_infinite_spatial_",cnames_bycore[n],"_28Nov2017.rds") 
     # 06Dec 08Dec

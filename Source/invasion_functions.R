@@ -155,6 +155,7 @@ ressim <- function(w,x_z,am,bm,# as,bs,abr,
     if(ng[t] >= ngmin){
       
       if(nk==0){
+        # essentially one site with eps_s = 0
         
         x_t <- c(x_z[t,],log(ng[t])-log(tau_d/10))
         pi_bar_t <- sum(beta_p * x_t) + eps_y_p[t]
