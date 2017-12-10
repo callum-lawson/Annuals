@@ -480,7 +480,7 @@ multievolve <- function(
   am0,bm0,
   DDFUN=BHS,
   Sg=1,
-  smut_a=2,smut_b=2,# smut_s=0.1,smut_r=0.1,
+  smut_a=5,smut_b=5,# smut_s=0.1,smut_r=0.1,
   nsmin=10^-10,
   ngmin=10^-50,
   lastonly=T,

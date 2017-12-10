@@ -107,7 +107,7 @@ if(uncertainty==F){
 ### PARAMS FOR SENSITIVITY ANALYSES
 # Creates grid of starting alpha and beta values
 
-nit <- 100
+nit <- 50 # 100
 
 if(plasticity==F){
   Gsens <- data.frame(
@@ -139,7 +139,7 @@ if(plasticity==T){
 # }
 
 set.seed(1)
-Gsens <- Gsens[sample(1:np,nit),]
+Gsens <- Gsens[sample(1:nit,nit,replace=FALSE),]
   # random starting points 
   # -> does't matter how distributed over different climates
 
@@ -159,17 +159,17 @@ msdl <- as.list(c(1/mpsd,1,mpsd))
   # scaling mean log rainfall (zamo) only works because sign stays the same
 
 nclim <- length(maml)
-cpc <- 1 # CORES per CLIMATE (assumed equal for resident and invader)
+cpc <- 25 # CORES per CLIMATE (assumed equal for resident and invader)
 ncores <- nclim*cpc
 mpos <- rep(1:nclim,each=cpc)
 
 # nstart <- 1
-nr <- 100 # 100 # number of repeated invasions
-nt <- 125 # 10050 
+nr <- 50 # 100 # number of repeated invasions
+nt <- 75 # 125 # 10050 
 nb <- 25  # number of "burn-in" timesteps to stabilise resident dynamics
 nj <- 22
   # min invader iterations per core = nr * nit
-nk <- 1  
+nk <- Inf  
 
 iseq <- 1:nit
 
@@ -203,7 +203,7 @@ clusterExport(cl=CL, c(
   "nbtmean","nbtnorm","nbtlnmean","fnn","pradj","sprinkle",
   "fixG","ressim","invade_infinite","invade_finite",
   "evolve","multievolve",
-  "pls", 
+  "pls","plasticity",
   "ni","nj","nr","nt","nb","nk",
   "zamo","zsdo","wamo","wsdo",
   "mpos","maml","msdl","cpos",
@@ -226,8 +226,12 @@ parLapply(CL, 1:ncores, function(n){
 	  am0=am0[iset],bm0=bm0[iset],
 	  DDFUN=BHS,
 	  Sg=1,
-	  smut_a=2,smut_b=ifelse(plasticity==1,2,0),
-		savefile=paste0("ESS_nk",nk,"_",cnames_bycore[n]) 
+	  smut_a=5,smut_b=ifelse(plasticity==TRUE,5,0),
+		savefile=paste0("ESS_p",
+		  plasticity,
+		  "_nk",nk,"_",
+		  cnames_bycore[n]
+		  ) 
 		))
 	})
 stopCluster(CL)
@@ -251,6 +255,12 @@ stopCluster(CL)
   # 50 hours: 25 cores, nk=10000 (but 10 missing, 1 unfinished)
   # A few hours: 1 core, nk=10
   # 18 hours: 2 cores, nk=1000
+  # 
+  # SHORT SIMS
+  # ni=50, nr=100, nt=75, cpc=25
+  # nk=1: 53 secs
+  # nk=10: 122 secs
+  # nk=100: 1010 secs
 
 # write verbose form that allows convergence to be checked?
 
@@ -324,12 +334,13 @@ stopCluster(CL)
 #   }
 # names(psl) <- cnames_bycore_small
 
+apptext <- paste0("_p",plasticity,"_nk",nk,"_")
 psl <- as.list(rep(NA,ncores))
 dir <- paste0(getwd(),"/Sims/")
 files <- paste0(dir,list.files(dir))
 
 for(n in 1:ncores){
-  curname <- paste0("Sims/ESS_nk",nk,"_",cnames_bycore[n],"_09Dec2017.rds")
+  curname <- paste0("Sims/ESS",apptext,cnames_bycore[n],"_09Dec2017.rds")
   # curname <- paste0("Sims/ESS_finite_nk",nk,"_",cnames_bycore[n],"_08Dec2017.rds")
   # curname <- paste0("Sims/ESS_infinite_spatial_",cnames_bycore[n],"_28Nov2017.rds") 
     # 06Dec 08Dec
@@ -424,7 +435,7 @@ trangrey <- rgb(red=190,green=190,blue=190,alpha=0.25,maxColorValue = 255)
 
 # Quantile ES G plots -----------------------------------------------------
 
-pdf(paste0("Plots/ESS_nk",nk,"_",format(Sys.Date(),"%d%b%Y"),".pdf"),
+pdf(paste0("Plots/ESS",apptext,format(Sys.Date(),"%d%b%Y"),".pdf"),
   width=plotwidth,height=plotheight)
 
 plotsetup()
@@ -462,7 +473,7 @@ dev.off()
 
 nd <- 25 # number of draws to plot
 
-pdf(paste0("Plots/Gdraws_nk",nk,"_",format(Sys.Date(),"%d%b%Y"),".pdf"),
+pdf(paste0("Plots/Gdraws",apptext,format(Sys.Date(),"%d%b%Y"),".pdf"),
     width=plotwidth,height=plotheight)
 
 for(m in 1:nclim){
