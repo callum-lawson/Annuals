@@ -1,4 +1,5 @@
 ### Simulations of population dynamics for infinite area ###
+# Large edits from older version - grid ESS calculations no longer function
 
 library(plyr)
 library(reshape2)
@@ -13,6 +14,7 @@ source("Source/simulation_functions_analytical.R")
 source("Source/figure_functions.R")
 source("Source/prediction_functions.R")
 source("Source/trait_functions.R")
+source("Source/invasion_functions.R")
 
 msy <- read.csv("Output/msy_15Jan2016.csv",header=T)
 Tvalues <- read.csv("Output/Tvalues_31Jul2015.csv",header=T)
@@ -57,7 +59,8 @@ wsdo <- sd(log(ncy$germprcp))
 ### MODEL PARAMS (already permuted)
 
 pl <- list(
-	go = readRDS("Models/go_pars_tdistpois_naspecies_noerr_noGDD_loglik_BH_01Mar2017.rds"),
+  go = readRDS("Models/go_pars_lnGtnt_BH_25Nov2017.rds"),
+	# go = readRDS("Models/go_pars_tdistpois_naspecies_noerr_noGDD_loglik_BH_01Mar2017.rds"),
 	gs = readRDS("Models/gnzhh_onhh_pars_medians_26Oct2015.rds"),
 		# gs = g site level
 		# source script: venable_Stan_GO_descriptive_gnzhh_onhh_26Oct2015
@@ -69,47 +72,47 @@ pl <- list(
 
 ### MEDIAN PARAMETERS
 
-pls <- pl
-for(i in 1:length(pl)){
-  for(j in 1:length(pl[[i]])){
-    ndim <- length(dim(pl[[i]][[j]])) 
-    if(ndim==1){
-      pls[[i]][[j]] <- rep(median(pl[[i]][[j]]),length(pl[[i]][[j]]))
-    }
-    if(ndim>1){
-      keepdim <- 2:ndim # remove first dim, which is always iter
-      eachrep <- dim(pl[[i]][[j]])[1] # select iterdim
-      pls[[i]][[j]][] <- rep(apply(pl[[i]][[j]],keepdim,median),each=eachrep)
-    }
-    # if is.null(ndim), do nothing
-  }
-}
+# pls <- pl
+# for(i in 1:length(pl)){
+#   for(j in 1:length(pl[[i]])){
+#     ndim <- length(dim(pl[[i]][[j]])) 
+#     if(ndim==1){
+#       pls[[i]][[j]] <- rep(median(pl[[i]][[j]]),length(pl[[i]][[j]]))
+#     }
+#     if(ndim>1){
+#       keepdim <- 2:ndim # remove first dim, which is always iter
+#       eachrep <- dim(pl[[i]][[j]])[1] # select iterdim
+#       pls[[i]][[j]][] <- rep(apply(pl[[i]][[j]],keepdim,median),each=eachrep)
+#     }
+#     # if is.null(ndim), do nothing
+#   }
+# }
 
 ### PARAMS FOR SENSITIVITY ANALYSES
 
 # transformed climate range approx. -1 -> 1
-tmrange <- c(-1.5,0.5)
-tsrange <- c(-3,1)
-plasticity <- T
+# tmrange <- c(-1.5,0.5)
+# tsrange <- c(-3,1)
+# plasticity <- T
 
-if(plasticity==F){
-  nsens <- 100
-  Gsens <- data.frame(
-    # alpha_G=qlogis(seq(0.001,0.999,length.out=nsens)),
-    alpha_G=seq(-5,5,length.out=nsens),
-    beta_Gz=rep(0,nsens)
-  )
-}
-
-if(plasticity==T){
-  neach <- 10
-  tau_mu <- seq(tmrange[1],tmrange[2],length.out=neach)
-  tau_sd <- 2^seq(tsrange[1],tsrange[2],length.out=neach)
-  Gsens <- expand.grid(tau_mu=tau_mu,tau_sd=tau_sd)
-  nsens <- nrow(Gsens) # = neach^2
-  Gsens$alpha_G <- with(Gsens,godalpha_f(tau_mu,tau_sd))
-  Gsens$beta_Gz <- with(Gsens,godbeta_f(tau_sd))
-}
+# if(plasticity==F){
+#   nsens <- 100
+#   Gsens <- data.frame(
+#     # alpha_G=qlogis(seq(0.001,0.999,length.out=nsens)),
+#     alpha_G=seq(-5,5,length.out=nsens),
+#     beta_Gz=rep(0,nsens)
+#   )
+# }
+# 
+# if(plasticity==T){
+#   neach <- 10
+#   tau_mu <- seq(tmrange[1],tmrange[2],length.out=neach)
+#   tau_sd <- 2^seq(tsrange[1],tsrange[2],length.out=neach)
+#   Gsens <- expand.grid(tau_mu=tau_mu,tau_sd=tau_sd)
+#   nsens <- nrow(Gsens) # = neach^2
+#   Gsens$alpha_G <- with(Gsens,godalpha_f(tau_mu,tau_sd))
+#   Gsens$beta_Gz <- with(Gsens,godbeta_f(tau_sd))
+# }
 
 # if(plasticity==T){
 #   neach <- 20
@@ -142,11 +145,23 @@ if(plasticity==T){
 #   nsens <- nrow(Gsens) # = neach^2
 # }
 
-rpi <- 100 # number of replicated simulations per invasion
-nio <- rpi*nsens
-pls$go$alpha_G <- pls$go$beta_Gz <- array(dim=c(nio,22))
-pls$go$alpha_G[1:nio,] <- rep(Gsens$alpha_G,each=rpi)
-pls$go$beta_Gz[1:nio,] <- rep(Gsens$beta_Gz,each=rpi)
+ESG <- readRDS("Sims/ESSall_pTRUE_nk0_10Dec2017.rds")
+
+niE <- ESG$ni
+nclimE <-  3 # number of ESS climates
+rpi <- 10 # number of replicated climate runs for each parameter set
+
+ESG$alpha_G <- with(ESG$psla, abind(am[,,1],am[,,2],am[,,3],along=1))
+ESG$beta_Gz <- with(ESG$psla, abind(bm[,,1],bm[,,2],bm[,,3],along=1))
+nit <- rpi * niE * nclimE
+iseq <- rep(1:niE, each=rpi*nclimE)
+iseqG <- rep(1:(niE*nclimE), each=rpi)
+  # repetitions vary fastest, ESS climate varies slowest
+iseqz <- rep(1:(rpi*niE),times=nclimE) 
+
+pls <- pl
+pls$go$alpha_G <- ESG$alpha_G[iseqG,]
+pls$go$beta_Gz <- ESG$beta_Gz[iseqG,]
 
 # nplot <- 4
 # Gshow <- round(
@@ -179,41 +194,29 @@ pls$go$beta_Gz[1:nio,] <- rep(Gsens$beta_Gz,each=rpi)
 
 # maml <- as.list(c(1,1,mpam,1,mpam,mpam))
 # msdl <- as.list(c(0,1,1,mpsd,mpsd,0))
-maml <- as.list(c(1,mpam))
-msdl <- as.list(c(1,mpsd))
+maml <- as.list(c(1,mpam)) 
+msdl <- as.list(c(1,mpsd)) 
   # scaling mean log rainfall (zamo) only works because sign stays the same
 
 nclim <- length(maml)
-cpc <- 10 # CORES per CLIMATE (assumed equal for resident and invader)
+cpc <- 30 # CORES per CLIMATE (assumed equal for resident and invader)
 ncores <- nclim*cpc
 mpos <- rep(1:nclim,each=cpc)
 
 nstart <- rep(1,nspecies)
-nt <- 250
+nt <- 1025
 nj <- 22
   # min invader iterations per core = rpi * nsens
-tmin <- 15
-  # start time for invasion
-
-iseqone <- 1:nio
-iseqres <- rep(iseqone, each=nsens)
-iseqinv <- rep(seq(1,nio,rpi), times=nio)
-  # for invader, only G params are used, 
-  # so for itersetli just take first iter from pls for each rpi
 
 cpos <- rep(1:cpc,times=nclim)
-cipos <- rep(1:cpc,each=(rpi*nsens)/cpc)
-cirpos <- rep(1:cpc,each=(rpi*nsens^2)/cpc)
+cipos <- rep(1:cpc,each=nit/cpc)
 
-itersetl <- split(iseqone,cipos)
-itersetlr <- split(iseqres,cirpos)
-itersetli <- split(iseqinv,cirpos)
-  # requires that ni < maxiter
-  # resident simulations split between cores
-  # invader simulations replicated once for every resident in each core
+itersetl <- split(iseq,cipos)
+itersetlG <- split(iseqG,cipos)
+itersetlz <- split(iseqz,cipos)
 
 ni <- length(itersetl[[1]]) # iterations PER CORE for RESIDENT simulations
-nii <- length(itersetli[[1]]) # iterations per core for INVADER simulations
+# nii <- length(itersetli[[1]]) # iterations per core for INVADER simulations
 
 simp <- function(l){
   lapply(l,function(x){
@@ -232,18 +235,28 @@ cnames_merged <- paste(cnames_unique,collapse="_")
 
 require(MASS)
 set.seed(1)
-zn <- wn <- array(NA,c(rpi,nt))
 zwn_mu <- rep(0,2)
 zwn_sig <- matrix(c(1,rep(0.82,2),1),nr=2,nc=2) # correlation = 0.82
-zwn <- mvrnorm(n=ni*nt, mu=zwn_mu, Sigma=zwn_sig)
 
-zwyo <- data.frame(
-  zn = zwn[,1],
-  wn = zwn[,2],
-  eps_y_pn = rnorm(ni*nt,0,1),
-  eps_y_rn = rnorm(ni*nt,0,1)
-)
+zwyols <- list()
+for(i in 1:(rpi*niE)){
+  zwn <- mvrnorm(n=nt, mu=zwn_mu, Sigma=zwn_sig)
+  zwyols[[i]] <- data.frame(
+    zn = zwn[,1],
+    wn = zwn[,2],
+    eps_y_pn = rnorm(nt,0,1),
+    eps_y_rn = rnorm(nt,0,1)
+  )
+}
+zwyol <- rep(zwyols,nclimE)
+  # different climate / reproduction sequence for each rep and ESS starting pars
+  # same sequences for ESSs from different climates
   
+zwyoli <- list()
+for(i in 1:cpc){
+  zwyoli[[i]] <- do.call("rbind", zwyol[itersetlz[[i]]])
+}
+
 # CALCULATE GERMINATION BEFOREHAND
 # REDUCE S0 TO NI*NJ VALUES
 # CYCLE ITERATIONS WHEN >1000
@@ -255,19 +268,21 @@ system.time({
 CL = makeCluster(ncores)
 clusterExport(cl=CL, c("popana","pls", 
   "ni","nt","nj","nstart",
-  "zwyo","zamo","zsdo","wamo","wsdo",
+  "zwyoli","zamo","zsdo","wamo","wsdo",
   "mpos","maml","msdl","cpos",
   "Tvalues","cnames_bycore",
-  "itersetl"
+  "itersetl","itersetlG"
   )) 
 parLapply(CL, 1:ncores, function(n){
 	mam <- maml[[mpos[n]]]
 	msd <- msdl[[mpos[n]]]
 	popana(pl=pls,ni=ni,nt=nt,nj=nj,
-		nstart=nstart,zam=zamo+mam*zsdo,zsd=zsdo*msd,
-		zwy=zwyo,wam=wamo+wam*wsdo,wsd=wsdo*msd,
+		nstart=nstart,
+	  zam=zamo+mam*zsdo,zsd=zsdo*msd,
+		zwy=zwyoli[[cpos[n]]],
+	  wam=wamo+mam*wsdo,wsd=wsdo*msd,
 		Tvalues=Tvalues,tau_p=10^2,tau_d=10^2,tau_s=10^2,
-		iterset=itersetl[[cpos[n]]],
+		iterset=itersetl[[cpos[n]]],itersetG=itersetlG[[cpos[n]]],
 		savefile=paste0("res_",cnames_bycore[n]) # res -> residents
 		)
 	})
@@ -287,46 +302,14 @@ stopCluster(CL)
 #   }
 # names(psl) <- cnames_bycore_small
 
-simcombine <- function(insiml){
-  
-  varl <- insiml[[1]]
-  nvar <- length(varl)
-  dimvar <- lapply(varl,dim)
-  ndimvar <- sapply(dimvar,length)
-  firstmpos <- match(1:nclim,mpos)
-  
-  # Combine sim matrices by sim type
-  outsiml <- vector("list", nvar)
-  names(outsiml) <- names(varl)
-  for(i in 1:nvar){
-    if(ndimvar[i]>0){
-      for(j in 1:nclim){
-        for(k in 1:cpc){
-          if(k==1) ast <- insiml[[firstmpos[j]]][[i]]
-          else ast <- abind(ast,insiml[[firstmpos[j]+(k-1)]][[i]],along=1)
-        }
-        if(j==1){
-          outsiml[[i]] <- array(ast,dim=c(dim(ast),1))
-        }
-        else{
-          outsiml[[i]] <- abind(outsiml[[i]],ast,along=ndimvar[i]+1)
-        }
-      }
-      if(nclim>1) dimnames(outsiml[[i]])[[ndimvar[i]+1]] <- cnames_unique
-    }
-  }
-  outsiml <- outsiml[ndimvar>0]
-  return(outsiml)
-}
-
 psl <- as.list(rep(NA,ncores))
 for(n in 1:ncores){
-  psl[[n]] <- readRDS(paste0("Sims/res_",cnames_bycore[n],"_23Aug2017.rds"))
+  psl[[n]] <- readRDS(paste0("Sims/res_",cnames_bycore[n],"_10Dec2017.rds"))
 }
 names(psl) <- cnames_bycore
 
 # psl[is.na(psl)] <- psl[1]
-psla <- simcombine(psl)
+psla <- simcombine(psl,nclim=nclim,cpc=cpc)
 
 # Invader simulations -----------------------------------------------------
 

@@ -49,7 +49,8 @@
 popana <- function(pl,ni,nt,nj=22,nstart,
   zwy,zam,zsd,wam,wsd,
   Tvalues,tau_p=10^2,tau_d=10^2,tau_s=10^2,
-  iterset=NULL,
+  iterset,
+  itersetG,
   savefile=NULL,
   rel.tol=10^-5,
   abs.tol=0, # .Machine$double.eps^0.25,
@@ -102,11 +103,10 @@ popana <- function(pl,ni,nt,nj=22,nstart,
   ### DEFINE PARAMETERS ###
     
   iter_go <- iter_pr <- iter_rs <- iterset
-  alpha_G <- go$alpha_G[iterset,]
-  beta_Gz <- go$beta_Gz[iterset,]
 
-  alpha_G <- go$alpha_G[iterset,]
-  beta_Gz <- go$beta_Gz[iterset,]
+  alpha_G <- go$alpha_G[itersetG,]
+  beta_Gz <- go$beta_Gz[itersetG,]
+  
   alpha_m <- go$alpha_m[iterset,]
   beta_m <- go$alpha_m[iterset,]
   
@@ -116,6 +116,8 @@ popana <- function(pl,ni,nt,nj=22,nstart,
   
   beta_r[] <- as.vector(rs$beta_r[iterset,,])
   phi_r <- rep(rs$phi_r[iterset],times=nj)     # doesn't vary by species
+  
+  theta_g <- gs$theta_g[iterset,]
   
   zwy <- zwy[iterset,]
   
@@ -180,7 +182,7 @@ popana <- function(pl,ni,nt,nj=22,nstart,
       
     nn[,t,] <- ng[,t,] * pr_t * rs_t
       
-    Sn[,t,] <- BHS(nn[,t,],m0[,t,],m1[,t,])
+    Sn[,t,] <- BHS(nn[,t,]*(1-theta_g),m0[,t,],m1[,t,])
       
     if(t<nt){
       ns[,t+1,][al] <- (ns[,t,]*(1-G[,t,])*So[,t,] + Sn[,t,]*nn[,t,])[al]

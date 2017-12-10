@@ -193,7 +193,7 @@ cnames_merged <- paste(cnames_unique,collapse="_")
 
 # maxiter <- 10000 # max number of iterations in PARAMETERISATION
 
-# Resident simulations ----------------------------------------------------
+# ES G simulations --------------------------------------------------------
 
 system.time({
 CL = makeCluster(ncores)
@@ -242,6 +242,8 @@ stopCluster(CL)
     # 46 hours with low-mid-high variability - but most finished in 24 hours
     # 3.3 hours with nt=75, ni=50, nr=50
     # but non-spatial = 2.25 mins!
+    # 1.3 hours: ni=100, nr=100, nt=1025, nk=0, cpc=25
+    #   (timing very consistent: all finished within 10 mins of each other)
   # 48 hours (25 cores, same but 200 instead of 100 invasions [nr])
   # 100 hours (25 cores, nk=10000, nit=50, nt=125, nr=100; 
   #   2/25 cores didn't finish)
@@ -264,6 +266,7 @@ stopCluster(CL)
   # nk=10: 122 secs
   # nk=100: 1010 secs
   # nk=1000, ni=50, nr=50, cpc=2: 3.23 hours
+  #   nk=Inf, cpc=2: 1 hour
 
 # write verbose form that allows convergence to be checked?
 
@@ -364,6 +367,13 @@ psls <- unlist(lapply(split(psl,mpos),preplace),recursive=FALSE)
   # requires that for each climate, there are more finished than missing cores
 
 psla <- simcombine(psl,nclim=nclim,cpc=cpc) # psls
+
+psla_out <- list(
+  maml=maml,msdl=msdl,
+  nk=nk,nt=nt,nb=nb,nr=nr,ni=nit,nj=nj,
+  pls=pls,psla=psla
+  )
+saveRDS(psla_out,paste0("Sims/ESSall",apptext,format(Sys.Date(),"%d%b%Y"),".rds"))
 
 # ES G plots --------------------------------------------------------------
 
