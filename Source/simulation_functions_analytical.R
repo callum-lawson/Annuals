@@ -119,8 +119,6 @@ popana <- function(pl,ni,nt,nj=22,nstart,
   
   theta_g <- gs$theta_g[iterset,]
   
-  zwy <- zwy[iterset,]
-  
   ### RANDOM YEAR EFFECTS ###
   
   eps_y_p <- eps_y_r <- array(NA,c(ni,nt,nj))

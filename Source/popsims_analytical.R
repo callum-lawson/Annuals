@@ -288,7 +288,7 @@ parLapply(CL, 1:ncores, function(n){
 	})
 stopCluster(CL)
 })
-  # 15 mins (10 cores)
+  # 10 mins: 30 cores, nit=3000, nt=1025
 
 # Read resident simulations back in ---------------------------------------
 
@@ -303,8 +303,16 @@ stopCluster(CL)
 # names(psl) <- cnames_bycore_small
 
 psl <- as.list(rep(NA,ncores))
+
+dir <- paste0(getwd(),"/Sims/")
+files <- paste0(dir,list.files(dir))
+
 for(n in 1:ncores){
-  psl[[n]] <- readRDS(paste0("Sims/res_",cnames_bycore[n],"_10Dec2017.rds"))
+  curname <- paste0("Sims/res_",cnames_bycore[n],"_10Dec2017.rds")
+  finished <- grep(curname,files)
+  if(length(finished)!=0){
+    psl[[n]] <- readRDS(curname)
+  }
 }
 names(psl) <- cnames_bycore
 
@@ -513,6 +521,29 @@ for(m in 1:nclim){
 
 
 # OLD STUFF #
+
+
+# Separate-out different ES G iterations ----------------------------------
+
+barquant <- function(a,probs=c(0.25,0.50,0.75),keepdims=3:4){
+  qarr <- apply(a,keepdims,quantile,prob=probs,na.rm=T)
+  return(qarr)
+}
+# 50% quantiles, not 90% quantiles!
+
+Epos <- rep(1:nclimE,each=rpi*niE)
+lns <- array(dim=c(nit,nt,nj,nclim,nclimE))
+for(i in 1:nclimE){
+  lns[,,,,i] <- log(psla$ns[Epos==i,,,])
+}
+
+dlns <- lns[,,,2,] - lns[,,,1,]
+
+q_lns <- barquant(lns[,,,1,])
+q_dlns <- barquant(dlns)
+qlist <- list(lns=q_lns,dlns=q_dlns)
+
+saveRDS(qlist,paste0("Sims/ESS_medpops_",format(Sys.Date(),"%d%b%Y"),".rds"))
 
 # Extract parameters used in simulations ----------------------------------
 
