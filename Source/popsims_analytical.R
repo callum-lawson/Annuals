@@ -194,7 +194,7 @@ pls$go$beta_Gz <- ESG$beta_Gz[iseqG,]
 
 # maml <- as.list(c(1,1,mpam,1,mpam,mpam))
 # msdl <- as.list(c(0,1,1,mpsd,mpsd,0))
-maml <- as.list(c(1,mpam)) 
+maml <- as.list(c(0,mpam)) 
 msdl <- as.list(c(1,mpsd)) 
   # scaling mean log rainfall (zamo) only works because sign stays the same
 
@@ -544,6 +544,107 @@ q_dlns <- barquant(dlns)
 qlist <- list(lns=q_lns,dlns=q_dlns)
 
 saveRDS(qlist,paste0("Sims/ESS_medpops_",format(Sys.Date(),"%d%b%Y"),".rds"))
+qlist <- readRDS(paste0("Sims/ESS_medpops_",format(Sys.Date(),"%d%b%Y"),".rds"))
+
+Escen <- c("low","medium","high")
+myteal <- rgb(190,235,159,maxColorValue=255)
+
+purples <- brewer.pal(9,"Purples")[5] 
+blues <- brewer.pal(9,"Blues")[5] 
+greens <- brewer.pal(9,"Greens")[5] 
+oranges <- brewer.pal(9,"Oranges")[5]
+reds <- brewer.pal(9,"Reds")[5] 
+greys <- brewer.pal(9,"Greys")[5] 
+
+cols <- c(purples,blues,greens,oranges,reds,greys)
+
+colpos <- 1:nclimE
+
+tran <- 25
+cols_rgb <- col2rgb(cols)
+trancols <- rgb(
+  red=cols_rgb[1,],
+  green=cols_rgb[2,],
+  blue=cols_rgb[3,],
+  alpha=tran,
+  maxColorValue = 255
+)
+
+# pdf(paste0("mean_variance_comparison_",
+#            paste(keepnames,collapse="_"),
+#            "_t",tpos,"_",
+#            format(Sys.Date(),"%d%b%Y"),".pdf"
+# ),
+# width=4.5,height=4.5)
+
+par(mfrow=c(1,1),mar=c(5,5,2,2),las=1,bty="l")
+boxplot(qlist$lns[2,,], 
+     #ylim=myylim,
+     range=0,
+     medlwd=2,
+     boxwex=0.35,
+     lty=1,
+     ylab=expression(Delta~ln~population~size),
+     xlab="Rainfall change scenario",
+     names=Escen,
+     border="white" # makes invisible
+)
+
+abline(h=0,lty=2)
+
+boxplot(qlist$lns[2,,], 
+        #ylim=myylim,
+        range=0,
+        medlwd=2,
+        boxwex=0.35,
+        lty=1,
+        ylab=expression(ln~population~size),
+        xlab="Rainfall change scenario",
+        names=Escen,
+        col=cols[colpos]
+        )
+
+par(mfrow=c(1,1),mar=c(5,5,2,2),las=1,bty="l")
+boxplot(qlist$dlns[2,,], 
+        #ylim=myylim,
+        range=0,
+        medlwd=2,
+        boxwex=0.35,
+        lty=1,
+        ylab=expression(ln~population~size),
+        xlab="Rainfall change scenario",
+        names=Escen,
+        border="white" # makes invisible
+)
+
+abline(h=0,lty=2)
+
+boxplot(qlist$dlns[2,,], 
+        #ylim=myylim,
+        range=0,
+        medlwd=2,
+        boxwex=0.35,
+        lty=1,
+        ylab=expression(Delta~ln~population~size),
+        xlab="Rainfall change scenario",
+        names=Escen,
+        col=cols[colpos]
+)
+
+# abline(h=0,lty=2)
+
+
+# Climate distributions ---------------------------------------------------
+# zam=zamo+mam*zsdo,zsd=zsdo*msd
+
+climcurve <- function(mam,msd){
+  curve(dnorm(x,zamo+zsdo*mam,zsdo*msd),xlim=c(zamo-2.5*zsdo,zamo+2.5*zsdo),ylim=c(0,0.85))
+}
+climcurve(0,1/msdl[[2]])
+climcurve(0,1)
+climcurve(0,msdl[[2]])
+climcurve(maml[[2]],msdl[[2]])
+
 
 # Extract parameters used in simulations ----------------------------------
 

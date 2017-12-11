@@ -154,7 +154,7 @@ pls$bm0 <- Gsens$beta_Gz
 
 # maml <- as.list(c(1,1,mpam,1,mpam,mpam))
 # msdl <- as.list(c(0,1,1,mpsd,mpsd,0))
-maml <- as.list(c(1,1,1)) 
+maml <- as.list(c(0,0,0)) 
 msdl <- as.list(c(1/mpsd,1,mpsd)) 
   # scaling mean log rainfall (zamo) only works because sign stays the same
 

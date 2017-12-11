@@ -143,7 +143,7 @@ for(i in 1:nrow(Gplot)){
 
 # 1000 per 0.1m^2 - *what does this mean?*
 
-maml <- as.list(c(1,1,mpam,1,mpam,mpam))
+maml <- as.list(c(0,0,mpam,0,mpam,mpam))
 msdl <- as.list(c(0,1,1,mpsd,mpsd,0))
   # scaling mean log rainfall (zamo) only works because sign stays the same
 
