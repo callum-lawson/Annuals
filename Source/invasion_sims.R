@@ -244,6 +244,8 @@ stopCluster(CL)
     # but non-spatial = 2.25 mins!
     # 1.3 hours: ni=100, nr=100, nt=1025, nk=0, cpc=25
     #   (timing very consistent: all finished within 10 mins of each other)
+    #   repeat: 1.5 hours
+    #   ni=1000, cpc=20: 14 hours
   # 48 hours (25 cores, same but 200 instead of 100 invasions [nr])
   # 100 hours (25 cores, nk=10000, nit=50, nt=125, nr=100; 
   #   2/25 cores didn't finish)
@@ -346,7 +348,7 @@ dir <- paste0(getwd(),"/Sims/")
 files <- paste0(dir,list.files(dir))
 
 for(n in 1:ncores){
-  curname <- paste0("Sims/ESS",apptext,cnames_bycore[n],"_10Dec2017.rds")
+  curname <- paste0("Sims/ESS",apptext,cnames_bycore[n],"_11Dec2017.rds")
   # curname <- paste0("Sims/ESS_finite_nk",nk,"_",cnames_bycore[n],"_08Dec2017.rds")
   # curname <- paste0("Sims/ESS_infinite_spatial_",cnames_bycore[n],"_28Nov2017.rds") 
     # 06Dec 08Dec
@@ -384,7 +386,8 @@ oranges <- brewer.pal(9,"Oranges")[5]
 reds <- brewer.pal(9,"Reds")[5] 
 greys <- brewer.pal(9,"Greys")[5] 
 
-cols <- c(purples,blues,greens,oranges,reds,greys)
+# cols <- c(purples,blues,greens,oranges,reds,greys)
+cols <- c(blues,oranges,reds)
 ltys <- c(3,1,3)
 
 colledgetext <- cnames_unique
@@ -400,7 +403,7 @@ detledgetext <- c(
 
 colpos <- 1:nclim 
 
-tran <- 25
+tran <- 15
 cols_rgb <- col2rgb(cols)
 trancols <- rgb(
   red=cols_rgb[1,],
@@ -410,13 +413,17 @@ trancols <- rgb(
   maxColorValue = 255
 )
 
+wam <- sapply(maml,function(x) zam=wamo - log(tau_p))
+wsd <- sapply(msdl,function(x) zam=wsdo*x)
+qw <- rbind(wam-1.96*wsd,wam+1.96*wsd)
+
 alpha_G <- as.vector(psla$am)
 beta_Gz <- as.vector(psla$bm)
 # alpha_G <- with(psl,c(mu1_sd081_s1$am,mu1_sd1_s1$am,mu1_sd12_s1$am))
 # beta_Gz <- with(psl,c(mu1_sd081_s1$bm,mu1_sd1_s1$bm,mu1_sd12_s1$bm))
 
 nw <- 100
-wseq <- seq(-2,2,length.out=nw)
+wseq <- seq(wam[3]-2*wsd[3],wam[3]+2*wsd[3],length.out=nw)
 Gw <- array(dim=c(nw,ni*cpc,nj,nclim))
 Gw[] <- plogis(
   matrix(rep(alpha_G,each=nw),nr=nw,nc=ni*cpc*nj*nclim)
@@ -440,11 +447,8 @@ qGob <- aperm(
   c(2,3,1)
 )
 
-wam <- sapply(maml,function(x) zam=wamo+x*wsdo - log(tau_p))
-wsd <- sapply(msdl,function(x) zam=wsdo*x)
-qw <- rbind(wam-1.96*wsd,wam+1.96*wsd)
-
 trangrey <- rgb(red=190,green=190,blue=190,alpha=0.25,maxColorValue = 255)
+myteal <- rgb(246,255,224,maxColorValue=255)
 
 # Quantile ES G plots -----------------------------------------------------
 
@@ -452,6 +456,24 @@ pdf(paste0("Plots/ESS",apptext,format(Sys.Date(),"%d%b%Y"),".pdf"),
   width=plotwidth,height=plotheight)
 
 plotsetup()
+par(bg=myteal)
+
+for(j in 1:nspecies){
+  matplot(wseq,qGw[,j,,2],type="l",lty=ltys,ylim=c(0,1),col=cols[colpos][2])
+  xx <- rep(qw[,colpos[2]],each=2)
+  yy <- c(0,1,1,0)
+  polygon(xx, yy, col=trancols[colpos][2],border=NA)
+  
+  matplot(wseq,qGob[,j,],type="l",lty=ltys,col="black",add=T)
+  
+  lettlab(j)
+  
+  if(j %in% 19:23) addxlab("w") 
+  if(j %in% seq(1,23,4)) addylab("G") 
+}
+
+addledge(ltext=colledgetext[colpos],col=cols[colpos],lty=1) #[c(1,2,4)]
+addledge(ltext=detledgetext)
 
 for(j in 1:nspecies){
   matplot(wseq,qGw[,j,,1],type="l",lty=ltys,ylim=c(0,1),col=cols[colpos][1])

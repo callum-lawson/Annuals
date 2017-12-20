@@ -145,11 +145,11 @@ pl <- list(
 #   nsens <- nrow(Gsens) # = neach^2
 # }
 
-ESG <- readRDS("Sims/ESSall_pTRUE_nk0_10Dec2017.rds")
+ESG <- readRDS("Sims/ESSall_pTRUE_nk0_11Dec2017.rds")
 
 niE <- ESG$ni
 nclimE <-  3 # number of ESS climates
-rpi <- 10 # number of replicated climate runs for each parameter set
+rpi <- 1 # number of replicated climate runs for each parameter set
 
 ESG$alpha_G <- with(ESG$psla, abind(am[,,1],am[,,2],am[,,3],along=1))
 ESG$beta_Gz <- with(ESG$psla, abind(bm[,,1],bm[,,2],bm[,,3],along=1))
@@ -308,7 +308,7 @@ dir <- paste0(getwd(),"/Sims/")
 files <- paste0(dir,list.files(dir))
 
 for(n in 1:ncores){
-  curname <- paste0("Sims/res_",cnames_bycore[n],"_10Dec2017.rds")
+  curname <- paste0("Sims/res_",cnames_bycore[n],"_11Dec2017.rds")
   finished <- grep(curname,files)
   if(length(finished)!=0){
     psl[[n]] <- readRDS(curname)
@@ -547,7 +547,8 @@ saveRDS(qlist,paste0("Sims/ESS_medpops_",format(Sys.Date(),"%d%b%Y"),".rds"))
 qlist <- readRDS(paste0("Sims/ESS_medpops_",format(Sys.Date(),"%d%b%Y"),".rds"))
 
 Escen <- c("low","medium","high")
-myteal <- rgb(190,235,159,maxColorValue=255)
+# myteal <- rgb(190,235,159,maxColorValue=255)
+myteal <- rgb(246,255,224,maxColorValue=255)
 
 purples <- brewer.pal(9,"Purples")[5] 
 blues <- brewer.pal(9,"Blues")[5] 
@@ -556,7 +557,8 @@ oranges <- brewer.pal(9,"Oranges")[5]
 reds <- brewer.pal(9,"Reds")[5] 
 greys <- brewer.pal(9,"Greys")[5] 
 
-cols <- c(purples,blues,greens,oranges,reds,greys)
+# cols <- c(purples,blues,greens,oranges,reds,greys)
+cols <- c(blues,oranges,reds)
 
 colpos <- 1:nclimE
 
@@ -570,66 +572,68 @@ trancols <- rgb(
   maxColorValue = 255
 )
 
-# pdf(paste0("mean_variance_comparison_",
-#            paste(keepnames,collapse="_"),
-#            "_t",tpos,"_",
-#            format(Sys.Date(),"%d%b%Y"),".pdf"
-# ),
-# width=4.5,height=4.5)
+pdf(
+  paste0("Plots/pop_consequences_ESS_",format(Sys.Date(),"%d%b%Y"),".pdf"),
+  width=4.5,height=4.5
+  )
 
-par(mfrow=c(1,1),mar=c(5,5,2,2),las=1,bty="l")
-boxplot(qlist$lns[2,,], 
+par(mfrow=c(1,1),mar=c(5,5,2,2),las=1,bty="l",bg=myteal)
+boxplot(exp(qlist$lns[2,,]), 
      #ylim=myylim,
      range=0,
      medlwd=2,
      boxwex=0.35,
      lty=1,
-     ylab=expression(Delta~ln~population~size),
-     xlab="Rainfall change scenario",
+     ylab=expression(ln~population~size),
+     xlab="Rainfall variability",
      names=Escen,
-     border="white" # makes invisible
+     border="white", # makes invisible,
+     log="y"
 )
 
 abline(h=0,lty=2)
 
-boxplot(qlist$lns[2,,], 
+boxplot(exp(qlist$lns[2,,]), 
         #ylim=myylim,
         range=0,
         medlwd=2,
         boxwex=0.35,
         lty=1,
-        ylab=expression(ln~population~size),
-        xlab="Rainfall change scenario",
+        ylab=expression(population~size),
+        xlab="Rainfall variability",
         names=Escen,
-        col=cols[colpos]
+        col=cols[colpos],
+        log="y"
         )
 
 par(mfrow=c(1,1),mar=c(5,5,2,2),las=1,bty="l")
-boxplot(qlist$dlns[2,,], 
+boxplot(exp(qlist$dlns[2,,]), 
         #ylim=myylim,
         range=0,
         medlwd=2,
         boxwex=0.35,
         lty=1,
-        ylab=expression(ln~population~size),
-        xlab="Rainfall change scenario",
+        ylab=expression(Delta~population~size),
+        xlab="Rainfall variability",
         names=Escen,
-        border="white" # makes invisible
+        border="white", # makes invisible,
+        log="y"
 )
 
-abline(h=0,lty=2)
-
-boxplot(qlist$dlns[2,,], 
+boxplot(exp(qlist$dlns[2,,]), 
         #ylim=myylim,
         range=0,
         medlwd=2,
         boxwex=0.35,
         lty=1,
-        ylab=expression(Delta~ln~population~size),
-        xlab="Rainfall change scenario",
+        ylab=expression(Delta~population~size),
+        xlab="Rainfall variability",
         names=Escen,
-        col=cols[colpos]
+        col=cols[colpos],
+        log="y"
 )
+
+dev.off()
 
 # abline(h=0,lty=2)
 
@@ -637,14 +641,22 @@ boxplot(qlist$dlns[2,,],
 # Climate distributions ---------------------------------------------------
 # zam=zamo+mam*zsdo,zsd=zsdo*msd
 
-climcurve <- function(mam,msd){
-  curve(dnorm(x,zamo+zsdo*mam,zsdo*msd),xlim=c(zamo-2.5*zsdo,zamo+2.5*zsdo),ylim=c(0,0.85))
+climcurve <- function(mam,msd,...){
+  curve(dnorm(x,zamo+zsdo*mam,zsdo*msd),xlim=c(zamo-3*zsdo,zamo+3*zsdo),
+    ylim=c(0,0.85),xlab="",ylab="",...)
 }
-climcurve(0,1/msdl[[2]])
-climcurve(0,1)
-climcurve(0,msdl[[2]])
-climcurve(maml[[2]],msdl[[2]])
 
+pdf(paste0("Plots/zdists",format(Sys.Date(),"%d%b%Y"),".pdf"),width=3.5,height=3.5)
+
+par(mfrow=c(1,1),mar=c(5,5,2,2),las=1,bty="l",bg=myteal,lwd=2)
+climcurve(0,1/msdl[[2]],col=cols[1],type="n")
+climcurve(0,1/msdl[[2]],col=cols[1])
+climcurve(0,1,add=TRUE,col=cols[2])
+climcurve(0,msdl[[2]],add=TRUE,col=cols[3])
+
+climcurve(0,1,col=cols[2])
+climcurve(maml[[2]],msdl[[2]],add=TRUE,col=purples)
+dev.off()
 
 # Extract parameters used in simulations ----------------------------------
 
