@@ -159,17 +159,17 @@ msdl <- as.list(c(1/mpsd,1,mpsd))
   # scaling mean log rainfall (zamo) only works because sign stays the same
 
 nclim <- length(maml)
-cpc <- 25 # CORES per CLIMATE (assumed equal for resident and invader)
+cpc <- 10 # CORES per CLIMATE (assumed equal for resident and invader)
 ncores <- nclim*cpc
 mpos <- rep(1:nclim,each=cpc)
 
 # nstart <- 1
 nr <- 100 # 100 # number of repeated invasions
-nt <- 1025 # 125 # 10050 
+nt <- 125 # 125 # 10050 
 nb <- 25  # number of "burn-in" timesteps to stabilise resident dynamics
 nj <- 22
   # min invader iterations per core = nr * nit
-nk <- 0  
+nk <- 10^4  
 
 iseq <- 1:nit
 
@@ -348,7 +348,7 @@ dir <- paste0(getwd(),"/Sims/")
 files <- paste0(dir,list.files(dir))
 
 for(n in 1:ncores){
-  curname <- paste0("Sims/ESS",apptext,cnames_bycore[n],"_11Dec2017.rds")
+  curname <- paste0("Sims/ESS",apptext,cnames_bycore[n],"_20Dec2017.rds")
   # curname <- paste0("Sims/ESS_finite_nk",nk,"_",cnames_bycore[n],"_08Dec2017.rds")
   # curname <- paste0("Sims/ESS_infinite_spatial_",cnames_bycore[n],"_28Nov2017.rds") 
     # 06Dec 08Dec
@@ -368,7 +368,8 @@ psls <- unlist(lapply(split(psl,mpos),preplace),recursive=FALSE)
   # sequentially replaces sims that didn't finish
   # requires that for each climate, there are more finished than missing cores
 
-psla <- simcombine(psl,nclim=nclim,cpc=cpc) # psls
+# psla <- simcombine(psl,nclim=nclim,cpc=cpc) # psls
+psla <- simcombine(psls,nclim=nclim,cpc=cpc) # psls
 
 psla_out <- list(
   maml=maml,msdl=msdl,
