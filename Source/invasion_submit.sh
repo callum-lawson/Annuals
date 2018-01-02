@@ -6,10 +6,8 @@
 #$ -binding linear:1 
 
 # Output files 
-#$ -o invasion.out 
-#$ -e invasion.err 
- 
- # -o /work/$USER/$JOB_NAME-$JOB_ID
+#$ -o /work/$USER/$JOB_NAME-$JOB_ID.out
+#$ -e /work/$USER/$JOB_NAME-$JOB_ID.err
  
 # Bash script
 for arg in "$@" ; do
