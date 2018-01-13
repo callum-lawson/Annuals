@@ -383,8 +383,7 @@ evolve <- function(
   
   eps_y_p <- rnorm(nt,0,sig_y_p)
   eps_y_r <- rnorm(nt,0,sig_y_r)
-  So <- exp(-m0)
-  
+
   x_z <- matrix(nr=nt,nc=3)
   x_z[,1] <- 1 # intercept
   x_z[,2] <- zw[,1]
