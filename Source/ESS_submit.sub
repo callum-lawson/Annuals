@@ -3,8 +3,8 @@
 ### qsub arguments
  
 #$ -S /bin/bash
-#$ -N an-array-job
-#$ -t 2-10:2
+#$ -N ESS_output
+#$ -t 1-2
 #$ -l h_rt=60,h_vmem=1G 
 #$ -binding linear:1
  
@@ -15,4 +15,6 @@
  
 ### Program
 
-echo "processing chunk $SGE_TASK_ID ..."
+curdate = date +%d%b%Y
+module load R
+Rscript ESS_program.R $SGE_TASK_ID $curdate

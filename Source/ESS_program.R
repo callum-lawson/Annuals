@@ -1,28 +1,37 @@
-### Run instance of ESS calculation
+### Run single instance of ESS calculation
 
-# Inputs ------------------------------------------------------------------
+library(optparse)
 
-# read-in file path (specified in submit script)
-# ij <- task number
-ij <- 1
-cur_date <- format(Sys.Date(),"%d%b%Y")
-# Should be passed on from wrapper function
-# SAVE FILE PATH (SPECIFIED IN WRAPPER SCRIPT)
+# Parsing arguments -------------------------------------------------------
+
+parser <- OptionParser(
+  usage       = "Rscript %prog sourcepath outpath curdate",
+  description = "\ncalculate ESS"
+)
+
+cli <- parse_args(parser, positional_arguments = 2)
+
+# Shortcuts ---------------------------------------------------------------
+
+task_id <- cli$args[1]
+curdate <- cli$args[2]
+
+# other args: sourcepath, outpath
 
 # Functions ---------------------------------------------------------------
 
-source("Source/ESS_functions.R")
+source("~/Annuals/Source/ESS_functions.R")
 
 # Read in data ------------------------------------------------------------
 
-pd <- readRDS(paste0("Sims/ESS_inputs_",cur_date,".rds"))
-pdi <- pd[ij,]
+pd <- readRDS(paste0("~/work/lawson/ESS_input_",curdate,".rds"))
+pdi <- pd[task_id,]
 
 # Calculate ESS -----------------------------------------------------------
 
-set.seed(ij)
+set.seed(task_id)
 ess <- evolve(pdi) 
 
 # Save ESS ----------------------------------------------------------------
 
-saveRDS(ess,paste0("Sims/",savefile,"_",cur_date,".rds"))
+saveRDS(ess,paste0("~/work/lawson/ESS_output_",task_id,"_",curdate,".rds"))

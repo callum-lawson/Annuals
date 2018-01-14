@@ -1,10 +1,8 @@
-### Assemble inputs for ESS analyses ###
+### Assemble input for ESS analyses ###
+
+# curdate,outpath
 
 # Input parameters --------------------------------------------------------
-
-cur_date <- format(Sys.Date(),"%d%b%Y")
-  # Should be passed on from wrapper function
-# SAVE FILE PATH (SPECIFIED IN WRAPPER SCRIPT)
 
 ni <- 2
 nj <- 22
@@ -20,11 +18,11 @@ nc <- length(cmd)
 # Basic parameters --------------------------------------------------------
 
 plastic <- TRUE
-
 rho <- 0.82
 n0 <- 1
 ddfun <- "BHS"
 Sg <- 1
+
 smut_a <- 5
 if(plastic==TRUE)  smut_b <- 5
 if(plastic==FALSE) smut_b <- 0
@@ -32,13 +30,35 @@ if(plastic==FALSE) smut_b <- 0
 nsmin <- 10^-10
 ngmin <- 10^-50
 
+# Model parameters --------------------------------------------------------
+
+pl <- list(
+  go = readRDS("Models/go_pars_lnGtnt_BH_25Nov2017.rds"),
+  # go = readRDS("Models/go_pars_tdistpois_naspecies_noerr_noGDD_loglik_RICKER_15Oct2017.rds"),
+  gs = readRDS("Models/gnzhh_onhh_pars_medians_26Oct2015.rds"),
+  # gs = g site level
+  # source script: venable_Stan_GO_descriptive_gnzhh_onhh_26Oct2015
+  # uses tau_s = 100
+  # but tau actually irrelevant because all multiplicative?
+  pr = readRDS("Models/pr_pars_yearhet_squared_pc_02Mar2016.rds"),
+  rs = readRDS("Models/rs_pars_yearhet_squared_pc_trunc_05Mar2016.rds")
+)
+# already permuted
+
+# Starting parameters -----------------------------------------------------
+# Creates grid of starting alpha and beta values
+
+am0 <- runif(ni,-5,5)
+if(plastic==TRUE)  bm0 <- runif(ni,-5,5)
+if(plastic==FALSE) bm0 <- 0
+
 # Climate -----------------------------------------------------------------
 
 pp <- read.csv("Output/prcp_projection_summaries_03Sep2017.csv",header=T)
 mpam <- with(pp, median[measure=="mpam" & scenario==60 & yearcat==100])
 mpsd <- with(pp, median[measure=="mpsd" & scenario==60 & yearcat==100])
-# using projected season precipitation for germination season precipitation change
-# (both very similar)
+# using projected season precipitation for 
+# germination season precipitation change (both very similar)
 # year = 2100
 # Representative Concentration Pathway 6.0
 
@@ -56,28 +76,6 @@ zm <- zmo + cmd * zso
 zs <- zso ^ csd
 wm <- wmo + cmd * wso
 ws <- wso ^ csd
-
-# Model parameters --------------------------------------------------------
-
-pl <- list(
-  go = readRDS("Models/go_pars_lnGtnt_BH_25Nov2017.rds"),
-  # go = readRDS("Models/go_pars_tdistpois_naspecies_noerr_noGDD_loglik_RICKER_15Oct2017.rds"),
-  gs = readRDS("Models/gnzhh_onhh_pars_medians_26Oct2015.rds"),
-  # gs = g site level
-  # source script: venable_Stan_GO_descriptive_gnzhh_onhh_26Oct2015
-  # uses tau_s = 100
-  # but tau actually irrelevant because all multiplicative?
-  pr = readRDS("Models/pr_pars_yearhet_squared_pc_02Mar2016.rds"),
-  rs = readRDS("Models/rs_pars_yearhet_squared_pc_trunc_05Mar2016.rds")
-)
-  # already permuted
-
-# Starting parameters -----------------------------------------------------
-# Creates grid of starting alpha and beta values
-
-am0 <- runif(ni,-5,5)
-if(plastic==TRUE)  bm0 <- runif(ni,-5,5)
-if(plastic==FALSE) bm0 <- 0
 
 # Parameter dataframe -----------------------------------------------------
 
@@ -121,10 +119,10 @@ pd <- with(pl, data.frame(
   smut_a,smut_b,
   nsmin,ngmin,
   plastic
-  ))
+))
 
 # Save RDS file -----------------------------------------------------------
 
-saveRDS(pd,
-        paste0("Sims/ESS_inputs_",cur_date,".rds")
-        )
+saveRDS(pd,paste0("Sims/ESS_input_",curdate,".rds"))
+
+
