@@ -1,6 +1,23 @@
-### Assemble input for ESS analyses ###
+### Assemble input for ESS analyses
 
-# curdate,outpath
+# Hard inputs -------------------------------------------------------------
+
+parpath <- "data/idiv_brose/lawson/Annuals/Models/"
+workpath <- "/work/lawson/"
+
+# Parsing arguments -------------------------------------------------------
+
+library(optparse)
+
+parser <- OptionParser(
+  usage       = "Rscript %prog curdate",
+  description = "\ngenerate inputs for ESS calculations"
+)
+
+cli <- parse_args(parser, positional_arguments = 1)
+# other args: sourcepath, workpath
+
+curdate <- cli$args[1]
 
 # Input parameters --------------------------------------------------------
 
@@ -33,15 +50,15 @@ ngmin <- 10^-50
 # Model parameters --------------------------------------------------------
 
 pl <- list(
-  go = readRDS("Models/go_pars_lnGtnt_BH_25Nov2017.rds"),
+  go = readRDS(paste0(parpath,"go_pars_lnGtnt_BH_25Nov2017.rds")),
   # go = readRDS("Models/go_pars_tdistpois_naspecies_noerr_noGDD_loglik_RICKER_15Oct2017.rds"),
-  gs = readRDS("Models/gnzhh_onhh_pars_medians_26Oct2015.rds"),
+  gs = readRDS(paste0(parpath,"Models/gnzhh_onhh_pars_medians_26Oct2015.rds")),
   # gs = g site level
   # source script: venable_Stan_GO_descriptive_gnzhh_onhh_26Oct2015
   # uses tau_s = 100
   # but tau actually irrelevant because all multiplicative?
-  pr = readRDS("Models/pr_pars_yearhet_squared_pc_02Mar2016.rds"),
-  rs = readRDS("Models/rs_pars_yearhet_squared_pc_trunc_05Mar2016.rds")
+  pr = readRDS(paste0(parpath,"Models/pr_pars_yearhet_squared_pc_02Mar2016.rds")),
+  rs = readRDS(paste0(parpath,"Models/rs_pars_yearhet_squared_pc_trunc_05Mar2016.rds"))
 )
 # already permuted
 
@@ -123,6 +140,4 @@ pd <- with(pl, data.frame(
 
 # Save RDS file -----------------------------------------------------------
 
-saveRDS(pd,paste0("Sims/ESS_input_",curdate,".rds"))
-
-
+saveRDS(pd,paste0(workpath,"ESS_input_",curdate,".rds"))
