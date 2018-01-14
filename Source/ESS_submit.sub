@@ -10,11 +10,11 @@
  
 ### Output files
 
-#$ -o /work/$USER/$JOB_NAME-$JOB_ID-$TASK_ID.out
 #$ -e /work/$USER/$JOB_NAME-$JOB_ID-$TASK_ID.err
  
 ### Program
 
-curdate = date +%d%b%Y
+#curdate=date +%d%b%Y
+curdate="14Jan2018"
 module load R
-Rscript ESS_program.R $SGE_TASK_ID $curdate
+Rscript ~/Annuals/Source/ESS_program.R $SGE_TASK_ID $curdate

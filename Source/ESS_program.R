@@ -5,7 +5,7 @@ library(optparse)
 # Parsing arguments -------------------------------------------------------
 
 parser <- OptionParser(
-  usage       = "Rscript %prog sourcepath outpath curdate",
+  usage       = "Rscript %prog task_id curdate",
   description = "\ncalculate ESS"
 )
 
@@ -24,7 +24,7 @@ source("~/Annuals/Source/ESS_functions.R")
 
 # Read in data ------------------------------------------------------------
 
-pd <- readRDS(paste0("~/work/lawson/ESS_input_",curdate,".rds"))
+pd <- readRDS(paste0("/work/lawson/ESS_input_",curdate,".rds"))
 pdi <- pd[task_id,]
 
 # Calculate ESS -----------------------------------------------------------
@@ -34,4 +34,4 @@ ess <- evolve(pdi)
 
 # Save ESS ----------------------------------------------------------------
 
-saveRDS(ess,paste0("~/work/lawson/ESS_output_",task_id,"_",curdate,".rds"))
+saveRDS(ess,paste0("/work/lawson/ESS_output_",task_id,"_",curdate,".rds"))
