@@ -1,14 +1,18 @@
 #!/bin/bash
  
+### qsub arguments
+ 
 #$ -S /bin/bash
-#$ -N allargs
+#$ -N an-array-job
+#$ -t 2-10:2
 #$ -l h_rt=60,h_vmem=1G 
 #$ -binding linear:1
  
-# Output files
-#$ -o /work/$USER/$JOB_NAME-$JOB_ID.out
-#$ -e /work/$USER/$JOB_NAME-$JOB_ID.err
+### Output files
+
+#$ -o /work/$USER/$JOB_NAME-$JOB_ID-$TASK_ID.out
+#$ -e /work/$USER/$JOB_NAME-$JOB_ID-$TASK_ID.err
  
-for arg in "$@" ; do
-  echo $arg
-done
+### Program
+
+echo "processing chunk $SGE_TASK_ID ..."

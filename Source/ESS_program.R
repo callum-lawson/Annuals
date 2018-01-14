@@ -22,7 +22,6 @@ pdi <- pd[ij,]
 
 set.seed(ij)
 ess <- evolve(pdi) 
-  # normalised climate + strategy evolution
 
 # Save ESS ----------------------------------------------------------------
 
