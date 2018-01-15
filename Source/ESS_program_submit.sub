@@ -3,8 +3,7 @@
 ### qsub arguments
  
 #$ -S /bin/bash
-#$ -N ESS_program
-#$ -t 1-2
+#$ -N ESS
 #$ -l h_rt=60,h_vmem=1G 
 #$ -binding linear:1
  
