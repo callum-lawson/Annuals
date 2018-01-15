@@ -2,7 +2,7 @@
 
 # Hard inputs -------------------------------------------------------------
 
-# workpath <- "Sims/"
+# workpath <- savepath <- "Sims/"
 workpath <- "/gpfs1/work/lawson/"
 savepath <- "/gpfs1/data/idiv_brose/lawson/Annuals/Sims/"
 
@@ -11,19 +11,19 @@ savepath <- "/gpfs1/data/idiv_brose/lawson/Annuals/Sims/"
 library(optparse)
 
 parser <- OptionParser(
-  usage       = "Rscript %prog nstasks curdate",
+  usage       = "Rscript %prog curdate",
   description = "\ncombine ESS outputs into single RDS file"
 )
 
-cli <- parse_args(parser, positional_arguments = 2)
+cli <- parse_args(parser, positional_arguments = 1)
 # other args: sourcepath, workpath
 
-ntasks  <- cli$args[1]
-curdate <- cli$args[2]
+curdate <- cli$args[1]
 
 # Read in files -----------------------------------------------------------
 
 pd <- readRDS(paste0(workpath,"ESS_input_",curdate,".rds"))
+ntasks  <- nrow(pd) # = nj * ni * nm
 finite <- with(pd[1,], nk>0 & nk<Inf)
 
 zw <- with(pd[1,], array(dim=c(nt,2,nj,ni)))
@@ -43,5 +43,5 @@ for(i in 1:ntasks){
 
 # Save output -------------------------------------------------------------
 
-outlist <- list(pd=pd,zw=zw,es=es)
-saveRDS(outlist,paste0(workpath,"ESS_output_",curdate,".rds"))
+saveRDS(zw,paste0(workpath,"ESS_climate_",curdate,".rds"))
+saveRDS(es,paste0(workpath,"ESS_strategies_",curdate,".rds"))

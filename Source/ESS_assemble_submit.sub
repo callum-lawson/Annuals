@@ -3,7 +3,7 @@
 ### qsub arguments
  
 #$ -S /bin/bash
-#$ -N ESS_input
+#$ -N ESS_assemble
 #$ -l h_rt=60,h_vmem=1G 
 #$ -binding linear:1
  
@@ -15,4 +15,4 @@
 
 curdate="15Jan2018"
 module load R
-Rscript ~/Annuals/Source/ESS_input.R $curdate
+Rscript ~/Annuals/Source/ESS_assemble.R $curdate
