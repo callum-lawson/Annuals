@@ -1,0 +1,16 @@
+#!/bin/bash
+ 
+### qsub arguments
+ 
+#$ -S /bin/bash
+#$ -l h_rt=60,h_vmem=1G 
+#$ -binding linear:1
+ 
+### Output files
+
+#$ -e /work/$USER/$JOB_NAME-$JOB_ID-$TASK_ID.err
+ 
+### Program
+
+module load R
+Rscript ~/Annuals/Source/ESS_program.R $SGE_TASK_ID $1  

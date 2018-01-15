@@ -3,7 +3,7 @@
 # Hard inputs -------------------------------------------------------------
 
 sourcepath <- "~/Annuals/Source/"
-workpath <- "/work/lawson/"
+workpath <- "/gpfs1/work/lawson/"
 
 # Parsing arguments -------------------------------------------------------
 
@@ -31,7 +31,7 @@ pdi <- pd[task_id,]
 
 # Calculate ESS -----------------------------------------------------------
 
-set.seed(task_id)
+set.seed(pdi$iteration)
 ess <- evolve(pdi) 
 
 # Save ESS ----------------------------------------------------------------
