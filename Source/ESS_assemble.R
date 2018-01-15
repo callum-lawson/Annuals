@@ -2,9 +2,9 @@
 
 # Hard inputs -------------------------------------------------------------
 
-workpath <- "Sims/"
-# workpath <- "/work/lawson/"
-savepath <- "data/idiv_brose/lawson/Annuals/Sims/"
+# workpath <- "Sims/"
+workpath <- "/gpfs1/work/lawson/"
+savepath <- "/gpfs1/data/idiv_brose/lawson/Annuals/Sims/"
 
 # Parsing arguments -------------------------------------------------------
 

@@ -13,6 +13,6 @@
  
 ### Program
 
-curdate="14Jan2018"
+curdate="15Jan2018"
 module load R
 Rscript ~/Annuals/Source/ESS_input.R $curdate

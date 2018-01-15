@@ -2,8 +2,9 @@
 
 # Hard inputs -------------------------------------------------------------
 
-parpath <- "data/idiv_brose/lawson/Annuals/Models/"
-workpath <- "/work/lawson/"
+datpath  <- "/gpfs1/data/idiv_brose/lawson/Annuals/Output/" 
+parpath  <- "/gpfs1/data/idiv_brose/lawson/Annuals/Models/"
+workpath <- "/gpfs1/work/lawson/"
 
 # Parsing arguments -------------------------------------------------------
 
@@ -52,13 +53,13 @@ ngmin <- 10^-50
 pl <- list(
   go = readRDS(paste0(parpath,"go_pars_lnGtnt_BH_25Nov2017.rds")),
   # go = readRDS("Models/go_pars_tdistpois_naspecies_noerr_noGDD_loglik_RICKER_15Oct2017.rds"),
-  gs = readRDS(paste0(parpath,"Models/gnzhh_onhh_pars_medians_26Oct2015.rds")),
+  gs = readRDS(paste0(parpath,"gnzhh_onhh_pars_medians_26Oct2015.rds")),
   # gs = g site level
   # source script: venable_Stan_GO_descriptive_gnzhh_onhh_26Oct2015
   # uses tau_s = 100
   # but tau actually irrelevant because all multiplicative?
-  pr = readRDS(paste0(parpath,"Models/pr_pars_yearhet_squared_pc_02Mar2016.rds")),
-  rs = readRDS(paste0(parpath,"Models/rs_pars_yearhet_squared_pc_trunc_05Mar2016.rds"))
+  pr = readRDS(paste0(parpath,"pr_pars_yearhet_squared_pc_02Mar2016.rds")),
+  rs = readRDS(paste0(parpath,"rs_pars_yearhet_squared_pc_trunc_05Mar2016.rds"))
 )
 # already permuted
 
@@ -71,7 +72,7 @@ if(plastic==FALSE) bm0 <- 0
 
 # Climate -----------------------------------------------------------------
 
-pp <- read.csv("Output/prcp_projection_summaries_03Sep2017.csv",header=T)
+pp <- read.csv(paste0(datpath,"prcp_projection_summaries_03Sep2017.csv"),header=T)
 mpam <- with(pp, median[measure=="mpam" & scenario==60 & yearcat==100])
 mpsd <- with(pp, median[measure=="mpsd" & scenario==60 & yearcat==100])
 # using projected season precipitation for 
@@ -79,7 +80,7 @@ mpsd <- with(pp, median[measure=="mpsd" & scenario==60 & yearcat==100])
 # year = 2100
 # Representative Concentration Pathway 6.0
 
-ncy <- read.csv("Output/ncy_15Jan2016.csv",header=T)
+ncy <- read.csv(paste0(datpath,"ncy_15Jan2016.csv"),header=T)
 ncy <- subset(ncy,is.na(seasprcp)==F)
 # removes first value (missing because no previous winter)
 
