@@ -36,9 +36,12 @@ if(finite==TRUE){
   # extra column for extinction in finite populations
 
 for(i in 1:ntasks){
-  curlist <- readRDS(paste0(workpath,"ESS_output_",ntasks,"_",curdate,".rds"))
-  zw[,,pd$species[i],pd$iteration[i]] <- curlist$zw
-  es[,,pd$species[i],pd$iteration[i]] <- as.matrix(curlist$es)
+  filename <- paste0(workpath,"ESS_output_",i,"_",curdate,".rds")
+  if(file.exists(filename)){
+    curlist <- readRDS(filename)
+    zw[,,pd$species[i],pd$iteration[i]] <- curlist$zw
+    es[,,pd$species[i],pd$iteration[i]] <- as.matrix(curlist$es)
+  }
 }
 
 # Save output -------------------------------------------------------------
