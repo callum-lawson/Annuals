@@ -8,7 +8,7 @@
  
 ### Output files
 
-#$ -e /work/$USER/$JOB_NAME-$JOB_ID-$TASK_ID.err
+#$ -e /work/$USER/$JOB_NAME-$2-$TASK_ID.err
  
 ### Program
 
