@@ -13,4 +13,4 @@
 ### Program
 
 module load R
-Rscript ~/Annuals/Source/ESS_input.R $1 
+Rscript ~/Annuals/Source/ESS_input.R $1 $2

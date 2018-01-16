@@ -1,24 +1,21 @@
-### Assemble input for ESS analyses
-
-# Hard inputs -------------------------------------------------------------
-
-datpath  <- "/gpfs1/data/idiv_brose/lawson/Annuals/Output/" 
-parpath  <- "/gpfs1/data/idiv_brose/lawson/Annuals/Models/"
-workpath <- "/gpfs1/work/lawson/"
+### Assemble inputs for ESS analyses
 
 # Parsing arguments -------------------------------------------------------
 
 library(optparse)
 
 parser <- OptionParser(
-  usage       = "Rscript %prog curdate",
+  usage       = "Rscript %prog datapath label",
   description = "\ngenerate inputs for ESS calculations"
 )
 
-cli <- parse_args(parser, positional_arguments = 1)
+cli <- parse_args(parser, positional_arguments = 2)
 # other args: sourcepath, workpath
 
-curdate <- cli$args[1]
+outputpath <- paste0(cli$args[1],"Output/")
+modelspath <- paste0(cli$args[1],"Models/")
+simspath   <- paste0(cli$args[1],"Sims/")
+label      <- cli$args[2]
 
 # Input parameters --------------------------------------------------------
 
@@ -51,15 +48,15 @@ ngmin <- 10^-50
 # Model parameters --------------------------------------------------------
 
 pl <- list(
-  go = readRDS(paste0(parpath,"go_pars_lnGtnt_BH_25Nov2017.rds")),
+  go = readRDS(paste0(modelspath,"go_pars_lnGtnt_BH_25Nov2017.rds")),
   # go = readRDS("Models/go_pars_tdistpois_naspecies_noerr_noGDD_loglik_RICKER_15Oct2017.rds"),
-  gs = readRDS(paste0(parpath,"gnzhh_onhh_pars_medians_26Oct2015.rds")),
+  gs = readRDS(paste0(modelspath,"gnzhh_onhh_pars_medians_26Oct2015.rds")),
   # gs = g site level
   # source script: venable_Stan_GO_descriptive_gnzhh_onhh_26Oct2015
   # uses tau_s = 100
   # but tau actually irrelevant because all multiplicative?
-  pr = readRDS(paste0(parpath,"pr_pars_yearhet_squared_pc_02Mar2016.rds")),
-  rs = readRDS(paste0(parpath,"rs_pars_yearhet_squared_pc_trunc_05Mar2016.rds"))
+  pr = readRDS(paste0(modelspath,"pr_pars_yearhet_squared_pc_02Mar2016.rds")),
+  rs = readRDS(paste0(modelspath,"rs_pars_yearhet_squared_pc_trunc_05Mar2016.rds"))
 )
 # already permuted
 
@@ -72,7 +69,7 @@ if(plastic==FALSE) bm0 <- 0
 
 # Climate -----------------------------------------------------------------
 
-pp <- read.csv(paste0(datpath,"prcp_projection_summaries_03Sep2017.csv"),header=T)
+pp <- read.csv(paste0(outputpath,"prcp_projection_summaries_03Sep2017.csv"),header=T)
 mpam <- with(pp, median[measure=="mpam" & scenario==60 & yearcat==100])
 mpsd <- with(pp, median[measure=="mpsd" & scenario==60 & yearcat==100])
 # using projected season precipitation for 
@@ -80,7 +77,7 @@ mpsd <- with(pp, median[measure=="mpsd" & scenario==60 & yearcat==100])
 # year = 2100
 # Representative Concentration Pathway 6.0
 
-ncy <- read.csv(paste0(datpath,"ncy_15Jan2016.csv"),header=T)
+ncy <- read.csv(paste0(outputpath,"ncy_15Jan2016.csv"),header=T)
 ncy <- subset(ncy,is.na(seasprcp)==F)
 # removes first value (missing because no previous winter)
 
@@ -141,4 +138,4 @@ pd <- with(pl, data.frame(
 
 # Save RDS file -----------------------------------------------------------
 
-saveRDS(pd,paste0(workpath,"ESS_input_",curdate,".rds"))
+saveRDS(pd,paste0(simspath,"ESS_input_",label,".rds"))

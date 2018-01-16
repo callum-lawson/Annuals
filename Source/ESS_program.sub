@@ -8,9 +8,9 @@
  
 ### Output files
 
-#$ -e /work/$USER/$JOB_NAME-$2-$TASK_ID.err
+#$ -e /work/$USER/$JOB_NAME-$3-$TASK_ID.err
  
 ### Program
 
 module load R
-Rscript ~/Annuals/Source/ESS_program.R $SGE_TASK_ID $1  
+Rscript ~/Annuals/Source/ESS_program.R $1 $2 $3 $SGE_TASK_ID

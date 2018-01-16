@@ -1,28 +1,24 @@
 ### Assemble individual RDS ESS outputs into a single RDS file
 
-# Hard inputs -------------------------------------------------------------
-
-# workpath <- savepath <- "Sims/"
-workpath <- "/gpfs1/work/lawson/"
-savepath <- "/gpfs1/data/idiv_brose/lawson/Annuals/Sims/"
-
 # Parsing arguments -------------------------------------------------------
 
 library(optparse)
 
 parser <- OptionParser(
-  usage       = "Rscript %prog curdate",
+  usage       = "Rscript %prog datapath workpath label",
   description = "\ncombine ESS outputs into single RDS file"
 )
 
-cli <- parse_args(parser, positional_arguments = 1)
+cli <- parse_args(parser, positional_arguments = 3)
 # other args: sourcepath, workpath
 
-curdate <- cli$args[1]
+savepath <- paste0(cli$args[1],"Sims/")
+workpath <- cli$args[2]
+label    <- cli$args[3]
 
 # Read in files -----------------------------------------------------------
 
-pd <- readRDS(paste0(workpath,"ESS_input_",curdate,".rds"))
+pd <- readRDS(paste0(workpath,"ESS_input_",label,".rds"))
 ntasks  <- nrow(pd) # = nj * ni * nm
 finite <- with(pd[1,], nk>0 & nk<Inf)
 
@@ -36,7 +32,7 @@ if(finite==TRUE){
   # extra column for extinction in finite populations
 
 for(i in 1:ntasks){
-  filename <- paste0(workpath,"ESS_output_",i,"_",curdate,".rds")
+  filename <- paste0(workpath,"ESS_output_",i,"_",label,".rds")
   if(file.exists(filename)){
     curlist <- readRDS(filename)
     zw[,,pd$species[i],pd$iteration[i]] <- curlist$zw
@@ -46,5 +42,5 @@ for(i in 1:ntasks){
 
 # Save output -------------------------------------------------------------
 
-saveRDS(zw,paste0(workpath,"ESS_climate_",curdate,".rds"))
-saveRDS(es,paste0(workpath,"ESS_strategies_",curdate,".rds"))
+saveRDS(zw,paste0(savepath,"ESS_climate_",label,".rds"))
+saveRDS(es,paste0(savepath,"ESS_strategies_",label,".rds"))
