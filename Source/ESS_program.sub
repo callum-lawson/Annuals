@@ -8,8 +8,9 @@
  
 ### Output files
 
-#$ -e /work/$USER/$JOB_NAME-$3-$TASK_ID.err
- 
+#$ -o /work/$USER/logs/$JOB_NAME-$JOB_ID-$TASK_ID.log
+#$ -j y
+
 ### Program
 
 module load R

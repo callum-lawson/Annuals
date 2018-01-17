@@ -2,6 +2,18 @@
 
 # Parsing arguments -------------------------------------------------------
 
+args <- commandArgs(trailingOnly=TRUE)
+
+outputpath <- args[1]
+modelspath <- args[1]
+...
+
+
+
+
+
+
+
 library(optparse)
 
 parser <- OptionParser(
