@@ -2,23 +2,14 @@
 
 # Parsing arguments -------------------------------------------------------
 
-library(optparse)
+args <- commandArgs(trailingOnly=TRUE)
 
-parser <- OptionParser(
-  usage       = "Rscript %prog datapath workpath label",
-  description = "\ncombine ESS outputs into single RDS file"
-)
-
-cli <- parse_args(parser, positional_arguments = 3)
-# other args: sourcepath, workpath
-
-savepath <- paste0(cli$args[1],"Sims/")
-workpath <- cli$args[2]
-label    <- cli$args[3]
+storepath <- cli$args[1]
+label     <- cli$args[2]
 
 # Read in files -----------------------------------------------------------
 
-pd <- readRDS(paste0(workpath,"ESS_input_",label,".rds"))
+pd <- readRDS(paste0(storepath,"ESS_input_",label,".rds"))
 ntasks  <- nrow(pd) # = nj * ni * nm
 finite <- with(pd[1,], nk>0 & nk<Inf)
 
@@ -32,7 +23,7 @@ if(finite==TRUE){
   # extra column for extinction in finite populations
 
 for(i in 1:ntasks){
-  filename <- paste0(workpath,"ESS_output_",i,"_",label,".rds")
+  filename <- paste0(storepath,"ESS_output_",i,"_",label,".rds")
   if(file.exists(filename)){
     curlist <- readRDS(filename)
     zw[,,pd$species[i],pd$iteration[i]] <- curlist$zw
@@ -42,5 +33,5 @@ for(i in 1:ntasks){
 
 # Save output -------------------------------------------------------------
 
-saveRDS(zw,paste0(savepath,"ESS_climate_",label,".rds"))
-saveRDS(es,paste0(savepath,"ESS_strategies_",label,".rds"))
+saveRDS(zw,paste0("Sims/ESS_climate_",label,".rds"))
+saveRDS(es,paste0("Sims/ESS_strategies_",label,".rds"))

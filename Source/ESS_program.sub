@@ -3,6 +3,7 @@
 ### qsub arguments
  
 #$ -S /bin/bash
+#$ -N ESS_program
 #$ -l h_rt=60,h_vmem=1G 
 #$ -binding linear:1
  
@@ -14,4 +15,4 @@
 ### Program
 
 module load R
-Rscript ~/Annuals/Source/ESS_program.R $1 $2 $3 $SGE_TASK_ID
+Rscript ~/Annuals/Source/ESS_program.R "$@"

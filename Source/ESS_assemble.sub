@@ -3,14 +3,16 @@
 ### qsub arguments
  
 #$ -S /bin/bash
+#$ -N ESS_assemble
 #$ -l h_rt=60,h_vmem=1G 
 #$ -binding linear:1
  
 ### Output files
 
-#$ -e /work/$USER/$JOB_NAME-$3.err
+#$ -o /work/$USER/logs/$JOB_NAME-$JOB_ID-$TASK_ID.log
+#$ -j y
  
 ### Program
 
 module load R
-Rscript ~/Annuals/Source/ESS_assemble.R $1 $2 $3
+Rscript ~/Annuals/Source/ESS_assemble.R "$@"
