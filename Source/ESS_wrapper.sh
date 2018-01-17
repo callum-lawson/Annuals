@@ -1,43 +1,47 @@
 #!/bin/bash
 
 ### Inputs
-datapath="/gpfs1/data/idiv_brose/lawson/Annuals/"
-workpath="/gpfs1/work/lawson/"
+datapath=/data/idiv_brose/lawson/Annuals
 # nk=10
 
 ### Referencing
 cd $datapath
 
 NAME_PREFIX=${1:-ESS_Annuals}
-label=$NAME_PREFIX-$(date +%FT%H-%M-%S)
+label=$NAME_PREFIX-$(date +%F-%H-%M-%S)
 storepath=/work/$USER/$label
 
-mkdir /work/$USER/logs
 mkdir $storepath || {
     echo "output dir $storepath already exists" >&2
     exit 1
 }
+mkdir $storepath/logs
 
 ### Input
-bash Source/ESS_input.sh \
-  $storepath \
-  $label 
+INPUT=$(qsub \
+  -terse \
+  -wd $datapath \
+  Source/ESS_input.sub \
+    $storepath \
+    $label 
+)
 
 ### Program
-#ARRAY_JOB_ID=$(qsub \
-#	-terse \
-#	-t 1-2 \
-#	-wd $datapath \
-#	Source/ESS_program.sub \
-#	  $storepath \
-#	  $label \
-#	  $TASK_ID
+#PROGRAM=$(qsub \
+#  -hold_jid $INPUT \
+#  -terse \
+#  -t 1-2 \
+#  -wd $datapath \
+#  Source/ESS_program.sub \
+#    $storepath \
+#    $label \
+#    $TASK_ID
 #)
 
 ### Assemble
 #qsub \
-#    -hold_jid $ARRAY_JOB_ID \
-#    -wd $datapath \
-#    Source/ESS_assemble.sub \
-#  	  $storepath \
-#  	  $label
+#  -hold_jid $PROGRAM \
+#  -wd $datapath \
+#  Source/ESS_assemble.sub \
+#    $storepath \
+#    $label

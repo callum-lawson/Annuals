@@ -10,12 +10,12 @@ library(optparse)
 
 options <- list (
   make_option(
-    opt_str = c("-i", "--ni"),
+    opt_str = c("--ni"),
     dest    = "ni",
     type    = "integer",
     default = ni_df,
-    help    = paste0("number of Stan parameter samples, defaults to ", ni_df),
-    metavar = "4")
+    help    = paste0("number of Stan parameter samples, defaults to ", ni_df)
+  )
 )
 
 parser <- OptionParser(
@@ -26,6 +26,8 @@ parser <- OptionParser(
 
 cli <- parse_args(parser, positional_arguments = 2)
 
+#args <- commandArgs(trailingOnly=TRUE)
+
 # Assign variables --------------------------------------------------------
 
 storepath <- cli$args[1]
@@ -35,6 +37,7 @@ ni <- cli$options$ni
 
 # Input parameters --------------------------------------------------------
 
+#ni <- 2
 nj <- 22
 nk <- Inf
 nt <- 20

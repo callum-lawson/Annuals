@@ -1,5 +1,5 @@
 #!/bin/bash
- 
+
 ### qsub arguments
  
 #$ -S /bin/bash
@@ -9,10 +9,10 @@
  
 ### Output files
 
-#$ -o /work/$USER/logs/$JOB_NAME-$JOB_ID-$TASK_ID.log
+#$ -o work/$USER/logs/$JOB_NAME-$JOB_ID-$TASK_ID.log
 #$ -j y
  
 ### Program
 
 module load R
-Rscript ~/Annuals/Source/ESS_input.R "$@"
+Rscript Source/ESS_input.R "$@"
