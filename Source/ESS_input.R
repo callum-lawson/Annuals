@@ -19,19 +19,18 @@ options <- list (
 )
 
 parser <- OptionParser(
-  usage       = "Rscript %prog [options] storepath label",
+  usage       = "Rscript %prog [options] label",
   option_list = options,
   description = "\nAssemble inputs for ESS analyses"
 )
 
-cli <- parse_args(parser, positional_arguments = 2)
+cli <- parse_args(parser, positional_arguments = 1)
 
 #args <- commandArgs(trailingOnly=TRUE)
 
 # Assign variables --------------------------------------------------------
 
-storepath <- cli$args[1]
-label     <- cli$args[2]
+label <- cli$args[1]
 
 ni <- cli$options$ni
 
