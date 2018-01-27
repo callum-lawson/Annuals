@@ -4,12 +4,12 @@
 
 args <- commandArgs(trailingOnly=TRUE)
 
-storepath <- cli$args[1]
-label     <- cli$args[2]
+storepath <- args[1]
+label     <- args[2]
 
 # Read in files -----------------------------------------------------------
 
-pd <- readRDS(paste0(storepath,"ESS_input_",label,".rds"))
+pd <- readRDS(paste0("Sims/ESS_input_",label,".rds"))
 ntasks  <- nrow(pd) # = nj * ni * nm
 finite <- with(pd[1,], nk>0 & nk<Inf)
 
@@ -23,7 +23,7 @@ if(finite==TRUE){
   # extra column for extinction in finite populations
 
 for(i in 1:ntasks){
-  filename <- paste0(storepath,"ESS_output_",i,"_",label,".rds")
+  filename <- paste0(storepath,"/ESS_output_",i,"_",label,".rds")
   if(file.exists(filename)){
     curlist <- readRDS(filename)
     zw[,,pd$species[i],pd$iteration[i]] <- curlist$zw

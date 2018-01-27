@@ -1,14 +1,11 @@
 #!/bin/bash
 
 ### Inputs
-datapath=/data/idiv_brose/lawson/Annuals
-nk=10
+datapath=/data/idiv_brose/lawson/Annuals/
+nk=${1:-100}
 
-### Referencing
-cd $datapath
-
-label="nk_"$nk"_"$(date +%F-%H-%M-%S)
-storepath=/work/$USER/${1:-ESS}_$label
+label="nk"$nk"_"$(date +%F-%H-%M-%S)
+storepath=/work/$USER/ESS_$label
 
 mkdir $storepath || {
     echo "output dir $storepath already exists" >&2
@@ -17,47 +14,32 @@ mkdir $storepath || {
 mkdir $storepath/logs
 
 ### Input
-INPUT=$(qsub \
-  -S /bin/bash
-  -N ESS_input
-  -l h_rt=60,h_vmem=1G
-  -binding linear:1
-  -o $storepath/logs/$JOB_NAME-$JOB_ID.log
-  -j y
-  -terse \
-  -wd $datapath \
-  Source/ESS_input.sub \
-    $label 
-)
+cd $datapath
+module load R
+Rscript \
+  Source/ESS_input.R \
+    $datapath \
+    $label \
+    $nk
 
-## Program
+### Program
 PROGRAM=$(qsub \
-  -S /bin/bash
-  -N ESS_program
-  -l h_rt=60,h_vmem=1G
-  -binding linear:1
-  -o $storepath/logs/$JOB_NAME-$JOB_ID-$TASK_ID.log
-  -j y
-  -hold_jid $INPUT \
   -terse \
   -t 1-2 \
   -wd $datapath \
-  Source/ESS_program.sh \
+  -o $storepath/logs/ESS_program_$label.out \
+  -e $storepath/logs/ESS_program_$label.err \
+  Source/ESS_program.sub \
     $storepath \
-    $label \
-    $TASK_ID
+    $label 
 )
 
-## Assemble
-qsub \
-  -S /bin/bash
-  -N ESS_assemble
-  -l h_rt=60,h_vmem=1G 
-  -binding linear:1
-  -o $storepath/logs/$JOB_NAME-$JOB_ID.log
-  -j y
-  -hold_jid $PROGRAM \
-  -wd $datapath \
-  Source/ESS_assemble.sh \
-    $storepath \
-    $label
+### Assemble
+# qsub \
+#   -hold_jid $PROGRAM \
+#   -wd $datapath \
+#   -o $storepath/logs/ESS_assemble_$label.out \
+#   -e $storepath/logs/ESS_assemble_$label.err \
+#   Source/ESS_assemble.sub \
+#     $storepath \
+#     $label

@@ -1,18 +1,8 @@
 #!/bin/bash
- 
-### qsub arguments
- 
-#$ -S /bin/bash
-#$ -N ESS_assemble
-#$ -l h_rt=60,h_vmem=1G 
-#$ -binding linear:1
- 
-### Output files
 
-#$ -o /work/$USER/logs/$JOB_NAME-$JOB_ID-$TASK_ID.log
-#$ -j y
- 
-### Program
+#$ -S /bin/bash
+#$ -l h_rt=60,h_vmem=5G
+#$ -binding linear:1
 
 module load R
-Rscript ~/Annuals/Source/ESS_assemble.R "$@"
+Rscript Source/ESS_assemble.R "$@"

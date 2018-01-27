@@ -19,26 +19,30 @@ options <- list (
 )
 
 parser <- OptionParser(
-  usage       = "Rscript %prog [options] label",
+  usage       = "Rscript %prog [options] datapath label nk",
   option_list = options,
   description = "\nAssemble inputs for ESS analyses"
 )
 
-cli <- parse_args(parser, positional_arguments = 1)
+cli <- parse_args(parser, positional_arguments = 3)
 
 #args <- commandArgs(trailingOnly=TRUE)
 
 # Assign variables --------------------------------------------------------
 
-label <- cli$args[1]
+datapath <- cli$args[1]
+label    <- cli$args[2]
+nk       <- as.numeric(cli$args[3])
 
 ni <- cli$options$ni
+
+setwd(datapath)
 
 # Input parameters --------------------------------------------------------
 
 #ni <- 2
 nj <- 22
-nk <- Inf
+# nk <- Inf
 nt <- 20
 nb <- 5 # number of "burn-in" timesteps to stabilise resident dynamics
 nr <- 5 # number of repeated invasions
