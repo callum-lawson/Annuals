@@ -1,6 +1,0 @@
-Fehler in gzfile(file, "rb") : kann Verbindung nicht öffnen
-Ruft auf: readRDS -> gzfile
-Zusätzlich: Warnmeldung:
-In gzfile(file, "rb") :
-  kann komprimierte Datei '/work/lawson/ESS_nk10_2018-01-27-19-43-31/ESS_input_nk10_2018-01-27-19-43-31.rds' nicht öffnen. Grund evtl. 'Datei oder Verzeichnis nicht gefunden'
-Ausführung angehalten

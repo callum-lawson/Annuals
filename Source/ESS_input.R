@@ -17,7 +17,6 @@ setwd(datapath)
 
 nj <- 22
 nb <- 25 # number of "burn-in" timesteps to stabilise resident dynamics
-nr <- 5 
 
 cmd <- c(0,0,0)  # amount of sds to add
 csd <- c(-1,0,1) # powers
