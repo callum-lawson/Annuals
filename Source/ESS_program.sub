@@ -1,7 +1,8 @@
 #!/bin/bash
 
 #$ -S /bin/bash
-#$ -l h_rt=60,h_vmem=5G
+#$ -l h_rt=01:00:00
+#$ -l h_vmem=5G
 #$ -binding linear:1
 
 module load R

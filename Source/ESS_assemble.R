@@ -9,7 +9,7 @@ label     <- args[2]
 
 # Read in files -----------------------------------------------------------
 
-pd <- readRDS(paste0("Sims/ESS_input_",label,".rds"))
+pd <- readRDS(paste0("Sims/ESS_",label,"/ESS_input_",label,".rds"))
 ntasks  <- nrow(pd) # = nj * ni * nm
 finite <- with(pd[1,], nk>0 & nk<Inf)
 
@@ -33,5 +33,5 @@ for(i in 1:ntasks){
 
 # Save output -------------------------------------------------------------
 
-saveRDS(zw,paste0("Sims/ESS_climate_",label,".rds"))
-saveRDS(es,paste0("Sims/ESS_strategies_",label,".rds"))
+saveRDS(zw,paste0("Sims/ESS_",label,"/ESS_climate_",label,".rds"))
+saveRDS(es,paste0("Sims/ESS_",label,"/ESS_strategies_",label,".rds"))

@@ -1,51 +1,23 @@
 ### Assemble inputs for ESS analyses
 
-# Default arguments -------------------------------------------------------
-
-ni_df <- 2
-
-# Parsing arguments -------------------------------------------------------
-
-library(optparse)
-
-options <- list (
-  make_option(
-    opt_str = c("--ni"),
-    dest    = "ni",
-    type    = "integer",
-    default = ni_df,
-    help    = paste0("number of Stan parameter samples, defaults to ", ni_df)
-  )
-)
-
-parser <- OptionParser(
-  usage       = "Rscript %prog [options] datapath label nk",
-  option_list = options,
-  description = "\nAssemble inputs for ESS analyses"
-)
-
-cli <- parse_args(parser, positional_arguments = 3)
-
-#args <- commandArgs(trailingOnly=TRUE)
-
 # Assign variables --------------------------------------------------------
 
-datapath <- cli$args[1]
-label    <- cli$args[2]
-nk       <- as.numeric(cli$args[3])
+args <- commandArgs(trailingOnly=TRUE)
 
-ni <- cli$options$ni
+datapath <- args[1]
+label    <- args[2]
+ni <- as.numeric(args[3])
+nr <- as.numeric(args[4]) # number of repeated invasions
+nt <- as.numeric(args[5]) # must be >25
+nk <- as.numeric(args[6])
 
 setwd(datapath)
 
 # Input parameters --------------------------------------------------------
 
-#ni <- 2
 nj <- 22
-# nk <- Inf
-nt <- 20
-nb <- 5 # number of "burn-in" timesteps to stabilise resident dynamics
-nr <- 5 # number of repeated invasions
+nb <- 25 # number of "burn-in" timesteps to stabilise resident dynamics
+nr <- 5 
 
 cmd <- c(0,0,0)  # amount of sds to add
 csd <- c(-1,0,1) # powers
@@ -159,4 +131,4 @@ pd <- with(pl, data.frame(
 
 # Save RDS file -----------------------------------------------------------
 
-saveRDS(pd,paste0("Sims/ESS_input_",label,".rds"))
+saveRDS(pd,paste0("Sims/ESS_",label,"/ESS_input_",label,".rds"))

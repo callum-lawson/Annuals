@@ -14,7 +14,7 @@ source("Source/ESS_functions.R")
 
 # Read in data ------------------------------------------------------------
 
-pd <- readRDS(paste0("Sims/ESS_input_",label,".rds"))
+pd <- readRDS(paste0("Sims/ESS_",label,"/ESS_input_",label,".rds"))
 pdi <- pd[task_id,]
 
 # Calculate ESS -----------------------------------------------------------
