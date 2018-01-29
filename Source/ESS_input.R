@@ -79,10 +79,10 @@ zso <- sd(log(ncy$seasprcp))
 wmo <- mean(log(ncy$germprcp))
 wso <- sd(log(ncy$germprcp))
 
-zm <- zmo + cmd * zso
-zs <- zso ^ csd
-wm <- wmo + cmd * wso
-ws <- wso ^ csd
+zm <- zmo + mpam * cmd * zso
+zs <- zso * mpsd ^ csd
+wm <- wmo + mpam * cmd * wso
+ws <- wso * mpsd ^ csd
 
 # Parameter dataframe -----------------------------------------------------
 
@@ -90,7 +90,7 @@ posd <- expand.grid(ipos=1:ni,jpos=1:nj,mpos=1:nc)
 
 itot <- 10^4 # total iterations in Stan output
 ei <- posd$ipos
-ec <- with(posd, jpos * itot + ipos)
+ec <- with(posd, jpos * (itot-1) + ipos)
 em <- posd$mpos
 
 pd <- with(pl, data.frame(
