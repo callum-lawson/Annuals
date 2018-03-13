@@ -238,12 +238,9 @@ rsmod <- "
 
   	// LIKELIHOOD
 		for(i in 1:I_r){
-			loglam_r[i] <- exp(
-				x_r[i] * beta_r[species_r[i]]' // [L,M] or [M,L] matrix
+			loglam_r[i] <- x_r[i] * beta_r[species_r[i]]' // [L,M] or [M,L] matrix
 					+ eps_y_r[spyear_r[i]] 
-					+ eps_s_r[spsite_r[i]]
-				);
-				// put exp here if not using neg_binomial_2_log
+					+ eps_s_r[spsite_r[i]];
 		  }
 
 		}
@@ -272,11 +269,9 @@ rsmod <- "
 		eps_s_r ~ normal(0,sig_s_r);
 
 		for(i in 1:I_r){
-			seedsint[i] ~ neg_binomial_2(loglam_r[i],phi_r) T[1,];
-			}
-
-		// seedsint ~ neg_binomial_2_log(loglam_r,phi_r);
-		// removed truncation T[1,] (and exp around poisson function)
+			seedsint[i] ~ neg_binomial_2_log(loglam_r[i],phi_r);
+      target += -log1m((phi_r/(exp(loglam_r[i])+phi_r))^phi_r);
+      }
 
 	  }
 
