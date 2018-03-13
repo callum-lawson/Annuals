@@ -139,12 +139,12 @@ prmod <- "
 		vector[I_p] pi;   // logit scale!
 
 		// COEFFICIENTS
-		beta_p <- u * beta_mu_p + (diag_pre_multiply(tau_p,L_Omega_p) * z_p)';
+		beta_p = u * beta_mu_p + (diag_pre_multiply(tau_p,L_Omega_p) * z_p)';
 			// u*gamma = M x L matrix (or L x M) = beta_mus for each species
 
 		// LINEAR PREDICTOR
 		for (i in 1:I_p)
-			pi[i] <- x_p[i] * beta_p[species_p[i]]' // [L,M] or [M,L] matrix
+			pi[i] = x_p[i] * beta_p[species_p[i]]' // [L,M] or [M,L] matrix
 				+ eps_y_p[spyear_p[i]]
 				+ eps_s_p[spsite_p[i]]
 				+ eps_o_p[i];
@@ -178,10 +178,10 @@ prmod <- "
 		matrix[M_p,M_p] Omega_p;
     vector[I_p] log_lik_p;
 
-		Omega_p <- L_Omega_p * L_Omega_p';
+		Omega_p = L_Omega_p * L_Omega_p';
 
     for (i in 1:I_p){
-      log_lik_p[i] <- binomial_logit_log(nfert[i],nmeas[i],pi[i]);
+      log_lik_p[i] = binomial_logit_lpdf(nfert[i],nmeas[i],pi[i]);
       }
 
 		}
@@ -233,12 +233,12 @@ rsmod <- "
 		vector[I_r] loglam_r;
 
 		// COEFFICIENTS
-		beta_r <- u * beta_mu_r + (diag_pre_multiply(tau_r,L_Omega_r) * z_r)';
+		beta_r = u * beta_mu_r + (diag_pre_multiply(tau_r,L_Omega_r) * z_r)';
 			// u*gamma = M x L matrix (or L x M) = beta_mus for each species
 
   	// LIKELIHOOD
 		for(i in 1:I_r){
-			loglam_r[i] <- x_r[i] * beta_r[species_r[i]]' // [L,M] or [M,L] matrix
+			loglam_r[i] = x_r[i] * beta_r[species_r[i]]' // [L,M] or [M,L] matrix
 					+ eps_y_r[spyear_r[i]] 
 					+ eps_s_r[spsite_r[i]];
 		  }
@@ -280,11 +280,11 @@ rsmod <- "
 		matrix[M_r,M_r] Omega_r;
     vector[I_r] log_lik_r;
 
-		Omega_r <- L_Omega_r * L_Omega_r';
+		Omega_r = L_Omega_r * L_Omega_r';
 
     for (i in 1:I_r){
-      log_lik_r[i] <- neg_binomial_2_log(seedsint[i],loglam_r[i],phi_r)
-        / ( 1 - neg_binomial_2_log(0,loglam_r[i],phi_r) );
+      log_lik_r[i] = neg_binomial_2_log_lpmf(seedsint[i]|loglam_r[i],phi_r)
+        / ( 1 - neg_binomial_2_log_lpmf(0|loglam_r[i],phi_r) );
       }
 
 		}
@@ -294,7 +294,7 @@ rsmod <- "
 
 prfit <- stan(model_code=prmod,data=dat_list,chains=0)
 rsfit <- stan(model_code=rsmod,data=dat_list,chains=0)
-rsfit <- stan(model_code=rsmod,data=dat_list,chains=1,warmup=10,iter=20,init=inits[1])
+rsfit <- stan(model_code=rsmod,data=dat_list,chains=1,warmup=10,iter=20) # init=inits[1]
 
 ### SET UP PARALLEL
 
