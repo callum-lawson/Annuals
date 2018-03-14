@@ -73,15 +73,13 @@ dat_list$sp_bysite_r <- with(rsdat, species_r[match(unique(spsite_r),spsite_r)])
 dat_list$x_p <- cbind(
   intfake=rep(1,dat_list$I_p),
   ltprcp=log(prdat$prcp/tau_p),
-	ltprcp2=(log(prdat$prcp/tau_p))^2,
   ltgermd=log(prdat$germd/tau_d)
   )
 
 dat_list$x_r <- cbind(
-  intfake=rep(1,dat_list$I_r),
   ltprcp=log(rsdat$prcp/tau_p),
-	ltprcp2=(log(rsdat$prcp/tau_p))^2,
-  ltgermd=log(rsdat$germd/tau_d)
+	prcp=rsdat$prcp/tau_p,
+  germd=rsdat$germd/tau_d
   )
 
 dat_list$M_p <- ncol(dat_list$x_p) # 4 columns in the x matrices
@@ -238,10 +236,14 @@ rsmod <- "
 
   	// LIKELIHOOD
 		for(i in 1:I_r){
-			loglam_r[i] = x_r[i] * beta_r[species_r[i]]' // [L,M] or [M,L] matrix
+			loglam_r[i] = beta_r[species_r[i],1]
+          + x_r[i,1]
+          - log(exp(beta_r[species_r[i],2]) + x_r[i,2])
+          - log(exp(beta_r[species_r[i],3]) + x_r[i,3])
 					+ eps_y_r[spyear_r[i]] 
 					+ eps_s_r[spsite_r[i]];
 		  }
+        // ln(lambda)=ln(a)+ln(prcp)-ln(b+prcp)-ln(c+N)
 
 		}
 
@@ -323,26 +325,26 @@ mod_names <- paste(names(fit_list),apptext,sep="_")
 
 fit_list <- list(rsfit=rsfit)
 par_list <- list("beta_mu_r")
-apptext <- c("yearhet_nositehet_squared_trunc_loglik")
-warm_list <- 500
-iter_list <- 1500
+apptext <- c("yearhet_nositehet_hyperbolic_trunc_loglik")
+warm_list <- 250 # 500
+iter_list <- 750 # 1500
 
 nmods <- length(fit_list)
-cpm <- 12 # chains per mod # earlier 10
+cpm <- 5 # 12 # chains per mod 
 fit_ind <- rep(1:nmods,each=cpm)
 chain_ind <- rep(1:cpm,times=nmods)
 nchains <- nmods*cpm
 mod_names <- paste(names(fit_list),apptext,sep="_")
 
-inits <- readRDS("rs_inits_sq_b_03Mar2016.rds")
-inits <- inits[1:cpm]
-inits_sq <- lapply(inits,function(x){
-	x[names(x) %in% c("z_r","L_Omega_r","tau_r","beta_mu_r","beta_r","Omega_r")==F]
-	})
+# inits <- readRDS("rs_inits_sq_b_03Mar2016.rds")
+# inits <- inits[1:cpm]
+# inits_sq <- lapply(inits,function(x){
+# 	x[names(x) %in% c("z_r","L_Omega_r","tau_r","beta_mu_r","beta_r","Omega_r")==F]
+# 	})
 
 system.time({
   CL = makeCluster(nchains, outfile=paste0(paste(mod_names,collapse="_"),"_",format(Sys.Date(),"%d%b%Y"),".log"))
-  clusterExport(cl=CL, c("dat_list","fit_list","par_list","fit_ind","chain_ind","mod_names","warm_list","iter_list","inits")) 
+  clusterExport(cl=CL, c("dat_list","fit_list","par_list","fit_ind","chain_ind","mod_names","warm_list","iter_list")) # "inits"
   p_r_list <- parLapply(CL, 1:nchains, fun=function(i) {  # number of chains
     require(rstan)
     stan(fit=fit_list[[fit_ind[i]]], 
@@ -352,7 +354,7 @@ system.time({
          iter=iter_list[fit_ind[i]],
          pars=par_list[[fit_ind[i]]],
          chain_id=i,
-    		 init=inits[i], # OMITTED FOR PR!
+    		 # init=inits[i], # OMITTED FOR PR!
          sample_file=paste0("Models/",mod_names[fit_ind[i]],"_chain",chain_ind[i],"_",format(Sys.Date(),"%d%b%Y"),".csv")
     )
   })
@@ -378,7 +380,7 @@ stopCluster(CL)
 
 # RS
 
-finchains <- 1:10 # cutting off spare chains 11,12
+finchains <- 1:5 # 1:10
 maxchains <- max(finchains)   # !!! only runs loop up to here !!!
 CL = makeCluster(nchains) # load from earlier
 r_sflist <- list()
@@ -387,7 +389,7 @@ clusterExport(cl=CL, c("r_sflist","fit_ind","chain_ind","mod_names","finchains")
 r_sflist <- parLapply(CL, 1:maxchains, function(i){
   require(rstan)
   if(i %in% finchains){
-    read_stan_csv(paste0("Models/",mod_names[fit_ind[i]],"_chain",chain_ind[i],"_19May2016.csv"))
+    read_stan_csv(paste0("Models/",mod_names[fit_ind[i]],"_chain",chain_ind[i],"_13Mar2018.csv"))
     }
   })
 stopCluster(CL)

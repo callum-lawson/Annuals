@@ -1,0 +1,175 @@
+starting worker pid=87623 on localhost:11776 at 17:10:50.314
+starting worker pid=87632 on localhost:11776 at 17:10:50.890
+starting worker pid=87642 on localhost:11776 at 17:10:51.453
+starting worker pid=87661 on localhost:11776 at 17:10:52.015
+starting worker pid=87687 on localhost:11776 at 17:10:52.583
+Loading required package: rstan
+Loading required package: rstan
+Loading required package: rstan
+Loading required package: rstan
+Loading required package: rstan
+Loading required package: ggplot2
+Loading required package: ggplot2
+Loading required package: ggplot2
+Loading required package: ggplot2
+Loading required package: ggplot2
+Loading required package: StanHeaders
+Loading required package: StanHeaders
+Loading required package: StanHeaders
+Loading required package: StanHeaders
+rstan (Version 2.14.1, packaged: 2016-12-28 14:55:41 UTC, GitRev: 5fa1e80eb817)
+For execution on a local, multicore CPU with excess RAM we recommend calling
+rstan_options(auto_write = TRUE)
+options(mc.cores = parallel::detectCores())
+rstan (Version 2.14.1, packaged: 2016-12-28 14:55:41 UTC, GitRev: 5fa1e80eb817)
+For execution on a local, multicore CPU with excess RAM we recommend calling
+rstan_options(auto_write = TRUE)
+options(mc.cores = parallel::detectCores())
+rstan (Version 2.14.1, packaged: 2016-12-28 14:55:41 UTC, GitRev: 5fa1e80eb817)
+rstan (Version 2.14.1, packaged: 2016-12-28 14:55:41 UTC, GitRev: 5fa1e80eb817)
+For execution on a local, multicore CPU with excess RAM we recommend calling
+rstan_options(auto_write = TRUE)
+options(mc.cores = parallel::detectCores())
+For execution on a local, multicore CPU with excess RAM we recommend calling
+rstan_options(auto_write = TRUE)
+options(mc.cores = parallel::detectCores())
+Loading required package: StanHeaders
+rstan (Version 2.14.1, packaged: 2016-12-28 14:55:41 UTC, GitRev: 5fa1e80eb817)
+For execution on a local, multicore CPU with excess RAM we recommend calling
+rstan_options(auto_write = TRUE)
+options(mc.cores = parallel::detectCores())
+
+SAMPLING FOR MODEL '0c88bb95603d2b79d36ff9a9fbed7c6d' NOW (CHAIN 5).
+
+SAMPLING FOR MODEL '0c88bb95603d2b79d36ff9a9fbed7c6d' NOW (CHAIN 2).
+
+SAMPLING FOR MODEL '0c88bb95603d2b79d36ff9a9fbed7c6d' NOW (CHAIN 3).
+
+SAMPLING FOR MODEL '0c88bb95603d2b79d36ff9a9fbed7c6d' NOW (CHAIN 1).
+
+SAMPLING FOR MODEL '0c88bb95603d2b79d36ff9a9fbed7c6d' NOW (CHAIN 4).
+WARNING: The initial buffer, adaptation window, and terminal buffer
+         overflow the total number of warmup iterations.
+         Defaulting to a 15%/75%/10% partition,
+           init_buffer = 15
+           adapt_window = 75
+           term_buffer = 10
+
+
+Chain 5, Iteration:   1 / 300 [  0%]  (Warmup)WARNING: The initial buffer, adaptation window, and terminal buffer
+         overflow the total number of warmup iterations.
+         Defaulting to a 15%/75%/10% partition,
+           init_buffer = 15
+           adapt_window = 75
+           term_buffer = 10
+
+WARNING: The initial buffer, adaptation window, and terminal buffer
+         overflow the total number of warmup iterations.
+         Defaulting to a 15%/75%/10% partition,
+           init_buffer = 15
+           adapt_window = 75
+           term_buffer = 10
+
+WARNING: The initial buffer, adaptation window, and terminal buffer
+         overflow the total number of warmup iterations.
+         Defaulting to a 15%/75%/10% partition,
+           init_buffer = 15
+           adapt_window = 75
+           term_buffer = 10
+
+WARNING: The initial buffer, adaptation window, and terminal buffer
+         overflow the total number of warmup iterations.
+         Defaulting to a 15%/75%/10% partition,
+           init_buffer = 15
+           adapt_window = 75
+           term_buffer = 10
+
+
+Chain 2, Iteration:   1 / 300 [  0%]  (Warmup)
+Chain 4, Iteration:   1 / 300 [  0%]  (Warmup)
+Chain 1, Iteration:   1 / 300 [  0%]  (Warmup)
+Chain 3, Iteration:   1 / 300 [  0%]  (Warmup)
+Chain 5, Iteration:  30 / 300 [ 10%]  (Warmup)
+Chain 2, Iteration:  30 / 300 [ 10%]  (Warmup)
+Chain 4, Iteration:  30 / 300 [ 10%]  (Warmup)
+Chain 3, Iteration:  30 / 300 [ 10%]  (Warmup)
+Chain 1, Iteration:  30 / 300 [ 10%]  (Warmup)
+Chain 3, Iteration:  60 / 300 [ 20%]  (Warmup)
+Chain 4, Iteration:  60 / 300 [ 20%]  (Warmup)
+Chain 2, Iteration:  60 / 300 [ 20%]  (Warmup)
+Chain 3, Iteration:  90 / 300 [ 30%]  (Warmup)
+Chain 4, Iteration:  90 / 300 [ 30%]  (Warmup)
+Chain 2, Iteration:  90 / 300 [ 30%]  (Warmup)
+Chain 3, Iteration: 101 / 300 [ 33%]  (Sampling)
+Chain 4, Iteration: 101 / 300 [ 33%]  (Sampling)
+Chain 1, Iteration:  60 / 300 [ 20%]  (Warmup)
+Chain 3, Iteration: 130 / 300 [ 43%]  (Sampling)
+Chain 2, Iteration: 101 / 300 [ 33%]  (Sampling)
+Chain 5, Iteration:  60 / 300 [ 20%]  (Warmup)
+Chain 1, Iteration:  90 / 300 [ 30%]  (Warmup)
+Chain 1, Iteration: 101 / 300 [ 33%]  (Sampling)
+Chain 1, Iteration: 130 / 300 [ 43%]  (Sampling)
+Chain 5, Iteration:  90 / 300 [ 30%]  (Warmup)
+Chain 5, Iteration: 101 / 300 [ 33%]  (Sampling)
+Chain 4, Iteration: 130 / 300 [ 43%]  (Sampling)
+Chain 5, Iteration: 130 / 300 [ 43%]  (Sampling)
+Chain 1, Iteration: 160 / 300 [ 53%]  (Sampling)
+Chain 3, Iteration: 160 / 300 [ 53%]  (Sampling)
+Chain 5, Iteration: 160 / 300 [ 53%]  (Sampling)
+Chain 5, Iteration: 190 / 300 [ 63%]  (Sampling)
+Chain 2, Iteration: 130 / 300 [ 43%]  (Sampling)
+Chain 5, Iteration: 220 / 300 [ 73%]  (Sampling)
+Chain 5, Iteration: 250 / 300 [ 83%]  (Sampling)
+Chain 5, Iteration: 280 / 300 [ 93%]  (Sampling)
+Chain 5, Iteration: 300 / 300 [100%]  (Sampling)
+ Elapsed Time: 939.84 seconds (Warm-up)
+               1838.22 seconds (Sampling)
+               2778.06 seconds (Total)
+
+Sample of chain 5 is written to file Models/rsfit_yearhet_nositehet_hyperbolic_trunc_loglik_chain5_13Mar2018.csv.
+
+Chain 4, Iteration: 160 / 300 [ 53%]  (Sampling)
+Chain 1, Iteration: 190 / 300 [ 63%]  (Sampling)
+Chain 3, Iteration: 190 / 300 [ 63%]  (Sampling)
+Chain 2, Iteration: 160 / 300 [ 53%]  (Sampling)
+Chain 4, Iteration: 190 / 300 [ 63%]  (Sampling)
+Chain 1, Iteration: 220 / 300 [ 73%]  (Sampling)
+Chain 3, Iteration: 220 / 300 [ 73%]  (Sampling)
+Chain 2, Iteration: 190 / 300 [ 63%]  (Sampling)
+Chain 4, Iteration: 220 / 300 [ 73%]  (Sampling)
+Chain 1, Iteration: 250 / 300 [ 83%]  (Sampling)
+Chain 3, Iteration: 250 / 300 [ 83%]  (Sampling)
+Chain 2, Iteration: 220 / 300 [ 73%]  (Sampling)
+Chain 4, Iteration: 250 / 300 [ 83%]  (Sampling)
+Chain 1, Iteration: 280 / 300 [ 93%]  (Sampling)
+Chain 3, Iteration: 280 / 300 [ 93%]  (Sampling)
+Chain 2, Iteration: 250 / 300 [ 83%]  (Sampling)
+Chain 3, Iteration: 300 / 300 [100%]  (Sampling)
+Chain 1, Iteration: 300 / 300 [100%]  (Sampling)
+ Elapsed Time: 132.22 seconds (Warm-up)
+               9609.03 seconds (Sampling)
+               9741.25 seconds (Total)
+
+Sample of chain 3 is written to file Models/rsfit_yearhet_nositehet_hyperbolic_trunc_loglik_chain3_13Mar2018.csv.
+
+ Elapsed Time: 404.9 seconds (Warm-up)
+               9358.55 seconds (Sampling)
+               9763.45 seconds (Total)
+
+Sample of chain 1 is written to file Models/rsfit_yearhet_nositehet_hyperbolic_trunc_loglik_chain1_13Mar2018.csv.
+
+Chain 4, Iteration: 280 / 300 [ 93%]  (Sampling)
+Chain 2, Iteration: 280 / 300 [ 93%]  (Sampling)
+Chain 4, Iteration: 300 / 300 [100%]  (Sampling)
+ Elapsed Time: 145.89 seconds (Warm-up)
+               11181.6 seconds (Sampling)
+               11327.5 seconds (Total)
+
+Sample of chain 4 is written to file Models/rsfit_yearhet_nositehet_hyperbolic_trunc_loglik_chain4_13Mar2018.csv.
+
+Chain 2, Iteration: 300 / 300 [100%]  (Sampling)
+ Elapsed Time: 229.58 seconds (Warm-up)
+               11894.5 seconds (Sampling)
+               12124 seconds (Total)
+
+Sample of chain 2 is written to file Models/rsfit_yearhet_nositehet_hyperbolic_trunc_loglik_chain2_13Mar2018.csv.
